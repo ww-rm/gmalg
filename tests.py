@@ -1,4 +1,3 @@
-import sys
 import unittest
 
 from gmalg import SM3, SM4
