@@ -155,6 +155,6 @@ class SM3:
         _compress(W1, W2, V)
 
         value = bytearray()
-        for word in V:
-            value.extend(word.to_bytes(4, "big"))
+        for w in V:
+            value.extend(w.to_bytes(4, "big"))
         return bytes(value)
