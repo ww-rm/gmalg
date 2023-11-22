@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gmalg"
+authors = [
+    {name = "ww-rm", email = "ww-rm@qq.com"},
+]
+description = "GM algorithms implemented in pure python."
+requires-python = ">=3.7"
+dynamic = ["version", "readme"]
+
+[project.urls]
+"Homepage" = "https://github.com/ww-rm/gmalg"
+"Issues" = "https://github.com/ww-rm/gmalg/issues"
+
+[tool.setuptools]
+packages = ["gmalg"]
+
+[tool.setuptools.dynamic]
+version = {attr = "gmalg.__version__"}
+readme = {file = ["README.en.md"], content-type = "text/markdown"}
