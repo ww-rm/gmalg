@@ -45,6 +45,46 @@ def _P1(X):
     return X ^ _ROL(X, 15) ^ _ROL(X, 23)
 
 
+def _expand(B: bytes, W1: List[int], W2: List[int]):
+    """Expand message block."""
+
+    for i in range(16):
+        W1[i] = int.from_bytes(B[i * 4:i * 4 + 4], "big")
+    for i in range(16, 68):
+        W1[i] = _P1(W1[i - 16] ^ W1[i - 9] ^ _ROL(W1[i - 3], 15)) ^ _ROL(W1[i - 13], 7) ^ W1[i - 6]
+    for i in range(64):
+        W2[i] = W1[i] ^ W1[i + 4]
+
+
+def _compress(W1: List[int], W2: List[int], V: List[int]):
+    """Compress words."""
+
+    A, B, C, D, E, F, G, H = V
+
+    for i in range(64):
+        SS1 = _ROL((_ROL(A, 12) + E + _ROL_T_TABLE[i]) & 0xffffffff, 7)
+        SS2 = SS1 ^ _ROL(A, 12)
+        TT1 = (_FF(i, A, B, C) + D + SS2 + W2[i]) & 0xffffffff
+        TT2 = (_GG(i, E, F, G) + H + SS1 + W1[i]) & 0xffffffff
+        D = C
+        C = _ROL(B, 9)
+        B = A
+        A = TT1
+        H = G
+        G = _ROL(F, 19)
+        F = E
+        E = _P0(TT2)
+
+    V[0] ^= A
+    V[1] ^= B
+    V[2] ^= C
+    V[3] ^= D
+    V[4] ^= E
+    V[5] ^= F
+    V[6] ^= G
+    V[7] ^= H
+
+
 class SM3:
     """SM3"""
 
@@ -57,49 +97,6 @@ class SM3:
 
         self._words_buffer1: List[int] = [0] * 68
         self._words_buffer2: List[int] = [0] * 64
-
-    def _expand(self, B: bytes):
-        """Expand message block."""
-
-        W1 = self._words_buffer1
-        W2 = self._words_buffer2
-
-        for i in range(16):
-            W1[i] = int.from_bytes(B[i * 4:i * 4 + 4], "big")
-        for i in range(16, 68):
-            W1[i] = _P1(W1[i - 16] ^ W1[i - 9] ^ _ROL(W1[i - 3], 15)) ^ _ROL(W1[i - 13], 7) ^ W1[i - 6]
-        for i in range(64):
-            W2[i] = W1[i] ^ W1[i + 4]
-
-    def _compress(self, V: List[int]):
-        """Compress words."""
-
-        W1 = self._words_buffer1
-        W2 = self._words_buffer2
-        A, B, C, D, E, F, G, H = V
-
-        for i in range(64):
-            SS1 = _ROL((_ROL(A, 12) + E + _ROL_T_TABLE[i]) & 0xffffffff, 7)
-            SS2 = SS1 ^ _ROL(A, 12)
-            TT1 = (_FF(i, A, B, C) + D + SS2 + W2[i]) & 0xffffffff
-            TT2 = (_GG(i, E, F, G) + H + SS1 + W1[i]) & 0xffffffff
-            D = C
-            C = _ROL(B, 9)
-            B = A
-            A = TT1
-            H = G
-            G = _ROL(F, 19)
-            F = E
-            E = _P0(TT2)
-
-        V[0] ^= A
-        V[1] ^= B
-        V[2] ^= C
-        V[3] ^= D
-        V[4] ^= E
-        V[5] ^= F
-        V[6] ^= G
-        V[7] ^= H
 
     def update(self, data: bytes) -> None:
         """
@@ -114,6 +111,8 @@ class SM3:
             raise OverflowError("Message more than 2^64 bits.")
 
         B = self._msg_block_buffer
+        W1 = self._words_buffer1
+        W2 = self._words_buffer2
         V = self._value
 
         b_len = len(B)
@@ -122,13 +121,13 @@ class SM3:
             # process last short block
             begin = 64 - b_len
             B.extend(data[:begin])
-            self._expand(B)
-            self._compress(V)
+            _expand(B, W1, W2)
+            _compress(W1, W2, V)
             B.clear()
 
             for i in range(begin, d_len, 64):
-                self._expand(data[i:i+64])
-                self._compress(V)
+                _expand(data[i:i+64], W1, W2)
+                _compress(W1, W2, V)
 
             B.extend(data[d_len - ((d_len - begin) & 0x3f):])
         else:
@@ -141,6 +140,8 @@ class SM3:
         """Get hash value."""
 
         B = self._msg_block_buffer.copy()
+        W1 = self._words_buffer1
+        W2 = self._words_buffer2
         V = self._value.copy()
 
         b_len = len(B)
@@ -150,8 +151,8 @@ class SM3:
             B.append(0x00)
         B.extend((self._msg_len * 8).to_bytes(8, "big"))
 
-        self._expand(B)
-        self._compress(V)
+        _expand(B, W1, W2)
+        _compress(W1, W2, V)
 
         value = bytearray()
         for word in V:
