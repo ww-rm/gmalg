@@ -79,7 +79,7 @@ class SM4:
 
     def __init__(self, key: bytes) -> None:
         if len(key) != SM4.BLOCK_LEN:
-            raise ValueError(f"Invalid key length {len(key)} bytes, key must be 16 bytes.")
+            raise ValueError(f"Invalid key length {len(key)} bytes, key must be {SM4.BLOCK_LEN} bytes.")
 
         self._key: bytes = key
         self._rkey: List[int] = [0] * 32
@@ -99,6 +99,9 @@ class SM4:
         Raises:
             ValueError: Invalid block length.
         """
+
+        if len(block) != SM4.BLOCK_LEN:
+            raise ValueError(f"Invalid block length {len(block)} bytes, block must be {SM4.BLOCK_LEN} bytes.")
 
         RK = self._rkey
 
@@ -133,6 +136,9 @@ class SM4:
         Raises:
             ValueError: Invalid block length.
         """
+
+        if len(block) != SM4.BLOCK_LEN:
+            raise ValueError(f"Invalid block length {len(block)} bytes, block must be {SM4.BLOCK_LEN} bytes.")
 
         RK = self._rkey
 
