@@ -20,7 +20,7 @@ pip install gmalg
   - [ ] Key Exchange Protocol
   - [ ] Public Key Encryption Algorithm
 - [x] SM3 Cryptogrpahic Hash Algorithm
-- [ ] SM4 Block Cipher Algorithm
+- [x] SM4 Block Cipher Algorithm
 - [ ] SM9 Identification Cryptographic Algorithm
   - [ ] Digitial Signature Algorithm
   - [ ] Key Exchange Protocol
