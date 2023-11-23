@@ -36,7 +36,7 @@ def _ROL(X, count):
     return ((X << count) | (X >> (32 - count))) & 0xffffffff
 
 
-def _BYTE_SUB(X):
+def _BS(X):
     return ((_S_BOX[(X >> 24) & 0xff] << 24) |
             (_S_BOX[(X >> 16) & 0xff] << 16) |
             (_S_BOX[(X >> 8) & 0xff] << 8) |
@@ -44,12 +44,12 @@ def _BYTE_SUB(X):
 
 
 def _T0(X):
-    X = _BYTE_SUB(X)
+    X = _BS(X)
     return X ^ _ROL(X, 2) ^ _ROL(X, 10) ^ _ROL(X, 18) ^ _ROL(X, 24)
 
 
 def _T1(X):
-    X = _BYTE_SUB(X)
+    X = _BS(X)
     return X ^ _ROL(X, 13) ^ _ROL(X, 23)
 
 
