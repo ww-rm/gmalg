@@ -98,7 +98,7 @@ class ZUC:
 
     def _lfsr_work(self, u: int = 0):
         S = self._lfsr
-        s16 = (0x8000 * S[15] + 0x20000 * S[13] + 0x200000 * S[10] + 0x100000 * S[4] + 0x101 * S[0] + u) % 0x7fffffff
+        s16 = ((S[15] << 15) + (S[13] << 17) + (S[10] << 21) + (S[4] << 20) + (S[0] << 8) + S[0] + u) % 0x7fffffff
         S.append(0x7fffffff if s16 == 0 else s16)
         S.pop(0)
 
