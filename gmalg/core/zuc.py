@@ -146,11 +146,3 @@ class ZUC:
         self._lfsr_work()
 
         return Z
-
-
-class EEA3:
-    """ZUC Confidentiality Algorithm"""
-
-
-class EIA3:
-    """ZUC Integrity Algorithm"""
