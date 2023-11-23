@@ -1,11 +1,11 @@
 import unittest
 
-from gmalg import SM3, SM4
+import gmalg
 
 
 class TestSM3(unittest.TestCase):
     def setUp(self) -> None:
-        self.h = SM3()
+        self.h = gmalg.SM3()
 
     def test_case1(self):
         self.h.update(b"abc")
@@ -24,7 +24,7 @@ class TestSM3(unittest.TestCase):
 
 class TestSM4(unittest.TestCase):
     def setUp(self) -> None:
-        self.c = SM4(bytes.fromhex("0123456789ABCDEFFEDCBA9876543210"))
+        self.c = gmalg.SM4(bytes.fromhex("0123456789ABCDEFFEDCBA9876543210"))
 
     def test_case1(self):
         cipher = self.c.encrypt(bytes.fromhex("0123456789ABCDEFFEDCBA9876543210"))
@@ -50,6 +50,23 @@ class TestSM4(unittest.TestCase):
         self.assertRaises(ValueError, self.c.encrypt, b"12345678123456781")
         self.assertRaises(ValueError, self.c.decrypt, b"123456781234567")
         self.assertRaises(ValueError, self.c.decrypt, b"12345678123456781")
+
+
+class TestZUC(unittest.TestCase):
+    def test_case1(self):
+        z = gmalg.ZUC(bytes.fromhex("00000000000000000000000000000000"), bytes.fromhex("00000000000000000000000000000000"))
+        self.assertEqual(z.generate(), 0x27bede74)
+        self.assertEqual(z.generate(), 0x018082da)
+
+    def test_case2(self):
+        z = gmalg.ZUC(bytes.fromhex("ffffffffffffffffffffffffffffffff"), bytes.fromhex("ffffffffffffffffffffffffffffffff"))
+        self.assertEqual(z.generate(), 0x0657cfa0)
+        self.assertEqual(z.generate(), 0x7096398b)
+
+    def test_case3(self):
+        z = gmalg.ZUC(bytes.fromhex("3d4c4be96a82fdaeb58f641db17b455b"), bytes.fromhex("84319aa8de6915ca1f6bda6bfbd8c766"))
+        self.assertEqual(z.generate(), 0x14f1c272)
+        self.assertEqual(z.generate(), 0x3279c419)
 
 
 if __name__ == "__main__":
