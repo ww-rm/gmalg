@@ -105,7 +105,7 @@ class SM3:
             OverflowError: Message more than 2^64 bits.
         """
 
-        if self._msg_len + len(data) > SM3.MAX_MSG_LEN:
+        if self._msg_len + len(data) > self.MAX_MSG_LEN:
             raise OverflowError("Message more than 2^64 bits.")
 
         B = self._msg_block_buffer
