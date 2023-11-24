@@ -77,10 +77,10 @@ class ZUC:
     IV_LEN = 16
 
     def __init__(self, key: bytes, iv: bytes) -> None:
-        if len(key) != ZUC.KEY_LEN:
-            raise ValueError(f"Invalid key length {len(key)} bytes, key must be {ZUC.KEY_LEN} bytes.")
-        if len(iv) != ZUC.IV_LEN:
-            raise ValueError(f"Invalid iv length {len(iv)} bytes, iv must be {ZUC.IV_LEN} bytes.")
+        if len(key) != self.KEY_LEN:
+            raise ValueError(f"Invalid key length {len(key)} bytes, key must be {self.KEY_LEN} bytes.")
+        if len(iv) != self.IV_LEN:
+            raise ValueError(f"Invalid iv length {len(iv)} bytes, iv must be {self.IV_LEN} bytes.")
 
         self._key: bytes = key
         self._iv: bytes = iv
