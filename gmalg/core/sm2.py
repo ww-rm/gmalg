@@ -114,11 +114,11 @@ class SM2:
             rnd (Random): random object to get random bits, default to `gmalg.random.SecretsRandom`
         """
 
-        self._xP = int.from_bytes(xP, "big") if xP is not None else None
-        self._yP = int.from_bytes(yP, "big") if yP is not None else None
-        self._d = int.from_bytes(d, "big") if d is not None else None
+        self._xP: int = int.from_bytes(xP, "big") if xP is not None else None
+        self._yP: int = int.from_bytes(yP, "big") if yP is not None else None
+        self._d: int = int.from_bytes(d, "big") if d is not None else None
         self._id = id_
-        self._rnd = rnd or gmrnd.SecretsRandom()
+        self._rnd: gmrnd.Random = rnd if rnd is not None else gmrnd.SecretsRandom()
 
         self.ec = EC(self.p, self.a, self.b)
 
