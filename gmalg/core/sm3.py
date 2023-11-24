@@ -123,11 +123,13 @@ class SM3:
             _compress(W1, W2, V)
             B.clear()
 
-            for i in range(begin, d_len, 64):
-                _expand(data[i:i+64], W1, W2)
+            pos = begin
+            while pos + 64 < d_len:
+                _expand(data[pos:pos+64], W1, W2)
                 _compress(W1, W2, V)
+                pos += 64
 
-            B.extend(data[d_len - ((d_len - begin) & 0x3f):])
+            B.extend(data[pos:])
         else:
             B.extend(data)
 
