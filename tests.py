@@ -1,6 +1,46 @@
 import unittest
 
 import gmalg.core
+import gmalg.random as gmrnd
+
+
+class TestSM2(unittest.TestCase):
+    def test_sign(self):
+        sm2 = gmalg.core.SM2(
+            bytes.fromhex("09F9DF31 1E5421A1 50DD7D16 1E4BC5C6 72179FAD 1833FC07 6BB08FF3 56F35020"),
+            bytes.fromhex("CCEA490C E26775A5 2DC6EA71 8CC1AA60 0AED05FB F35E084A 6632F607 2DA9AD13"),
+            bytes.fromhex("3945208F 7B2144B1 3F36E38A C6D39F95 88939369 2860B51A 42FB81EF 4DF7C5B8"),
+            b"1234567812345678",
+            rnd=gmrnd.ConstRandom(0x59276E27_D506861A_16680F3A_D9C02DCC_EF3CC1FA_3CDBE4CE_6D54B80D_EAC1BC21)
+        )
+
+        r, s = sm2.sign(b"message digest")
+        self.assertEqual(r, bytes.fromhex("F5A03B06 48D2C463 0EEAC513 E1BB81A1 5944DA38 27D5B741 43AC7EAC EEE720B3"))
+        self.assertEqual(s, bytes.fromhex("B1B6AA29 DF212FD8 763182BC 0D421CA1 BB9038FD 1F7F42D4 840B69C4 85BBC1AA"))
+
+        self.assertEqual(sm2.verify(b"message digest", r, s), True)
+
+    def test_sign2(self):
+        ecc = gmalg.core.SM2(
+            bytes.fromhex("0AE4C779 8AA0F119 471BEE11 825BE462 02BB79E2 A5844495 E97C04FF 4DF2548A"),
+            bytes.fromhex("7C0240F8 8F1CD4E1 6352A73C 17B7F16F 07353E53 A176D684 A9FE0C6B B798E857"),
+            bytes.fromhex("128B2FA8 BD433C6C 068C8D80 3DFF7979 2A519A55 171B1B65 0C23661D 15897263"),
+            b"ALICE123@YAHOO.COM",
+            rnd=gmrnd.ConstRandom(0x6CB28D99_385C175C_94F94E93_4817663F_C176D925_DD72B727_260DBAAE_1FB2F96F)
+        )
+        ecc.p = 0x8542D69E_4C044F18_E8B92435_BF6FF7DE_45728391_5C45517D_722EDB8B_08F1DFC3
+        ecc.a = 0x787968B4_FA32C3FD_2417842E_73BBFEFF_2F3C848B_6831D7E0_EC65228B_3937E498
+        ecc.b = 0x63E4C6D3_B23B0C84_9CF84241_484BFE48_F61D59A5_B16BA06E_6E12D1DA_27C5249A
+        ecc.n = 0x8542D69E_4C044F18_E8B92435_BF6FF7DD_29772063_0485628D_5AE74EE7_C32E79B7
+        ecc.xG = 0x421DEBD6_1B62EAB6_746434EB_C3CC315E_32220B3B_ADD50BDC_4C4E6C14_7FEDD43D
+        ecc.yG = 0x0680512B_CBB42C07_D47349D2_153B70C4_E5D7FDFC_BFA36EA1_A85841B9_E46E09A2
+        ecc.ec = gmalg.core.sm2.EC(ecc.p, ecc.a, ecc.b)
+
+        r, s = ecc.sign(b"message digest")
+        self.assertEqual(r, bytes.fromhex("40F1EC59 F793D9F4 9E09DCEF 49130D41 94F79FB1 EED2CAA5 5BACDB49 C4E755D1"))
+        self.assertEqual(s, bytes.fromhex("6FC6DAC3 2C5D5CF1 0C77DFB2 0F7C2EB6 67A45787 2FB09EC5 6327A67E C7DEEBE7"))
+
+        self.assertEqual(ecc.verify(b"message digest", r, s), True)
 
 
 class TestSM3(unittest.TestCase):
@@ -55,18 +95,18 @@ class TestSM4(unittest.TestCase):
 class TestZUC(unittest.TestCase):
     def test_case1(self):
         z = gmalg.core.ZUC(bytes.fromhex("00000000000000000000000000000000"), bytes.fromhex("00000000000000000000000000000000"))
-        self.assertEqual(z.generate(), 0x27bede74)
-        self.assertEqual(z.generate(), 0x018082da)
+        self.assertEqual(z.generate(), bytes.fromhex("27bede74"))
+        self.assertEqual(z.generate(), bytes.fromhex("018082da"))
 
     def test_case2(self):
         z = gmalg.core.ZUC(bytes.fromhex("ffffffffffffffffffffffffffffffff"), bytes.fromhex("ffffffffffffffffffffffffffffffff"))
-        self.assertEqual(z.generate(), 0x0657cfa0)
-        self.assertEqual(z.generate(), 0x7096398b)
+        self.assertEqual(z.generate(), bytes.fromhex("0657cfa0"))
+        self.assertEqual(z.generate(), bytes.fromhex("7096398b"))
 
     def test_case3(self):
         z = gmalg.core.ZUC(bytes.fromhex("3d4c4be96a82fdaeb58f641db17b455b"), bytes.fromhex("84319aa8de6915ca1f6bda6bfbd8c766"))
-        self.assertEqual(z.generate(), 0x14f1c272)
-        self.assertEqual(z.generate(), 0x3279c419)
+        self.assertEqual(z.generate(), bytes.fromhex("14f1c272"))
+        self.assertEqual(z.generate(), bytes.fromhex("3279c419"))
 
 
 if __name__ == "__main__":
