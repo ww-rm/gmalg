@@ -103,31 +103,6 @@ class SM2:
 
     EC_BITLEN = 256
 
-    ec = EC(p, a, b)
-
-    @classmethod
-    def verify_pubkey(cls, x: bytes, y: bytes) -> bool:
-        """Verify if a public key is valid.
-
-        Args:
-            x (bytes): x
-            y (bytes): y
-        """
-
-        x = int.from_bytes(x, "big")
-        y = int.from_bytes(y, "big")
-
-        if cls.ec.isinf(x, y):
-            return False
-
-        if not cls.ec.isvalid(x, y):
-            return False
-
-        if not cls.ec.isinf(cls.ec.mul(cls.n, x, y)):
-            return False
-
-        return True
-
     def __init__(self, xP: bytes = None, yP: bytes = None, d: bytes = None, id_: bytes = None, *, rnd: gmrnd.Random = None) -> None:
         """SM2
 
@@ -144,6 +119,30 @@ class SM2:
         self._d = int.from_bytes(d, "big") if d is not None else None
         self._id = id_
         self._rnd = rnd or gmrnd.SecretsRandom()
+
+        self.ec = EC(self.p, self.a, self.b)
+
+    def verify_pubkey(self, x: bytes, y: bytes) -> bool:
+        """Verify if a public key is valid.
+
+        Args:
+            x (bytes): x
+            y (bytes): y
+        """
+
+        x = int.from_bytes(x, "big")
+        y = int.from_bytes(y, "big")
+
+        if self.ec.isinf(x, y):
+            return False
+
+        if not self.ec.isvalid(x, y):
+            return False
+
+        if not self.ec.isinf(self.ec.mul(self.n, x, y)):
+            return False
+
+        return True
 
     def generate_keypair(self) -> Tuple[bytes, Tuple[bytes, bytes]]:
         """Generate key pair.
