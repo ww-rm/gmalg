@@ -127,11 +127,11 @@ class ZUC:
             X2 = ((S[7] & 0xffff) << 16) | (S[5] >> 15)
             self._lfsr_work(self._F(X0, X1, X2) >> 1)
 
-    def generate(self) -> int:
+    def generate(self) -> bytes:
         """Generate pseudo-random words.
 
         Returns:
-            int: a 32-bit pseudo-random word.
+            bytes: a 32-bit pseudo-random word.
         """
 
         S = self._lfsr
@@ -143,4 +143,4 @@ class ZUC:
         Z = self._F(X0, X1, X2) ^ X3
         self._lfsr_work()
 
-        return Z
+        return Z.to_bytes(4, "big")
