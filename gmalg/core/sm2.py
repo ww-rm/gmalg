@@ -1,9 +1,16 @@
-from typing import Tuple
-
-from .. import random as gmrnd
+from typing import Callable, Tuple
 from .sm3 import SM3
+import secrets
 
 __all__ = ["SM2"]
+
+
+_p = bytes.fromhex("FFFFFFFE FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF 00000000 FFFFFFFF FFFFFFFF")
+_a = bytes.fromhex("FFFFFFFE FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF 00000000 FFFFFFFF FFFFFFFC")
+_b = bytes.fromhex("28E9FA9E 9D9F5E34 4D5A9E4B CF6509A7 F39789F5 15AB8F92 DDBCBD41 4D940E93")
+_n = bytes.fromhex("FFFFFFFE FFFFFFFF FFFFFFFF FFFFFFFF 7203DF6B 21C6052B 53BBF409 39D54123")
+_xG = bytes.fromhex("32C4AE2C 1F198119 5F990446 6A39C994 8FE30BBF F2660BE1 715A4589 334C74C7")
+_yG = bytes.fromhex("BC3736A2 F4F6779C 59BDCEE3 6B692153 D0A9877C C62A4740 02DF32E5 2139F0A0")
 
 
 def _inv(x: int, p: int):
@@ -94,55 +101,53 @@ class EC:
 class SM2:
     """SM2"""
 
-    p = 0xFFFFFFFE_FFFFFFFF_FFFFFFFF_FFFFFFFF_FFFFFFFF_00000000_FFFFFFFF_FFFFFFFF
-    a = 0xFFFFFFFE_FFFFFFFF_FFFFFFFF_FFFFFFFF_FFFFFFFF_00000000_FFFFFFFF_FFFFFFFC
-    b = 0x28E9FA9E_9D9F5E34_4D5A9E4B_CF6509A7_F39789F5_15AB8F92_DDBCBD41_4D940E93
-    n = 0xFFFFFFFE_FFFFFFFF_FFFFFFFF_FFFFFFFF_7203DF6B_21C6052B_53BBF409_39D54123
-    xG = 0x32C4AE2C_1F198119_5F990446_6A39C994_8FE30BBF_F2660BE1_715A4589_334C74C7
-    yG = 0xBC3736A2_F4F6779C_59BDCEE3_6B692153_D0A9877C_C62A4740_02DF32E5_2139F0A0
-
-    EC_BITLEN = 256
-
-    def __init__(self, xP: bytes = None, yP: bytes = None, d: bytes = None, id_: bytes = None, *, rnd: gmrnd.Random = None) -> None:
-        """SM2
+    def __init__(self, d: bytes = None, xP: bytes = None, yP: bytes = None, id_: bytes = None, *,
+                 p: bytes = None, a: bytes = None, b: bytes = None, n: bytes = None, xG: bytes = None, yG: bytes = None,
+                 hash_fn: Callable[[bytes], bytes] = None, rnd_fn: Callable[[int], int] = None) -> None:
+        """SM2.
 
         Args:
-            xP (bytes): public key x
-            yP (bytes): public key y
-            d (bytes): secret key
-            id_ (bytes): id used in sign
-            rnd (Random): random object to get random bits, default to `gmalg.random.SecretsRandom`
+            d (bytes): secret key.
+            xP (bytes): x of public key.
+            yP (bytes): y of public key.
+            id_ (bytes): user id used in sign.
+
+            p (bytes): elliptic curve parameter `p`.
+            a (bytes): elliptic curve parameter `a`.
+            b (bytes): elliptic curve parameter `b`.
+
+            n (bytes): ECDLP parameter `n`.
+            xG (bytes): x of ECDLP parameter `G`.
+            yG (bytes): y of ECDLP parameter `G`.
+
+            hash_fn ((bytes) -> bytes): hash function used in SM2.
+            rnd_fn ((int) -> int): random function used to generate k-bit random number.
         """
 
+        self._d: int = int.from_bytes(d, "big") if d is not None else None
         self._xP: int = int.from_bytes(xP, "big") if xP is not None else None
         self._yP: int = int.from_bytes(yP, "big") if yP is not None else None
-        self._d: int = int.from_bytes(d, "big") if d is not None else None
-        self._id = id_
-        self._rnd: gmrnd.Random = rnd if rnd is not None else gmrnd.SecretsRandom()
+        self._id: bytes = id_
 
-        self.ec = EC(self.p, self.a, self.b)
+        self._ec: EC = EC(int.from_bytes(p or _p, "big"), int.from_bytes(a or _a, "big"), int.from_bytes(b or _b, "big"))
+        self._n: int = int.from_bytes(n or _n, "big")
+        self._xG: int = int.from_bytes(xG or _xG, "big")
+        self._yG: int = int.from_bytes(yG or _yG, "big")
 
-    def verify_pubkey(self, x: bytes, y: bytes) -> bool:
-        """Verify if a public key is valid.
+        self._hash_fn = hash_fn or self._default_hash_fn
+        self._rnd_fn = rnd_fn or self._default_rnd_fn
 
-        Args:
-            x (bytes): x
-            y (bytes): y
-        """
+        # try generate pubkey
+        if self._d is not None and (self._xP is None or self._yP is None):
+            self._xP, self._yP = self._ec.mul(self._d, self._xG, self._yG)
 
-        x = int.from_bytes(x, "big")
-        y = int.from_bytes(y, "big")
+    def _default_hash_fn(self, data: bytes) -> bytes:
+        sm3 = SM3()
+        sm3.update(data)
+        return sm3.value
 
-        if self.ec.isinf(x, y):
-            return False
-
-        if not self.ec.isvalid(x, y):
-            return False
-
-        if not self.ec.isinf(self.ec.mul(self.n, x, y)):
-            return False
-
-        return True
+    def _default_rnd_fn(self, k: int) -> int:
+        return secrets.randbits(k)
 
     def generate_keypair(self) -> Tuple[bytes, Tuple[bytes, bytes]]:
         """Generate key pair.
@@ -153,21 +158,46 @@ class SM2:
         """
 
         d_min = 1
-        d_max = self.n - 2
-        bit_len = self.EC_BITLEN
-        rnd = self._rnd
+        d_max = self._n - 2
+        bit_len = self._n.bit_length()
+        rnd = self._rnd_fn
 
-        d = rnd.randbits(bit_len)
+        d = rnd(bit_len)
         while d < d_min or d > d_max:
-            d = rnd.randbits(bit_len)
+            d = rnd(bit_len)
 
-        xP, yP = self.ec.mul(d, self.xG, self.yG)
+        xP, yP = self._ec.mul(d, self._xG, self._yG)
 
         return d.to_bytes(32, "big"), (xP.to_bytes(32, "big"), yP.to_bytes(32, "big"))
 
+    def verify_pubkey(self, x: bytes, y: bytes) -> bool:
+        """Verify if a public key is valid.
+
+        Args:
+            x (bytes): x
+            y (bytes): y
+
+        Returns:
+            (bool): Whether OK.
+        """
+
+        x = int.from_bytes(x, "big")
+        y = int.from_bytes(y, "big")
+
+        if self._ec.isinf(x, y):
+            return False
+
+        if not self._ec.isvalid(x, y):
+            return False
+
+        if not self._ec.isinf(self._ec.mul(self._n, x, y)):
+            return False
+
+        return True
+
     @property
     def can_sign(self) -> bool:
-        return self._xP is not None and self._yP is not None and self._id is not None and self._d is not None
+        return self._d is not None and self._id is not None
 
     @property
     def can_verify(self) -> bool:
@@ -190,16 +220,14 @@ class SM2:
         Z = bytearray()
         Z.extend(ENTL.to_bytes(2, "big"))
         Z.extend(self._id)
-        Z.extend(self.a.to_bytes(32, "big"))
-        Z.extend(self.b.to_bytes(32, "big"))
-        Z.extend(self.xG.to_bytes(32, "big"))
-        Z.extend(self.yG.to_bytes(32, "big"))
+        Z.extend(self._ec._a.to_bytes(32, "big"))
+        Z.extend(self._ec._b.to_bytes(32, "big"))
+        Z.extend(self._xG.to_bytes(32, "big"))
+        Z.extend(self._yG.to_bytes(32, "big"))
         Z.extend(self._xP.to_bytes(32, "big"))
         Z.extend(self._yP.to_bytes(32, "big"))
 
-        sm3 = SM3()
-        sm3.update(Z)
-        return sm3.value
+        return self._hash_fn(Z)
 
     def sign(self, message: bytes) -> Tuple[bytes, bytes]:
         """Sign.
@@ -212,24 +240,21 @@ class SM2:
         """
 
         if not self.can_sign:
-            raise ValueError("Can't sign, missing required args, need 'xP', 'yP', 'id_' and 'd'")
+            raise ValueError("Can't sign, missing required args, need 'd' and 'id_'")
 
-        M = self._Z + message
-        sm3 = SM3()
-        sm3.update(M)
-        e = int.from_bytes(sm3.value, "big")
+        e = int.from_bytes(self._hash_fn(self._Z + message), "big")
 
-        ec = self.ec
-        n = self.n
-        xG = self.xG
-        yG = self.yG
+        ec = self._ec
+        n = self._n
+        xG = self._xG
+        yG = self._yG
         d = self._d
-        bit_len = self.EC_BITLEN
-        rnd = self._rnd
+        bit_len = self._n.bit_length()
+        rnd = self._rnd_fn
         k_min = 1
-        k_max = self.n - 1
+        k_max = self._n - 1
         while True:
-            k = rnd.randbits(bit_len)
+            k = rnd(bit_len)
             if k < k_min or k > k_max:
                 continue
 
@@ -260,10 +285,10 @@ class SM2:
         if not self.can_verify:
             raise ValueError("Can't verify, missing required args, need 'xP', 'yP', 'id_'")
 
-        ec = self.ec
-        n = self.n
-        xG = self.xG
-        yG = self.yG
+        ec = self._ec
+        n = self._n
+        xG = self._xG
+        yG = self._yG
         xP = self._xP
         yP = self._yP
 
