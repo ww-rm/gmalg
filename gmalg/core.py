@@ -144,11 +144,12 @@ class EllipticCurve:
 class ECDLP:
     """Elliptic Curve Discrete Logarithm Problem"""
 
-    def __init__(self, p: int, a: int, b: int, n: int, xG: int, yG: int) -> None:
-        self.ec = EllipticCurve(p, a, b)
-        self._n = n
+    def __init__(self, ec: EllipticCurve, xG: int, yG: int, n: int, h: int = 1) -> None:
+        self.ec = ec
         self._xG = xG
         self._yG = yG
+        self._n = n
+        self._h = h
 
     @property
     def rank_bitlength(self) -> int:
