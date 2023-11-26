@@ -1,5 +1,7 @@
 from typing import List
 
+from .core import Hash
+
 __all__ = ["SM3"]
 
 _ROL_T_TABLE = [
@@ -83,10 +85,18 @@ def _compress(W1: List[int], W2: List[int], V: List[int]):
     V[7] ^= H
 
 
-class SM3:
+class SM3(Hash):
     """SM3"""
 
-    MAX_MSG_LEN = 1 << 64 >> 3
+    @classmethod
+    @property
+    def max_msg_length(self) -> int:
+        return 1 << 64 >> 3
+
+    @classmethod
+    @property
+    def hash_length(self) -> int:
+        return 32
 
     def __init__(self) -> None:
         self._value: List[int] = [0x7380166f, 0x4914b2b9, 0x172442d7, 0xda8a0600, 0xa96f30bc, 0x163138aa, 0xe38dee4d, 0xb0fb0e4e]
@@ -105,7 +115,7 @@ class SM3:
             OverflowError: Message more than 2^64 bits.
         """
 
-        if self._msg_len + len(data) > self.MAX_MSG_LEN:
+        if self._msg_len + len(data) > self.max_msg_length:
             raise OverflowError("Message more than 2^64 bits.")
 
         B = self._msg_block_buffer

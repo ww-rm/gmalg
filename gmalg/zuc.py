@@ -73,14 +73,21 @@ def _L2(X):
 class ZUC:
     """ZUC"""
 
-    KEY_LEN = 16
-    IV_LEN = 16
+    @classmethod
+    @property
+    def key_length(self) -> int:
+        return 16
+
+    @classmethod
+    @property
+    def iv_length(self) -> int:
+        return 16
 
     def __init__(self, key: bytes, iv: bytes) -> None:
-        if len(key) != self.KEY_LEN:
-            raise ValueError(f"Invalid key length {len(key)} bytes, key must be {self.KEY_LEN} bytes.")
-        if len(iv) != self.IV_LEN:
-            raise ValueError(f"Invalid iv length {len(iv)} bytes, iv must be {self.IV_LEN} bytes.")
+        if len(key) != self.key_length:
+            raise ValueError(f"Invalid key length {len(key)} bytes, key must be {self.key_length} bytes.")
+        if len(iv) != self.iv_length:
+            raise ValueError(f"Invalid iv length {len(iv)} bytes, iv must be {self.iv_length} bytes.")
 
         self._key: bytes = key
         self._iv: bytes = iv

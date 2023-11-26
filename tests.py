@@ -1,5 +1,6 @@
 import unittest
 
+import gmalg
 import gmalg.core
 
 
@@ -11,7 +12,7 @@ class TestSM2(unittest.TestCase):
         return 0x6CB28D99_385C175C_94F94E93_4817663F_C176D925_DD72B727_260DBAAE_1FB2F96F
 
     def test_sign(self):
-        sm2 = gmalg.core.SM2(
+        sm2 = gmalg.SM2(
             bytes.fromhex("3945208F 7B2144B1 3F36E38A C6D39F95 88939369 2860B51A 42FB81EF 4DF7C5B8"),
             bytes.fromhex("09F9DF31 1E5421A1 50DD7D16 1E4BC5C6 72179FAD 1833FC07 6BB08FF3 56F35020"),
             bytes.fromhex("CCEA490C E26775A5 2DC6EA71 8CC1AA60 0AED05FB F35E084A 6632F607 2DA9AD13"),
@@ -26,18 +27,18 @@ class TestSM2(unittest.TestCase):
         self.assertEqual(sm2.verify(b"message digest", r, s), True)
 
     def test_sign2(self):
-        ecc = gmalg.core.SM2(
-            bytes.fromhex("128B2FA8 BD433C6C 068C8D80 3DFF7979 2A519A55 171B1B65 0C23661D 15897263"),
-            bytes.fromhex("0AE4C779 8AA0F119 471BEE11 825BE462 02BB79E2 A5844495 E97C04FF 4DF2548A"),
-            bytes.fromhex("7C0240F8 8F1CD4E1 6352A73C 17B7F16F 07353E53 A176D684 A9FE0C6B B798E857"),
-            b"ALICE123@YAHOO.COM",
-            p=bytes.fromhex("8542D69E 4C044F18 E8B92435 BF6FF7DE 45728391 5C45517D 722EDB8B 08F1DFC3"),
-            a=bytes.fromhex("787968B4 FA32C3FD 2417842E 73BBFEFF 2F3C848B 6831D7E0 EC65228B 3937E498"),
-            b=bytes.fromhex("63E4C6D3 B23B0C84 9CF84241 484BFE48 F61D59A5 B16BA06E 6E12D1DA 27C5249A"),
-            n=bytes.fromhex("8542D69E 4C044F18 E8B92435 BF6FF7DD 29772063 0485628D 5AE74EE7 C32E79B7"),
-            xG=bytes.fromhex("421DEBD6 1B62EAB6 746434EB C3CC315E 32220B3B ADD50BDC 4C4E6C14 7FEDD43D"),
-            yG=bytes.fromhex("0680512B CBB42C07 D47349D2 153B70C4 E5D7FDFC BFA36EA1 A85841B9 E46E09A2"),
-            rnd_fn=self._const_rnd2
+        ecc = gmalg.core.EllipticCurveCipher(
+            bytes.fromhex("8542D69E 4C044F18 E8B92435 BF6FF7DE 45728391 5C45517D 722EDB8B 08F1DFC3"),
+            bytes.fromhex("787968B4 FA32C3FD 2417842E 73BBFEFF 2F3C848B 6831D7E0 EC65228B 3937E498"),
+            bytes.fromhex("63E4C6D3 B23B0C84 9CF84241 484BFE48 F61D59A5 B16BA06E 6E12D1DA 27C5249A"),
+            bytes.fromhex("8542D69E 4C044F18 E8B92435 BF6FF7DD 29772063 0485628D 5AE74EE7 C32E79B7"),
+            bytes.fromhex("421DEBD6 1B62EAB6 746434EB C3CC315E 32220B3B ADD50BDC 4C4E6C14 7FEDD43D"),
+            bytes.fromhex("0680512B CBB42C07 D47349D2 153B70C4 E5D7FDFC BFA36EA1 A85841B9 E46E09A2"),
+            gmalg.SM3, self._const_rnd2,
+            d=bytes.fromhex("128B2FA8 BD433C6C 068C8D80 3DFF7979 2A519A55 171B1B65 0C23661D 15897263"),
+            xP=bytes.fromhex("0AE4C779 8AA0F119 471BEE11 825BE462 02BB79E2 A5844495 E97C04FF 4DF2548A"),
+            yP=bytes.fromhex("7C0240F8 8F1CD4E1 6352A73C 17B7F16F 07353E53 A176D684 A9FE0C6B B798E857"),
+            id_=b"ALICE123@YAHOO.COM"
         )
 
         r, s = ecc.sign(b"message digest")
@@ -49,7 +50,7 @@ class TestSM2(unittest.TestCase):
 
 class TestSM3(unittest.TestCase):
     def setUp(self) -> None:
-        self.h = gmalg.core.SM3()
+        self.h = gmalg.SM3()
 
     def test_case1(self):
         self.h.update(b"abc")
@@ -68,7 +69,7 @@ class TestSM3(unittest.TestCase):
 
 class TestSM4(unittest.TestCase):
     def setUp(self) -> None:
-        self.c = gmalg.core.SM4(bytes.fromhex("0123456789ABCDEFFEDCBA9876543210"))
+        self.c = gmalg.SM4(bytes.fromhex("0123456789ABCDEFFEDCBA9876543210"))
 
     def test_case1(self):
         cipher = self.c.encrypt(bytes.fromhex("0123456789ABCDEFFEDCBA9876543210"))
@@ -98,17 +99,17 @@ class TestSM4(unittest.TestCase):
 
 class TestZUC(unittest.TestCase):
     def test_case1(self):
-        z = gmalg.core.ZUC(bytes.fromhex("00000000000000000000000000000000"), bytes.fromhex("00000000000000000000000000000000"))
+        z = gmalg.ZUC(bytes.fromhex("00000000000000000000000000000000"), bytes.fromhex("00000000000000000000000000000000"))
         self.assertEqual(z.generate(), bytes.fromhex("27bede74"))
         self.assertEqual(z.generate(), bytes.fromhex("018082da"))
 
     def test_case2(self):
-        z = gmalg.core.ZUC(bytes.fromhex("ffffffffffffffffffffffffffffffff"), bytes.fromhex("ffffffffffffffffffffffffffffffff"))
+        z = gmalg.ZUC(bytes.fromhex("ffffffffffffffffffffffffffffffff"), bytes.fromhex("ffffffffffffffffffffffffffffffff"))
         self.assertEqual(z.generate(), bytes.fromhex("0657cfa0"))
         self.assertEqual(z.generate(), bytes.fromhex("7096398b"))
 
     def test_case3(self):
-        z = gmalg.core.ZUC(bytes.fromhex("3d4c4be96a82fdaeb58f641db17b455b"), bytes.fromhex("84319aa8de6915ca1f6bda6bfbd8c766"))
+        z = gmalg.ZUC(bytes.fromhex("3d4c4be96a82fdaeb58f641db17b455b"), bytes.fromhex("84319aa8de6915ca1f6bda6bfbd8c766"))
         self.assertEqual(z.generate(), bytes.fromhex("14f1c272"))
         self.assertEqual(z.generate(), bytes.fromhex("3279c419"))
 

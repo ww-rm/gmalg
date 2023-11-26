@@ -1,16 +1,4 @@
-from typing import Callable, Tuple
-from .sm3 import SM3
-import secrets
-
-__all__ = ["SM2"]
-
-
-_p = bytes.fromhex("FFFFFFFE FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF 00000000 FFFFFFFF FFFFFFFF")
-_a = bytes.fromhex("FFFFFFFE FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF 00000000 FFFFFFFF FFFFFFFC")
-_b = bytes.fromhex("28E9FA9E 9D9F5E34 4D5A9E4B CF6509A7 F39789F5 15AB8F92 DDBCBD41 4D940E93")
-_n = bytes.fromhex("FFFFFFFE FFFFFFFF FFFFFFFF FFFFFFFF 7203DF6B 21C6052B 53BBF409 39D54123")
-_xG = bytes.fromhex("32C4AE2C 1F198119 5F990446 6A39C994 8FE30BBF F2660BE1 715A4589 334C74C7")
-_yG = bytes.fromhex("BC3736A2 F4F6779C 59BDCEE3 6B692153 D0A9877C C62A4740 02DF32E5 2139F0A0")
+from typing import Callable, Tuple, Type
 
 
 def _inv(x: int, p: int):
@@ -28,13 +16,60 @@ def _inv(x: int, p: int):
     return t1 % p
 
 
-class EC:
+class Hash:
+    @classmethod
+    @property
+    def max_msg_length(self) -> int:
+        raise NotImplementedError
+
+    @classmethod
+    @property
+    def hash_length(self) -> int:
+        raise NotImplementedError
+
+    def __init__(self) -> None:
+        raise NotImplementedError
+
+    def update(self, data: bytes) -> None:
+        raise NotImplementedError
+
+    @property
+    def value(self) -> bytes:
+        raise NotImplementedError
+
+
+class BlockCipher:
+    @classmethod
+    @property
+    def key_length(self) -> int:
+        raise NotImplementedError
+
+    @classmethod
+    @property
+    def block_length(self) -> int:
+        raise NotImplementedError
+
+    def __init__(self, key: bytes) -> None:
+        raise NotImplementedError
+
+    def encrypt(self, block: bytes) -> bytes:
+        raise NotImplementedError
+
+    def decrypt(self, block: bytes) -> bytes:
+        raise NotImplementedError
+
+
+class EllipticCurve:
     """Elliptic Curve (Fp)"""
 
     def __init__(self, p: int, a: int, b: int) -> None:
         self._p = p
         self._a = a
         self._b = b
+
+    @property
+    def ec_bitlength(self) -> int:
+        return self._p.bit_length()
 
     @staticmethod
     def isinf(x: int, y: int) -> bool:
@@ -98,20 +133,15 @@ class EC:
         return xk, yk
 
 
-class SM2:
-    """SM2"""
+class EllipticCurveCipher:
+    """Elliptic Curve Cipher"""
 
-    def __init__(self, d: bytes = None, xP: bytes = None, yP: bytes = None, id_: bytes = None, *,
-                 p: bytes = None, a: bytes = None, b: bytes = None, n: bytes = None, xG: bytes = None, yG: bytes = None,
-                 hash_fn: Callable[[bytes], bytes] = None, rnd_fn: Callable[[int], int] = None) -> None:
-        """SM2.
+    def __init__(self, p: bytes, a: bytes, b: bytes, n: bytes, xG: bytes, yG: bytes,
+                 hash_cls: Type[Hash], rnd_fn: Callable[[int], int], *,
+                 d: bytes = None, xP: bytes = None, yP: bytes = None, id_: bytes = None) -> None:
+        """ECC
 
         Args:
-            d (bytes): secret key.
-            xP (bytes): x of public key.
-            yP (bytes): y of public key.
-            id_ (bytes): user id used in sign.
-
             p (bytes): elliptic curve parameter `p`.
             a (bytes): elliptic curve parameter `a`.
             b (bytes): elliptic curve parameter `b`.
@@ -120,34 +150,35 @@ class SM2:
             xG (bytes): x of ECDLP parameter `G`.
             yG (bytes): y of ECDLP parameter `G`.
 
-            hash_fn ((bytes) -> bytes): hash function used in SM2.
+            hash_fn (Hash): hash function used in SM2.
             rnd_fn ((int) -> int): random function used to generate k-bit random number.
+
+            d (bytes): secret key.
+            xP (bytes): x of public key.
+            yP (bytes): y of public key.
+            id_ (bytes): user id used in sign.
         """
+
+        self._ec: EllipticCurve = EllipticCurve(int.from_bytes(p, "big"), int.from_bytes(a, "big"), int.from_bytes(b, "big"))
+        self._n: int = int.from_bytes(n, "big")
+        self._xG: int = int.from_bytes(xG, "big")
+        self._yG: int = int.from_bytes(yG, "big")
+
+        self._hash_cls = hash_cls
+        self._rnd_fn = rnd_fn
 
         self._d: int = int.from_bytes(d, "big") if d is not None else None
         self._xP: int = int.from_bytes(xP, "big") if xP is not None else None
         self._yP: int = int.from_bytes(yP, "big") if yP is not None else None
         self._id: bytes = id_
 
-        self._ec: EC = EC(int.from_bytes(p or _p, "big"), int.from_bytes(a or _a, "big"), int.from_bytes(b or _b, "big"))
-        self._n: int = int.from_bytes(n or _n, "big")
-        self._xG: int = int.from_bytes(xG or _xG, "big")
-        self._yG: int = int.from_bytes(yG or _yG, "big")
-
-        self._hash_fn = hash_fn or self._default_hash_fn
-        self._rnd_fn = rnd_fn or self._default_rnd_fn
-
-        # try generate pubkey
+        # try generate public key
         if self._d is not None and (self._xP is None or self._yP is None):
             self._xP, self._yP = self._ec.mul(self._d, self._xG, self._yG)
 
-    def _default_hash_fn(self, data: bytes) -> bytes:
-        sm3 = SM3()
-        sm3.update(data)
-        return sm3.value
-
-    def _default_rnd_fn(self, k: int) -> int:
-        return secrets.randbits(k)
+    @property
+    def rank_bitlength(self) -> int:
+        return self._n.bit_length()
 
     def generate_keypair(self) -> Tuple[bytes, Tuple[bytes, bytes]]:
         """Generate key pair.
@@ -159,7 +190,7 @@ class SM2:
 
         d_min = 1
         d_max = self._n - 2
-        bit_len = self._n.bit_length()
+        bit_len = self.rank_bitlength
         rnd = self._rnd_fn
 
         d = rnd(bit_len)
@@ -227,7 +258,9 @@ class SM2:
         Z.extend(self._xP.to_bytes(32, "big"))
         Z.extend(self._yP.to_bytes(32, "big"))
 
-        return self._hash_fn(Z)
+        hash_obj = self._hash_cls()
+        hash_obj.update(Z)
+        return hash_obj.value
 
     def sign(self, message: bytes) -> Tuple[bytes, bytes]:
         """Sign.
@@ -242,14 +275,16 @@ class SM2:
         if not self.can_sign:
             raise ValueError("Can't sign, missing required args, need 'd' and 'id_'")
 
-        e = int.from_bytes(self._hash_fn(self._Z + message), "big")
+        hash_obj = self._hash_cls()
+        hash_obj.update(self._Z + message)
+        e = int.from_bytes(hash_obj.value, "big")
 
         ec = self._ec
         n = self._n
         xG = self._xG
         yG = self._yG
         d = self._d
-        bit_len = self._n.bit_length()
+        bit_len = self.rank_bitlength
         rnd = self._rnd_fn
         k_min = 1
         k_max = self._n - 1
@@ -304,9 +339,9 @@ class SM2:
             return False
 
         M = self._Z + message
-        sm3 = SM3()
-        sm3.update(M)
-        e = int.from_bytes(sm3.value, "big")
+        hash_obj = self._hash_cls()
+        hash_obj.update(M)
+        e = int.from_bytes(hash_obj.value, "big")
 
         x, _ = ec.add(*ec.mul(s, xG, yG), *ec.mul(t, xP, yP))
         R = (e + x) % n
@@ -314,6 +349,9 @@ class SM2:
             return False
 
         return True
+
+    def _KDF(self, Z: bytes, klen: int) -> bytes:
+        ...
 
     def encrypt(self) -> bytes:
         """"""
