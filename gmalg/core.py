@@ -422,10 +422,12 @@ class EllipticCurveCipher:
 
             return C1, C2, C3
 
-    def decrypt(self, C1: Tuple[bytes, bytes], C2: bytes, C3: bytes) -> bytes:
+    def decrypt(self, x1: bytes, y1: bytes, C2: bytes, C3: bytes) -> bytes:
         """Decrypt.
 
         Args:
+            x1 (bytes): x of C1 (kG point).
+            y1 (bytes): y of C1 (kG point).
             C1 (bytes, bytes): kG point
             C2 (bytes): cipher
             C3 (bytes): hash value
@@ -442,8 +444,8 @@ class EllipticCurveCipher:
         if not self.can_decrypt:
             raise ValueError("Can't decrypt, missing required args, need 'd'")
 
-        x1 = int.from_bytes(C1[0], "big")
-        y1 = int.from_bytes(C1[1], "big")
+        x1 = int.from_bytes(x1, "big")
+        y1 = int.from_bytes(y1, "big")
 
         if not self._ecdlp.ec.isvalid(x1, y1):
             raise ValueError("Invalid C1 point, not on curve.")

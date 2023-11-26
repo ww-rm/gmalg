@@ -76,13 +76,13 @@ class TestSM2(unittest.TestCase):
             yP=bytes.fromhex("AE38F2D8 890838DF 9C19935A 65A8BCC8 994BC792 4672F912"),
         )
 
-        c1, c2, c3 = ecc.encrypt(b"encryption standard")
-        self.assertEqual(c1[0], bytes.fromhex("23FC680B 124294DF DF34DBE7 6E0C38D8 83DE4D41 FA0D4CF5"))
-        self.assertEqual(c1[1], bytes.fromhex("70CF14F2 0DAF0C4D 777F738D 16B16824 D31EEFB9 DE31EE1F"))
+        (x1, y1), c2, c3 = ecc.encrypt(b"encryption standard")
+        self.assertEqual(x1, bytes.fromhex("23FC680B 124294DF DF34DBE7 6E0C38D8 83DE4D41 FA0D4CF5"))
+        self.assertEqual(y1, bytes.fromhex("70CF14F2 0DAF0C4D 777F738D 16B16824 D31EEFB9 DE31EE1F"))
         self.assertEqual(c2, bytes.fromhex("610567 DBD4854F 51F4F00A DCC01CFE 90B1FB1C"))
         self.assertEqual(c3, bytes.fromhex("6AFB3BCE BD76F82B 252CE5EB 25B57996 86902B8C F2FD8753 6E55EF76 03B09E7C"))
 
-        self.assertEqual(ecc.decrypt(c1, c2, c3), b"encryption standard")
+        self.assertEqual(ecc.decrypt(x1, y1, c2, c3), b"encryption standard")
 
     def _rnd_encrypt2(self, k: int) -> int:
         return 0x4C62EEFD_6ECFC2B9_5B92FD6C_3D957514_8AFA1742_5546D490_18E5388D_49DD7B4F
@@ -103,13 +103,13 @@ class TestSM2(unittest.TestCase):
             yP=bytes.fromhex("75DDBA78 F15FEECB 4C7895E2 C1CDF5FE 01DEBB2C DBADF453 99CCF77B BA076A42"),
         )
 
-        c1, c2, c3 = ecc.encrypt(b"encryption standard")
-        self.assertEqual(c1[0], bytes.fromhex("245C26FB 68B1DDDD B12C4B6B F9F2B6D5 FE60A383 B0D18D1C 4144ABF1 7F6252E7"))
-        self.assertEqual(c1[1], bytes.fromhex("76CB9264 C2A7E88E 52B19903 FDC47378 F605E368 11F5C074 23A24B84 400F01B8"))
+        (x1, y1), c2, c3 = ecc.encrypt(b"encryption standard")
+        self.assertEqual(x1, bytes.fromhex("245C26FB 68B1DDDD B12C4B6B F9F2B6D5 FE60A383 B0D18D1C 4144ABF1 7F6252E7"))
+        self.assertEqual(y1, bytes.fromhex("76CB9264 C2A7E88E 52B19903 FDC47378 F605E368 11F5C074 23A24B84 400F01B8"))
         self.assertEqual(c2, bytes.fromhex("650053 A89B41C4 18B0C3AA D00D886C 00286467"))
         self.assertEqual(c3, bytes.fromhex("9C3D7360 C30156FA B7C80A02 76712DA9 D8094A63 4B766D3A 285E0748 0653426D"))
 
-        self.assertEqual(ecc.decrypt(c1, c2, c3), b"encryption standard")
+        self.assertEqual(ecc.decrypt(x1, y1, c2, c3), b"encryption standard")
 
     def _rnd_encrypt3(self, k: int) -> int:
         return 0x59276E27_D506861A_16680F3A_D9C02DCC_EF3CC1FA_3CDBE4CE_6D54B80D_EAC1BC21
@@ -122,21 +122,21 @@ class TestSM2(unittest.TestCase):
             rnd_fn=self._rnd_encrypt3,
         )
 
-        c1, c2, c3 = sm2.encrypt(b"encryption standard")
-        self.assertEqual(c1[0], bytes.fromhex("04EBFC71 8E8D1798 62043226 8E77FEB6 415E2EDE 0E073C0F 4F640ECD 2E149A73"))
-        self.assertEqual(c1[1], bytes.fromhex("E858F9D8 1E5430A5 7B36DAAB 8F950A3C 64E6EE6A 63094D99 283AFF76 7E124DF0"))
+        (x1, y1), c2, c3 = sm2.encrypt(b"encryption standard")
+        self.assertEqual(x1, bytes.fromhex("04EBFC71 8E8D1798 62043226 8E77FEB6 415E2EDE 0E073C0F 4F640ECD 2E149A73"))
+        self.assertEqual(y1, bytes.fromhex("E858F9D8 1E5430A5 7B36DAAB 8F950A3C 64E6EE6A 63094D99 283AFF76 7E124DF0"))
         self.assertEqual(c2, bytes.fromhex("21886C A989CA9C 7D580873 07CA9309 2D651EFA"))
         self.assertEqual(c3, bytes.fromhex("59983C18 F809E262 923C53AE C295D303 83B54E39 D609D160 AFCB1908 D0BD8766"))
 
-        self.assertEqual(sm2.decrypt(c1, c2, c3), b"encryption standard")
+        self.assertEqual(sm2.decrypt(x1, y1, c2, c3), b"encryption standard")
 
     def test_encrypt4(self):
         d, pk = gmalg.SM2().generate_keypair()
         sm2 = gmalg.SM2(d, *pk)
 
         plain = b"random SM2 encrypt test random SM2 encrypt test random SM2 encrypt test random SM2 encrypt test random SM2 encrypt test random SM2 encrypt test random SM2 encrypt test"
-        c1, c2, c3 = sm2.encrypt(plain)
-        self.assertEqual(sm2.decrypt(c1, c2, c3), plain)
+        (x1, y1), c2, c3 = sm2.encrypt(plain)
+        self.assertEqual(sm2.decrypt(x1, y1, c2, c3), plain)
 
 
 class TestSM3(unittest.TestCase):
