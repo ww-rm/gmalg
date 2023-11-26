@@ -13,7 +13,7 @@ pip install gmalg
 ## Implemented Core Algorithms
 
 - [x] ZUC Stream Cipher Algorithm
-- [ ] SM2 Public Key Cryptograhpic Algorithm Based on Elliptic Curves
+- [x] SM2 Public Key Cryptograhpic Algorithm Based on Elliptic Curves
 - [x] SM3 Cryptogrpahic Hash Algorithm
 - [x] SM4 Block Cipher Algorithm
 - [ ] SM9 Identification Cryptographic Algorithm
