@@ -1,5 +1,13 @@
 from typing import Callable, Tuple, Type
 
+__all__ = [
+    "Hash",
+    "BlockCipher",
+    "ECDLP",
+    "EllipticCurve",
+    "EllipticCurveCipher",
+]
+
 
 def _inv(x: int, p: int):
     r1 = p
@@ -68,7 +76,7 @@ class EllipticCurve:
         self._b = b
 
     @property
-    def ec_bitlength(self) -> int:
+    def bitlength(self) -> int:
         return self._p.bit_length()
 
     @staticmethod
@@ -133,11 +141,27 @@ class EllipticCurve:
         return xk, yk
 
 
+class ECDLP:
+    """Elliptic Curve Discrete Logarithm Problem"""
+
+    def __init__(self, p: int, a: int, b: int, n: int, xG: int, yG: int) -> None:
+        self.ec = EllipticCurve(p, a, b)
+        self._n = n
+        self._xG = xG
+        self._yG = yG
+
+    @property
+    def rank_bitlength(self) -> int:
+        return self._n.bit_length()
+
+    def kG(self, k: int) -> Tuple[int, int]:
+        return self.ec.mul(k, self._xG, self._yG)
+
+
 class EllipticCurveCipher:
     """Elliptic Curve Cipher"""
 
-    def __init__(self, p: bytes, a: bytes, b: bytes, n: bytes, xG: bytes, yG: bytes,
-                 hash_cls: Type[Hash], rnd_fn: Callable[[int], int], *,
+    def __init__(self, ecdlp: ECDLP, hash_cls: Type[Hash], rnd_fn: Callable[[int], int], *,
                  d: bytes = None, xP: bytes = None, yP: bytes = None, id_: bytes = None) -> None:
         """ECC
 
@@ -159,10 +183,7 @@ class EllipticCurveCipher:
             id_ (bytes): user id used in sign.
         """
 
-        self._ec: EllipticCurve = EllipticCurve(int.from_bytes(p, "big"), int.from_bytes(a, "big"), int.from_bytes(b, "big"))
-        self._n: int = int.from_bytes(n, "big")
-        self._xG: int = int.from_bytes(xG, "big")
-        self._yG: int = int.from_bytes(yG, "big")
+        self._ecdlp = ecdlp
 
         self._hash_cls = hash_cls
         self._rnd_fn = rnd_fn
@@ -174,11 +195,19 @@ class EllipticCurveCipher:
 
         # try generate public key
         if self._d is not None and (self._xP is None or self._yP is None):
-            self._xP, self._yP = self._ec.mul(self._d, self._xG, self._yG)
+            self._xP, self._yP = self._ecdlp.kG(self._d)
 
-    @property
-    def rank_bitlength(self) -> int:
-        return self._n.bit_length()
+    def _hash_fn(self, data: bytes) -> bytes:
+        hash_obj = self._hash_cls()
+        hash_obj.update(data)
+        return hash_obj.value
+
+    def _randint(self, a: int, b: int) -> int:
+        while True:
+            n = self._rnd_fn(b.bit_length())
+            if n < a or n > b:
+                continue
+            return n
 
     def generate_keypair(self) -> Tuple[bytes, Tuple[bytes, bytes]]:
         """Generate key pair.
@@ -188,17 +217,8 @@ class EllipticCurveCipher:
             (bytes, bytes): public key, (xP, yP)
         """
 
-        d_min = 1
-        d_max = self._n - 2
-        bit_len = self.rank_bitlength
-        rnd = self._rnd_fn
-
-        d = rnd(bit_len)
-        while d < d_min or d > d_max:
-            d = rnd(bit_len)
-
-        xP, yP = self._ec.mul(d, self._xG, self._yG)
-
+        d = self._randint(1, self._ecdlp._n - 2)
+        xP, yP = self._ecdlp.kG(d)
         return d.to_bytes(32, "big"), (xP.to_bytes(32, "big"), yP.to_bytes(32, "big"))
 
     def verify_pubkey(self, x: bytes, y: bytes) -> bool:
@@ -215,13 +235,13 @@ class EllipticCurveCipher:
         x = int.from_bytes(x, "big")
         y = int.from_bytes(y, "big")
 
-        if self._ec.isinf(x, y):
+        if self._ecdlp.ec.isinf(x, y):
             return False
 
-        if not self._ec.isvalid(x, y):
+        if not self._ecdlp.ec.isvalid(x, y):
             return False
 
-        if not self._ec.isinf(self._ec.mul(self._n, x, y)):
+        if not self._ecdlp.ec.isinf(self._ecdlp.ec.mul(self._ecdlp._n, x, y)):
             return False
 
         return True
@@ -251,16 +271,14 @@ class EllipticCurveCipher:
         Z = bytearray()
         Z.extend(ENTL.to_bytes(2, "big"))
         Z.extend(self._id)
-        Z.extend(self._ec._a.to_bytes(32, "big"))
-        Z.extend(self._ec._b.to_bytes(32, "big"))
-        Z.extend(self._xG.to_bytes(32, "big"))
-        Z.extend(self._yG.to_bytes(32, "big"))
+        Z.extend(self._ecdlp.ec._a.to_bytes(32, "big"))
+        Z.extend(self._ecdlp.ec._b.to_bytes(32, "big"))
+        Z.extend(self._ecdlp._xG.to_bytes(32, "big"))
+        Z.extend(self._ecdlp._yG.to_bytes(32, "big"))
         Z.extend(self._xP.to_bytes(32, "big"))
         Z.extend(self._yP.to_bytes(32, "big"))
 
-        hash_obj = self._hash_cls()
-        hash_obj.update(Z)
-        return hash_obj.value
+        return self._hash_fn(Z)
 
     def sign(self, message: bytes) -> Tuple[bytes, bytes]:
         """Sign.
@@ -275,25 +293,15 @@ class EllipticCurveCipher:
         if not self.can_sign:
             raise ValueError("Can't sign, missing required args, need 'd' and 'id_'")
 
-        hash_obj = self._hash_cls()
-        hash_obj.update(self._Z + message)
-        e = int.from_bytes(hash_obj.value, "big")
+        e = int.from_bytes(self._hash_fn(self._Z + message), "big")
 
-        ec = self._ec
-        n = self._n
-        xG = self._xG
-        yG = self._yG
+        ecdlp = self._ecdlp
+        n = self._ecdlp._n
         d = self._d
-        bit_len = self.rank_bitlength
-        rnd = self._rnd_fn
-        k_min = 1
-        k_max = self._n - 1
         while True:
-            k = rnd(bit_len)
-            if k < k_min or k > k_max:
-                continue
+            k = self._randint(1, n - 1)
 
-            x, _ = ec.mul(k, xG, yG)
+            x, _ = ecdlp.kG(k)
             r = (e + x) % n
             if r == 0 or (r + k == n):
                 continue
@@ -320,10 +328,8 @@ class EllipticCurveCipher:
         if not self.can_verify:
             raise ValueError("Can't verify, missing required args, need 'xP', 'yP', 'id_'")
 
-        ec = self._ec
-        n = self._n
-        xG = self._xG
-        yG = self._yG
+        ecdlp = self._ecdlp
+        n = self._ecdlp._n
         xP = self._xP
         yP = self._yP
 
@@ -338,12 +344,9 @@ class EllipticCurveCipher:
         if t == 0:
             return False
 
-        M = self._Z + message
-        hash_obj = self._hash_cls()
-        hash_obj.update(M)
-        e = int.from_bytes(hash_obj.value, "big")
+        e = int.from_bytes(self._hash_fn(self._Z + message), "big")
 
-        x, _ = ec.add(*ec.mul(s, xG, yG), *ec.mul(t, xP, yP))
+        x, _ = ecdlp.ec.add(*ecdlp.kG(s), *ecdlp.ec.mul(t, xP, yP))
         R = (e + x) % n
         if R != r:
             return False
@@ -351,10 +354,42 @@ class EllipticCurveCipher:
         return True
 
     def _KDF(self, Z: bytes, klen: int) -> bytes:
-        ...
+        """
+        Args:
+            klen (int): key byte length
+        """
 
-    def encrypt(self) -> bytes:
-        """"""
+        hash_fn = self._hash_fn
+        v = self._hash_cls.hash_length
+
+        count, tail = divmod(klen, v)
+        if count + (tail > 0) >= 0xffffffff:
+            raise OverflowError("klen is too big.")
+
+        K = bytearray()
+        for ct in range(1, count + 1):
+            K.extend(hash_fn(Z + ct.to_bytes(4, "big")))
+
+        if tail > 0:
+            K.extend(hash_fn(Z + (ct + 1).to_bytes(4, "big"))[:tail])
+
+        return bytes(K)
+
+    def encrypt(self, data: bytes) -> bytes:
+        """Encrypt
+
+        Args:
+            data (bytes): plain text to be encrypted.
+
+        Returns:
+            bytes: cipher
+        """
+
+        cipher = bytearray()
+        k_min = 1
+        k_max = self._n - 1
+        while True:
+            k = ...
 
     def decrypt(self) -> bytes:
         """"""

@@ -11,7 +11,7 @@ class TestSM2(unittest.TestCase):
     def _const_rnd2(self, k: int) -> int:
         return 0x6CB28D99_385C175C_94F94E93_4817663F_C176D925_DD72B727_260DBAAE_1FB2F96F
 
-    def test_sign(self):
+    def test_sign1(self):
         sm2 = gmalg.SM2(
             bytes.fromhex("3945208F 7B2144B1 3F36E38A C6D39F95 88939369 2860B51A 42FB81EF 4DF7C5B8"),
             bytes.fromhex("09F9DF31 1E5421A1 50DD7D16 1E4BC5C6 72179FAD 1833FC07 6BB08FF3 56F35020"),
@@ -27,14 +27,16 @@ class TestSM2(unittest.TestCase):
         self.assertEqual(sm2.verify(b"message digest", r, s), True)
 
     def test_sign2(self):
+        ecdlp = gmalg.core.ECDLP(
+            0x8542D69E_4C044F18_E8B92435_BF6FF7DE_45728391_5C45517D_722EDB8B_08F1DFC3,
+            0x787968B4_FA32C3FD_2417842E_73BBFEFF_2F3C848B_6831D7E0_EC65228B_3937E498,
+            0x63E4C6D3_B23B0C84_9CF84241_484BFE48_F61D59A5_B16BA06E_6E12D1DA_27C5249A,
+            0x8542D69E_4C044F18_E8B92435_BF6FF7DD_29772063_0485628D_5AE74EE7_C32E79B7,
+            0x421DEBD6_1B62EAB6_746434EB_C3CC315E_32220B3B_ADD50BDC_4C4E6C14_7FEDD43D,
+            0x0680512B_CBB42C07_D47349D2_153B70C4_E5D7FDFC_BFA36EA1_A85841B9_E46E09A2
+        )
         ecc = gmalg.core.EllipticCurveCipher(
-            bytes.fromhex("8542D69E 4C044F18 E8B92435 BF6FF7DE 45728391 5C45517D 722EDB8B 08F1DFC3"),
-            bytes.fromhex("787968B4 FA32C3FD 2417842E 73BBFEFF 2F3C848B 6831D7E0 EC65228B 3937E498"),
-            bytes.fromhex("63E4C6D3 B23B0C84 9CF84241 484BFE48 F61D59A5 B16BA06E 6E12D1DA 27C5249A"),
-            bytes.fromhex("8542D69E 4C044F18 E8B92435 BF6FF7DD 29772063 0485628D 5AE74EE7 C32E79B7"),
-            bytes.fromhex("421DEBD6 1B62EAB6 746434EB C3CC315E 32220B3B ADD50BDC 4C4E6C14 7FEDD43D"),
-            bytes.fromhex("0680512B CBB42C07 D47349D2 153B70C4 E5D7FDFC BFA36EA1 A85841B9 E46E09A2"),
-            gmalg.SM3, self._const_rnd2,
+            ecdlp, gmalg.SM3, self._const_rnd2,
             d=bytes.fromhex("128B2FA8 BD433C6C 068C8D80 3DFF7979 2A519A55 171B1B65 0C23661D 15897263"),
             xP=bytes.fromhex("0AE4C779 8AA0F119 471BEE11 825BE462 02BB79E2 A5844495 E97C04FF 4DF2548A"),
             yP=bytes.fromhex("7C0240F8 8F1CD4E1 6352A73C 17B7F16F 07353E53 A176D684 A9FE0C6B B798E857"),
@@ -46,6 +48,12 @@ class TestSM2(unittest.TestCase):
         self.assertEqual(s, bytes.fromhex("6FC6DAC3 2C5D5CF1 0C77DFB2 0F7C2EB6 67A45787 2FB09EC5 6327A67E C7DEEBE7"))
 
         self.assertEqual(ecc.verify(b"message digest", r, s), True)
+
+    def test_sign3(self):
+        d, pk = gmalg.SM2().generate_keypair()
+        sm2 = gmalg.SM2(d, *pk, b"test")
+        r, s = sm2.sign(b"random SM2 sign test")
+        self.assertEqual(sm2.verify(b"random SM2 sign test", r, s), True)
 
 
 class TestSM3(unittest.TestCase):

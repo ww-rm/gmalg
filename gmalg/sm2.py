@@ -1,7 +1,7 @@
 import secrets
 from typing import Callable
 
-from .core import EllipticCurveCipher
+from .core import ECDLP, EllipticCurveCipher
 from .sm3 import SM3
 
 __all__ = ["SM2"]
@@ -28,12 +28,12 @@ class SM2(EllipticCurveCipher):
             yP (bytes): y of public key.
             id_ (bytes): user id used in sign.
 
-            rnd_fn ((int) -> int): random function used to generate k-bit random number.
+            rnd_fn ((int) -> int): random function used to generate k-bit random number, default to `secrets.randbits`
         """
         super().__init__(
-            _p, _a, _b, _n, _xG, _yG,
-            SM3, rnd_fn or self._default_rnd_fn,
-            d=d, xP=xP, yP=yP, id_=id_
+            ECDLP(int.from_bytes(_p, "big"), int.from_bytes(_a, "big"), int.from_bytes(_b, "big"),
+                  int.from_bytes(_n, "big"), int.from_bytes(_xG, "big"), int.from_bytes(_yG, "big")),
+            SM3, rnd_fn or self._default_rnd_fn, d=d, xP=xP, yP=yP, id_=id_
         )
 
     def _default_rnd_fn(self, k: int) -> int:
