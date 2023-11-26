@@ -91,7 +91,7 @@ class SM3(Hash):
     @classmethod
     @property
     def max_msg_length(self) -> int:
-        return 1 << 64 >> 3
+        return 0x2000000000000000  # 1 << 64 >> 3
 
     @classmethod
     @property
