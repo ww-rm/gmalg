@@ -397,6 +397,9 @@ class EllipticCurveCipher:
             bytes: C2, cipher
             bytes: C3, hash value
 
+        Raises:
+            ValueError: Infinite point encountered.
+
         The return order is `C1, C2, C3`, **NOT** `C1, C3, C2`.
         """
 
@@ -407,7 +410,8 @@ class EllipticCurveCipher:
             k = self._randint(1, self._ecdlp._n - 1)
             x1, y1 = self._ecdlp.kG(k)
 
-            # XXX: no verify for S = [h]PB
+            if self._ecdlp.ec.isinf(*self._ecdlp.ec.mul(self._ecdlp._h, self._xP, self._yP)):
+                raise ValueError("Infinite point encountered.")
 
             x2, y2 = self._ecdlp.ec.mul(k, self._xP, self._yP)
             x2 = x2.to_bytes((x2.bit_length() + 7) >> 3, "big")
@@ -451,7 +455,8 @@ class EllipticCurveCipher:
         if not self._ecdlp.ec.isvalid(x1, y1):
             raise ValueError("Invalid C1 point, not on curve.")
 
-        # XXX: no verify for S = [h]PB
+        if self._ecdlp.ec.isinf(*self._ecdlp.ec.mul(self._ecdlp._h, x1, y1)):
+            raise ValueError("Infinite point encountered.")
 
         x2, y2 = self._ecdlp.ec.mul(self._d, x1, y1)
         x2 = x2.to_bytes((x2.bit_length() + 7) >> 3, "big")
