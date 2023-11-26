@@ -2,8 +2,6 @@
 
 GM algorithms implemented in pure python.
 
-It has low computational performance and is only used to experience and learn GM algorithms.
-
 ## Install
 
 ```bat
