@@ -159,7 +159,7 @@ class SM3(Hash):
         B.append(0x80)
         for _ in range(b_len + 1, 56):
             B.append(0x00)
-        B.extend((self._msg_len * 8).to_bytes(8, "big"))
+        B.extend((self._msg_len << 3).to_bytes(8, "big"))
 
         _expand(B, W1, W2)
         _compress(W1, W2, V)
