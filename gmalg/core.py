@@ -442,7 +442,8 @@ class EllipticCurveCipher:
 
         Raises:
             ValueError: Invalid C1 point, not on curve.
-            ValueError: Invalid t value.
+            ValueError: Infinite point encountered.
+            ValueError: Invalid key stream.
             ValueError: Incorrect hash value.
         """
 
@@ -464,7 +465,7 @@ class EllipticCurveCipher:
 
         t = self._KDF(x2 + y2, len(C2))
         if int.from_bytes(t, "big") == 0:
-            raise ValueError("Invalid t value.")
+            raise ValueError("Invalid key stream.")
 
         M = bytes(map(lambda b1, b2: b1 ^ b2, C2, t))
 
