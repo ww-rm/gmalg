@@ -66,7 +66,7 @@ print(cipher.hex())
 print(sm2.decrypt(cipher))
 ```
 
-Go to [gmalg-docs:TODO] see more detailed usages.
+Go to [docs:TODO] see more detailed usages.
 
 ---
 
