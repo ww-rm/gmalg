@@ -99,9 +99,16 @@ class EllipticCurve:
 
     @staticmethod
     def isinf(x: int, y: int) -> bool:
+        """Check if a point is a infinite point."""
+
         return x < 0 or y < 0
 
     def __init__(self, p: int, a: int, b: int) -> None:
+        """Elliptic Curve (Fp)
+
+        y^2 = x^3 + ax + b (mod p)
+        """
+
         self.p = p
         self.a = a
         self.b = b
@@ -154,7 +161,7 @@ class EllipticCurve:
         return self.add(x1, y1, x2, self.p - y2)
 
     def mul(self, k: int, x: int, y: int) -> Tuple[int, int]:
-        """k-multiply points."""
+        """Scalar multiplication by k."""
 
         xk = -1
         yk = -1
@@ -181,6 +188,15 @@ class ECDLP(EllipticCurve):
     """Elliptic Curve Discrete Logarithm Problem"""
 
     def __init__(self, p: int, a: int, b: int, xG: int, yG: int, n: int, h: int = 1) -> None:
+        """Elliptic Curve Discrete Logarithm Problem
+
+        Elliptic Curve (Fp): y^2 = x^3 + ax + b (mod p)
+
+        Base point: (xG, yG)
+        Order of the base point: n
+        Cofactor: h
+        """
+
         super().__init__(p, a, b)
 
         self.xG = xG
@@ -189,6 +205,8 @@ class ECDLP(EllipticCurve):
         self.h = h
 
     def kG(self, k: int) -> Tuple[int, int]:
+        """Scalar multiplication of G by k."""
+
         return self.mul(k, self.xG, self.yG)
 
 
@@ -196,7 +214,7 @@ class EllipticCurveCipher:
     """Elliptic Curve Cipher"""
 
     def __init__(self, ecdlp: ECDLP, hash_cls: Type[Hash], rnd_fn: Callable[[int], int]) -> None:
-        """ECC
+        """Elliptic Curve Cipher
 
         Args:
             ecdlp (ECDLP): ECDLP used in cipher.
@@ -222,29 +240,18 @@ class EllipticCurveCipher:
             return n
 
     def generate_keypair(self) -> Tuple[int, Tuple[int, int]]:
-        """Generate key pair.
-
-        Returns:
-            int: secret key
-            (int, int): public key, (xP, yP)
-        """
+        """Generate key pair."""
 
         d = self._randint(1, self.ecdlp.n - 2)
         return d, self.ecdlp.kG(d)
 
     def get_pubkey(self, d: int) -> Tuple[int, int]:
+        """Generate public key by secret key d."""
+
         return self.ecdlp.kG(d)
 
     def verify_pubkey(self, x: int, y: int) -> bool:
-        """Verify if a public key is valid.
-
-        Args:
-            x (int): x
-            y (int): y
-
-        Returns:
-            (bool): Whether valid.
-        """
+        """Verify if a public key is valid."""
 
         if self.ecdlp.isinf(x, y):
             return False
@@ -277,7 +284,7 @@ class EllipticCurveCipher:
         return self._hash_fn(Z)
 
     def sign(self, message: bytes, d: int, id_: bytes, xP: int = None, yP: int = None) -> Tuple[int, int]:
-        """Sign.
+        """Generate signature on the message.
 
         Args:
             message (bytes): message to be signed.
@@ -312,7 +319,7 @@ class EllipticCurveCipher:
             return r, s
 
     def verify(self, message: bytes, r: int, s: int, id_: bytes, xP: int, yP: int) -> bool:
-        """Verify.
+        """Verify the signature on the message.
 
         Args:
             message (bytes): Message to be verified.
@@ -371,7 +378,7 @@ class EllipticCurveCipher:
         return bytes(K)
 
     def encrypt(self, plain: bytes, xP: int, yP: int) -> Tuple[Tuple[int, int], bytes, bytes]:
-        """Encrypt
+        """Encrypt.
 
         Args:
             data (bytes): plain text to be encrypted.
