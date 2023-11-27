@@ -26,70 +26,96 @@ def _inv(x: int, p: int):
 
 class Hash:
     @classmethod
-    @property
     def max_msg_length(self) -> int:
+        """Get maximum message length in bytes."""
+
         raise NotImplementedError
 
     @classmethod
-    @property
     def hash_length(self) -> int:
+        """Get output hash value length in bytes."""
+
         raise NotImplementedError
 
     def __init__(self) -> None:
         raise NotImplementedError
 
     def update(self, data: bytes) -> None:
+        """Update internal state.
+
+        Args:
+            data (bytes): data stream to be updated.
+        """
+
         raise NotImplementedError
 
-    @property
     def value(self) -> bytes:
+        """Returns current hash value in bytes.
+
+        Returns:
+            bytes: Hash value.
+        """
+
         raise NotImplementedError
 
 
 class BlockCipher:
     @classmethod
-    @property
     def key_length(self) -> int:
+        """Get key length in bytes."""
+
         raise NotImplementedError
 
     @classmethod
-    @property
     def block_length(self) -> int:
+        """Get block length in bytes."""
+
         raise NotImplementedError
 
     def __init__(self, key: bytes) -> None:
+        """Block Cipher
+
+        Args:
+            key (bytes): key used in cipher, has a length of `BlockCipher.key_length()`
+        """
+
         raise NotImplementedError
 
     def encrypt(self, block: bytes) -> bytes:
+        """Encrypt"""
+
         raise NotImplementedError
 
     def decrypt(self, block: bytes) -> bytes:
+        """Decrypt"""
+
         raise NotImplementedError
 
 
 class EllipticCurve:
     """Elliptic Curve (Fp)"""
 
-    def __init__(self, p: int, a: int, b: int) -> None:
-        self._p = p
-        self._a = a
-        self._b = b
-
-    @property
-    def bitlength(self) -> int:
-        return self._p.bit_length()
+    INF = (-1, -1)
 
     @staticmethod
     def isinf(x: int, y: int) -> bool:
         return x < 0 or y < 0
 
+    def __init__(self, p: int, a: int, b: int) -> None:
+        self.p = p
+        self.a = a
+        self.b = b
+
+        self.bitlength = self.p.bit_length()
+        self.length = (self.bitlength + 7) >> 3
+
     def isvalid(self, x: int, y: int) -> bool:
         """Verify if a point is on the curve."""
 
-        if x >= self._p or y >= self._p:
+        if x >= self.p or y >= self.p:
             return False
 
-        if (y * y - x * x * x - self._a * x - self._b) % self._p != 0:
+        if (y * y - x * x * x - self.a * x - self.b) % self.p != 0:
             return False
 
         return True
@@ -97,8 +123,8 @@ class EllipticCurve:
     def add(self, x1: int, y1: int, x2: int, y2: int) -> Tuple[int, int]:
         """Add two points. Negative numbers means infinite point."""
 
-        a = self._a
-        p = self._p
+        a = self.a
+        p = self.p
 
         if self.isinf(x1, y1):
             return x2, y2
@@ -125,7 +151,7 @@ class EllipticCurve:
     def sub(self, x1: int, y1: int, x2: int, y2: int) -> Tuple[int, int]:
         """Sub two points."""
 
-        return self.add(x1, y1, x2, self._p - y2)
+        return self.add(x1, y1, x2, self.p - y2)
 
     def mul(self, k: int, x: int, y: int) -> Tuple[int, int]:
         """k-multiply points."""
@@ -140,179 +166,141 @@ class EllipticCurve:
 
         return xk, yk
 
+    def itob(self, i: int) -> bytes:
+        """Convert domain elements to bytes."""
 
-class ECDLP:
+        return i.to_bytes(self.length, "big")
+
+    def btoi(self, b: bytes) -> int:
+        """Convert bytes to domain elements"""
+
+        return int.from_bytes(b, "big")
+
+
+class ECDLP(EllipticCurve):
     """Elliptic Curve Discrete Logarithm Problem"""
 
-    def __init__(self, ec: EllipticCurve, xG: int, yG: int, n: int, h: int = 1) -> None:
-        self.ec = ec
-        self._xG = xG
-        self._yG = yG
-        self._n = n
-        self._h = h
+    def __init__(self, p: int, a: int, b: int, xG: int, yG: int, n: int, h: int = 1) -> None:
+        super().__init__(p, a, b)
 
-    @property
-    def rank_bitlength(self) -> int:
-        return self._n.bit_length()
+        self.xG = xG
+        self.yG = yG
+        self.n = n
+        self.h = h
 
     def kG(self, k: int) -> Tuple[int, int]:
-        return self.ec.mul(k, self._xG, self._yG)
+        return self.mul(k, self.xG, self.yG)
 
 
 class EllipticCurveCipher:
     """Elliptic Curve Cipher"""
 
-    def __init__(self, ecdlp: ECDLP, hash_cls: Type[Hash], rnd_fn: Callable[[int], int], *,
-                 d: bytes = None, xP: bytes = None, yP: bytes = None, id_: bytes = None) -> None:
+    def __init__(self, ecdlp: ECDLP, hash_cls: Type[Hash], rnd_fn: Callable[[int], int]) -> None:
         """ECC
 
         Args:
-            p (bytes): elliptic curve parameter `p`.
-            a (bytes): elliptic curve parameter `a`.
-            b (bytes): elliptic curve parameter `b`.
-
-            n (bytes): ECDLP parameter `n`.
-            xG (bytes): x of ECDLP parameter `G`.
-            yG (bytes): y of ECDLP parameter `G`.
-
-            hash_fn (Hash): hash function used in SM2.
+            ecdlp (ECDLP): ECDLP used in cipher.
+            hash_fn (Hash): hash function used in cipher.
             rnd_fn ((int) -> int): random function used to generate k-bit random number.
-
-            d (bytes): secret key.
-            xP (bytes): x of public key.
-            yP (bytes): y of public key.
-            id_ (bytes): user id used in sign.
         """
 
-        self._ecdlp = ecdlp
-
+        self.ecdlp = ecdlp
         self._hash_cls = hash_cls
         self._rnd_fn = rnd_fn
-
-        self._d: int = int.from_bytes(d, "big") if d is not None else None
-        self._xP: int = int.from_bytes(xP, "big") if xP is not None else None
-        self._yP: int = int.from_bytes(yP, "big") if yP is not None else None
-        self._id: bytes = id_
-
-        # try generate public key
-        if self._d is not None and (self._xP is None or self._yP is None):
-            self._xP, self._yP = self._ecdlp.kG(self._d)
 
     def _hash_fn(self, data: bytes) -> bytes:
         hash_obj = self._hash_cls()
         hash_obj.update(data)
-        return hash_obj.value
+        return hash_obj.value()
 
     def _randint(self, a: int, b: int) -> int:
+        bitlength = b.bit_length()
         while True:
-            n = self._rnd_fn(b.bit_length())
+            n = self._rnd_fn(bitlength)
             if n < a or n > b:
                 continue
             return n
 
-    def generate_keypair(self) -> Tuple[bytes, Tuple[bytes, bytes]]:
+    def generate_keypair(self) -> Tuple[int, Tuple[int, int]]:
         """Generate key pair.
 
         Returns:
-            bytes: secret key
-            (bytes, bytes): public key, (xP, yP)
+            int: secret key
+            (int, int): public key, (xP, yP)
         """
 
-        d = self._randint(1, self._ecdlp._n - 2)
-        xP, yP = self._ecdlp.kG(d)
-        return (
-            d.to_bytes((d.bit_length() + 7) >> 3, "big"),
-            (xP.to_bytes((xP.bit_length() + 7 >> 3), "big"), yP.to_bytes((yP.bit_length() + 7) >> 3, "big"))
-        )
+        d = self._randint(1, self.ecdlp.n - 2)
+        return d, self.ecdlp.kG(d)
 
-    def verify_pubkey(self, x: bytes, y: bytes) -> bool:
+    def get_pubkey(self, d: int) -> Tuple[int, int]:
+        return self.ecdlp.kG(d)
+
+    def verify_pubkey(self, x: int, y: int) -> bool:
         """Verify if a public key is valid.
 
         Args:
-            x (bytes): x
-            y (bytes): y
+            x (int): x
+            y (int): y
 
         Returns:
-            (bool): Whether OK.
+            (bool): Whether valid.
         """
 
-        x = int.from_bytes(x, "big")
-        y = int.from_bytes(y, "big")
-
-        if self._ecdlp.ec.isinf(x, y):
+        if self.ecdlp.isinf(x, y):
             return False
 
-        if not self._ecdlp.ec.isvalid(x, y):
+        if not self.ecdlp.isvalid(x, y):
             return False
 
-        if not self._ecdlp.ec.isinf(self._ecdlp.ec.mul(self._ecdlp._n, x, y)):
+        if not self.ecdlp.isinf(self.ecdlp.mul(self.ecdlp.n, x, y)):
             return False
 
         return True
 
-    @property
-    def can_sign(self) -> bool:
-        return self._d is not None and self._id is not None
-
-    @property
-    def can_verify(self) -> bool:
-        return self._xP is not None and self._yP is not None and self._id is not None
-
-    @property
-    def can_encrypt(self) -> bool:
-        return self._xP is not None and self._yP is not None
-
-    @property
-    def can_decrypt(self) -> bool:
-        return self._d is not None
-
-    @property
-    def _Z(self) -> bytes:
-        ENTL = len(self._id) << 3
+    def _Z(self, id_: bytes, xP: int, yP: int) -> bytes:
+        ENTL = len(id_) << 3
         if ENTL.bit_length() > 16:
             raise ValueError("ID bit length more than 2 bytes.")
 
-        a = self._ecdlp.ec._a
-        b = self._ecdlp.ec._b
-        xG = self._ecdlp._xG
-        yG = self._ecdlp._yG
-        xP = self._xP
-        yP = self._yP
+        itob = self.ecdlp.itob
 
         Z = bytearray()
         Z.extend(ENTL.to_bytes(2, "big"))
-        Z.extend(self._id)
-        Z.extend(a.to_bytes((a.bit_length() + 7 >> 3), "big"))
-        Z.extend(b.to_bytes((b.bit_length() + 7 >> 3), "big"))
-        Z.extend(xG.to_bytes((xG.bit_length() + 7 >> 3), "big"))
-        Z.extend(yG.to_bytes((yG.bit_length() + 7 >> 3), "big"))
-        Z.extend(xP.to_bytes((xP.bit_length() + 7 >> 3), "big"))
-        Z.extend(yP.to_bytes((yP.bit_length() + 7 >> 3), "big"))
+        Z.extend(id_)
+        Z.extend(itob(self.ecdlp.a))
+        Z.extend(itob(self.ecdlp.b))
+        Z.extend(itob(self.ecdlp.xG))
+        Z.extend(itob(self.ecdlp.yG))
+        Z.extend(itob(xP))
+        Z.extend(itob(yP))
 
         return self._hash_fn(Z)
 
-    def sign(self, message: bytes) -> Tuple[bytes, bytes]:
+    def sign(self, message: bytes, d: int, id_: bytes, xP: int = None, yP: int = None) -> Tuple[int, int]:
         """Sign.
 
         Args:
             message (bytes): message to be signed.
+            d (int): secret key.
+            id_ (bytes): user id.
+            xP (int): x of public key
+            yP (int): y of public key
 
         Returns:
-            (bytes, bytes): (r, s)
+            (int, int): (r, s)
         """
 
-        if not self.can_sign:
-            raise ValueError("Can't sign, missing required args, need 'd' and 'id_'")
+        if xP is None or yP is None:
+            xP, yP = self.get_pubkey(d)
 
-        e = int.from_bytes(self._hash_fn(self._Z + message), "big")
+        e = int.from_bytes(self._hash_fn(self._Z(id_, xP, yP) + message), "big")
 
-        ecdlp = self._ecdlp
-        n = self._ecdlp._n
-        d = self._d
+        ecdlp = self.ecdlp
+        n = self.ecdlp.n
         while True:
             k = self._randint(1, n - 1)
-
             x, _ = ecdlp.kG(k)
+
             r = (e + x) % n
             if r == 0 or (r + k == n):
                 continue
@@ -320,34 +308,30 @@ class EllipticCurveCipher:
             s = (_inv(1 + d, n) * (k - r * d)) % n
             if s == 0:
                 continue
-            break
 
-        return (r.to_bytes((r.bit_length() + 7 >> 3), "big"), s.to_bytes((s.bit_length() + 7 >> 3), "big"))
+            return r, s
 
-    def verify(self, message: bytes, r: bytes, s: bytes) -> bool:
+    def verify(self, message: bytes, r: int, s: int, id_: bytes, xP: int, yP: int) -> bool:
         """Verify.
 
         Args:
             message (bytes): Message to be verified.
-            r (bytes): r
-            s (bytes): s
+            r (int): r
+            s (int): s
+            id_ (bytes): user id.
+            xP (int): x of public key.
+            yP (int): y of public key.
 
         Returns:
             bool: Whether OK.
         """
 
-        if not self.can_verify:
-            raise ValueError("Can't verify, missing required args, need 'xP', 'yP', 'id_'")
+        ecdlp = self.ecdlp
+        n = self.ecdlp.n
 
-        ecdlp = self._ecdlp
-        n = self._ecdlp._n
-        xP = self._xP
-        yP = self._yP
-
-        r: int = int.from_bytes(r, "big")
         if r < 1 or r > n - 1:
             return False
-        s: int = int.from_bytes(s, "big")
+
         if s < 1 or s > n - 1:
             return False
 
@@ -355,11 +339,10 @@ class EllipticCurveCipher:
         if t == 0:
             return False
 
-        e = int.from_bytes(self._hash_fn(self._Z + message), "big")
+        e = int.from_bytes(self._hash_fn(self._Z(id_, xP, yP) + message), "big")
 
-        x, _ = ecdlp.ec.add(*ecdlp.kG(s), *ecdlp.ec.mul(t, xP, yP))
-        R = (e + x) % n
-        if R != r:
+        x, _ = ecdlp.add(*ecdlp.kG(s), *ecdlp.mul(t, xP, yP))
+        if (e + x) % n != r:
             return False
 
         return True
@@ -367,11 +350,12 @@ class EllipticCurveCipher:
     def _KDF(self, Z: bytes, klen: int) -> bytes:
         """
         Args:
+            Z (bytes): secret byets.
             klen (int): key byte length
         """
 
         hash_fn = self._hash_fn
-        v = self._hash_cls.hash_length
+        v = self._hash_cls.hash_length()
 
         count, tail = divmod(klen, v)
         if count + (tail > 0) >= 0xffffffff:
@@ -386,14 +370,16 @@ class EllipticCurveCipher:
 
         return bytes(K)
 
-    def encrypt(self, plain: bytes) -> Tuple[Tuple[bytes, bytes], bytes, bytes]:
+    def encrypt(self, plain: bytes, xP: int, yP: int) -> Tuple[Tuple[int, int], bytes, bytes]:
         """Encrypt
 
         Args:
             data (bytes): plain text to be encrypted.
+            xP (int): x of public key.
+            yP (int): y of public key.
 
         Returns:
-            (bytes, bytes): C1, kG point
+            (int, int): C1, kG point
             bytes: C2, cipher
             bytes: C3, hash value
 
@@ -403,39 +389,36 @@ class EllipticCurveCipher:
         The return order is `C1, C2, C3`, **NOT** `C1, C3, C2`.
         """
 
-        if not self.can_encrypt:
-            raise ValueError("Can't encrypt, missing required args, need 'xP' and 'yP'")
-
         while True:
-            k = self._randint(1, self._ecdlp._n - 1)
-            x1, y1 = self._ecdlp.kG(k)
+            k = self._randint(1, self.ecdlp.n - 1)
+            x1, y1 = self.ecdlp.kG(k)  # C1
 
-            if self._ecdlp.ec.isinf(*self._ecdlp.ec.mul(self._ecdlp._h, self._xP, self._yP)):
+            if self.ecdlp.isinf(*self.ecdlp.mul(self.ecdlp.h, xP, yP)):
                 raise ValueError("Infinite point encountered.")
 
-            x2, y2 = self._ecdlp.ec.mul(k, self._xP, self._yP)
-            x2 = x2.to_bytes((x2.bit_length() + 7) >> 3, "big")
-            y2 = y2.to_bytes((y2.bit_length() + 7) >> 3, "big")
+            x2, y2 = self.ecdlp.mul(k, xP, yP)
+            x2 = self.ecdlp.itob(x2)
+            y2 = self.ecdlp.itob(y2)
 
             t = self._KDF(x2 + y2, len(plain))
-            if int.from_bytes(t, "big") == 0:
+            if not any(t):
                 continue
 
-            C1 = (x1.to_bytes((x1.bit_length() + 7 >> 3), "big"), y1.to_bytes((y1.bit_length() + 7 >> 3), "big"))
             C2 = bytes(map(lambda b1, b2: b1 ^ b2, plain, t))
             C3 = self._hash_fn(x2 + plain + y2)
 
-            return C1, C2, C3
+            return (x1, y1), C2, C3
 
-    def decrypt(self, x1: bytes, y1: bytes, C2: bytes, C3: bytes) -> bytes:
+    def decrypt(self, x1: int, y1: int, C2: bytes, C3: bytes, d: int) -> bytes:
         """Decrypt.
 
         Args:
-            x1 (bytes): x of C1 (kG point).
-            y1 (bytes): y of C1 (kG point).
+            x1 (int): x of C1 (kG point).
+            y1 (int): y of C1 (kG point).
             C1 (bytes, bytes): kG point
             C2 (bytes): cipher
             C3 (bytes): hash value
+            d (int): secret key.
 
         Returns:
             bytes: plain text.
@@ -447,30 +430,23 @@ class EllipticCurveCipher:
             ValueError: Incorrect hash value.
         """
 
-        if not self.can_decrypt:
-            raise ValueError("Can't decrypt, missing required args, need 'd'")
-
-        x1 = int.from_bytes(x1, "big")
-        y1 = int.from_bytes(y1, "big")
-
-        if not self._ecdlp.ec.isvalid(x1, y1):
+        if not self.ecdlp.isvalid(x1, y1):
             raise ValueError("Invalid C1 point, not on curve.")
 
-        if self._ecdlp.ec.isinf(*self._ecdlp.ec.mul(self._ecdlp._h, x1, y1)):
+        if self.ecdlp.isinf(*self.ecdlp.mul(self.ecdlp.h, x1, y1)):
             raise ValueError("Infinite point encountered.")
 
-        x2, y2 = self._ecdlp.ec.mul(self._d, x1, y1)
-        x2 = x2.to_bytes((x2.bit_length() + 7) >> 3, "big")
-        y2 = y2.to_bytes((y2.bit_length() + 7) >> 3, "big")
+        x2, y2 = self.ecdlp.mul(d, x1, y1)
+        x2 = self.ecdlp.itob(x2)
+        y2 = self.ecdlp.itob(y2)
 
         t = self._KDF(x2 + y2, len(C2))
-        if int.from_bytes(t, "big") == 0:
+        if not any(t):
             raise ValueError("Invalid key stream.")
 
         M = bytes(map(lambda b1, b2: b1 ^ b2, C2, t))
 
-        u = self._hash_fn(x2 + M + y2)
-        if u != C3:
+        if self._hash_fn(x2 + M + y2) != C3:
             raise ValueError("Incorrect hash value.")
 
         return M
