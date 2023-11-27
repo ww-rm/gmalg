@@ -1,9 +1,9 @@
+import enum
 import secrets
 from typing import Callable, Tuple
 
 from .core import ECDLP, EllipticCurveCipher
 from .sm3 import SM3
-import enum
 
 __all__ = ["SM2"]
 
