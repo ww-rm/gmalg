@@ -89,12 +89,10 @@ class SM3(Hash):
     """SM3"""
 
     @classmethod
-    @property
     def max_msg_length(self) -> int:
         return 0x2000000000000000  # 1 << 64 >> 3
 
     @classmethod
-    @property
     def hash_length(self) -> int:
         return 32
 
@@ -107,15 +105,16 @@ class SM3(Hash):
         self._words_buffer2: List[int] = [0] * 64
 
     def update(self, data: bytes) -> None:
-        """
+        """Update internal state.
+
         Args:
-            data (bytes): data to update hash value.
+            data (bytes): data stream to be updated.
 
         Raises:
-            OverflowError: Message more than 2^64 bits.
+            OverflowError: Message too long.
         """
 
-        if self._msg_len + len(data) > self.max_msg_length:
+        if self._msg_len + len(data) > self.max_msg_length():
             raise OverflowError("Message more than 2^64 bits.")
 
         B = self._msg_block_buffer
@@ -145,10 +144,7 @@ class SM3(Hash):
 
         self._msg_len += d_len
 
-    @property
     def value(self) -> bytes:
-        """Get hash value."""
-
         B = self._msg_block_buffer.copy()
         W1 = self._words_buffer1
         W2 = self._words_buffer2

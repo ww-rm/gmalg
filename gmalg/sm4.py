@@ -76,18 +76,16 @@ class SM4(BlockCipher):
     """SM4"""
 
     @classmethod
-    @property
     def key_length(self) -> int:
         return 16
 
     @classmethod
-    @property
     def block_length(self) -> int:
         return 16
 
     def __init__(self, key: bytes) -> None:
-        if len(key) != self.key_length:
-            raise ValueError(f"Invalid key length {len(key)} bytes, key must be {self.key_length} bytes.")
+        if len(key) != self.key_length():
+            raise ValueError(f"Invalid key length {len(key)} bytes, key must be {self.key_length()} bytes.")
 
         self._key: bytes = key
         self._rkey: List[int] = [0] * 32
@@ -108,8 +106,8 @@ class SM4(BlockCipher):
             ValueError: Invalid block length.
         """
 
-        if len(block) != self.block_length:
-            raise ValueError(f"Invalid block length {len(block)} bytes, block must be {self.block_length} bytes.")
+        if len(block) != self.block_length():
+            raise ValueError(f"Invalid block length {len(block)} bytes, block must be {self.block_length()} bytes.")
 
         RK = self._rkey
 
@@ -145,8 +143,8 @@ class SM4(BlockCipher):
             ValueError: Invalid block length.
         """
 
-        if len(block) != self.block_length:
-            raise ValueError(f"Invalid block length {len(block)} bytes, block must be {self.block_length} bytes.")
+        if len(block) != self.block_length():
+            raise ValueError(f"Invalid block length {len(block)} bytes, block must be {self.block_length()} bytes.")
 
         RK = self._rkey
 
