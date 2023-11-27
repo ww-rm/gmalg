@@ -84,6 +84,12 @@ class SM4(BlockCipher):
         return 16
 
     def __init__(self, key: bytes) -> None:
+        """SM4
+
+        Args:
+            key (bytes): 16 bytes key.
+        """
+
         if len(key) != self.key_length():
             raise ValueError(f"Invalid key length {len(key)} bytes, key must be {self.key_length()} bytes.")
 

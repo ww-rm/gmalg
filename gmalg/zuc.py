@@ -82,6 +82,13 @@ class ZUC:
         return 16
 
     def __init__(self, key: bytes, iv: bytes) -> None:
+        """ZUC
+
+        Args:
+            key (bytes): 16 bytes key.
+            iv (bytes): 16 bytes key.
+        """
+
         if len(key) != self.key_length():
             raise ValueError(f"Invalid key length {len(key)} bytes, key must be {self.key_length()} bytes.")
         if len(iv) != self.iv_length():
