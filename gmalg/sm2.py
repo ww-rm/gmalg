@@ -73,9 +73,9 @@ class SM2:
         if mode is SM2.PC_MODE.RAW:
             return b"\x04" + ecdlp.itob(x) + ecdlp.itob(y)
         elif mode is SM2.PC_MODE.COMPRESS:
-            raise NotImplementedError
+            raise NotImplementedError(f"{mode} not supported.")
         elif mode is SM2.PC_MODE.MIXED:
-            raise NotImplementedError
+            raise NotImplementedError(f"{mode} not supported.")
         else:
             raise ValueError(f"Invalid mode {mode}")
 
@@ -85,17 +85,17 @@ class SM2:
         ecdlp = self._ecc.ecdlp
         length = ecdlp.length
 
-        mode, point = p[0], p[1:]
-
+        mode = p[0]
         if mode == 0x00:
             return ecdlp.INF
 
+        point = p[1:]
         x = point[:length]
         if mode == 0x04 or mode == 0x06 or mode == 0x07:
             y = point[length:]
             return ecdlp.btoi(x), ecdlp.btoi(y)
         elif mode == 0x02 or mode == 0x03:
-            raise NotImplementedError
+            raise NotImplementedError(f"PC 0x{mode:02x} not supported.")
         else:
             raise ValueError(f"Invalid PC byte 0x{mode:02x}")
 
@@ -196,7 +196,7 @@ class SM2:
             C1 = cipher[:1 + self._ecc.ecdlp.length * 2]
             c1_length = 1 + self._ecc.ecdlp.length * 2
         elif mode == 0x02 or mode == 0x03:
-            raise NotImplementedError
+            raise NotImplementedError(f"PC 0x{mode:02x} not supported.")
         else:
             raise ValueError(f"Invalid PC byte 0x{mode:02x}")
 
