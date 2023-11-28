@@ -44,7 +44,7 @@ class SM2:
     """SM2"""
 
     def __init__(self, d: bytes = None, id_: bytes = None, P: bytes = None, *,
-                 rnd_fn: Callable[[int], int] = None) -> None:
+                 rnd_fn: Callable[[int], int] = None, pc_mode: PC_MODE = PC_MODE.RAW) -> None:
         """SM2.
 
         Args:
@@ -67,6 +67,7 @@ class SM2:
                 self._xP, self._yP = None, None
 
         self._id = id_
+        self._pc_mode = pc_mode
 
     def _default_rnd_fn(self, k: int) -> int:
         return secrets.randbits(k)
@@ -135,7 +136,7 @@ class SM2:
     def can_decrypt(self) -> bool:
         return bool(self._d)
 
-    def generate_keypair(self, pc_mode: PC_MODE = PC_MODE.RAW) -> Tuple[bytes, bytes]:
+    def generate_keypair(self) -> Tuple[bytes, bytes]:
         """Generate key pair.
 
         Args:
@@ -147,13 +148,13 @@ class SM2:
         """
 
         d, (x, y) = self._ecc.generate_keypair()
-        P = self.point_to_bytes(x, y, pc_mode)
+        P = self.point_to_bytes(x, y, self._pc_mode)
         return _itob(d), P
 
-    def get_pubkey(self, d: bytes, pc_mode: PC_MODE = PC_MODE.RAW) -> bytes:
+    def get_pubkey(self, d: bytes) -> bytes:
         """Get public key from secret key."""
 
-        return self.point_to_bytes(*self._ecc.get_pubkey(_btoi(d)), pc_mode)
+        return self.point_to_bytes(*self._ecc.get_pubkey(_btoi(d)), self._pc_mode)
 
     def verify_pubkey(self, P: bytes) -> bool:
         """Verify if a public key is valid.
@@ -189,7 +190,7 @@ class SM2:
 
         return self._ecc.verify(message, _btoi(r), _btoi(s), self._id, self._xP, self._yP)
 
-    def encrypt(self, plain: bytes, pc_mode: PC_MODE = PC_MODE.RAW) -> bytes:
+    def encrypt(self, plain: bytes) -> bytes:
         """Encrypt
 
         Args:
@@ -203,7 +204,7 @@ class SM2:
         C1, C2, C3 = self._ecc.encrypt(plain, self._xP, self._yP)
 
         cipher = bytearray()
-        cipher.extend(self.point_to_bytes(*C1, pc_mode))
+        cipher.extend(self.point_to_bytes(*C1, self._pc_mode))
         cipher.extend(C3)
         cipher.extend(C2)
 

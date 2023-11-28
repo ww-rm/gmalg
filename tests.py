@@ -129,17 +129,18 @@ class TestSM2(unittest.TestCase):
 
     def test_encrypt4(self):
         d, pk = gmalg.SM2().generate_keypair()
-        sm2 = gmalg.SM2(d, P=pk)
-
         plain = b"random SM2 encrypt test random SM2 encrypt test random SM2 encrypt test random SM2 encrypt test random SM2 encrypt test random SM2 encrypt test random SM2 encrypt test"
 
+        sm2 = gmalg.SM2(d, P=pk)
         cipher = sm2.encrypt(plain)
         self.assertEqual(sm2.decrypt(cipher), plain)
 
-        cipher = sm2.encrypt(plain, gmalg.sm2.PC_MODE.COMPRESS)
+        sm2 = gmalg.SM2(d, P=pk, pc_mode=gmalg.sm2.PC_MODE.COMPRESS)
+        cipher = sm2.encrypt(plain)
         self.assertEqual(sm2.decrypt(cipher), plain)
 
-        cipher = sm2.encrypt(plain, gmalg.sm2.PC_MODE.MIXED)
+        sm2 = gmalg.SM2(d, P=pk, pc_mode=gmalg.sm2.PC_MODE.MIXED)
+        cipher = sm2.encrypt(plain)
         self.assertEqual(sm2.decrypt(cipher), plain)
 
     def test_pc(self):
