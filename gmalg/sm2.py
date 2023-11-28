@@ -139,9 +139,6 @@ class SM2:
     def generate_keypair(self) -> Tuple[bytes, bytes]:
         """Generate key pair.
 
-        Args:
-            pc_mode (PC_MODE): pc mode for public key point.
-
         Returns:
             bytes: secret key
             bytes: public key point (xP, yP)
@@ -195,7 +192,6 @@ class SM2:
 
         Args:
             plain (bytes): plain text to be encrypted.
-            pc_mode (PC_MODE): pc mode for points.
         """
 
         if not self.can_encrypt:
