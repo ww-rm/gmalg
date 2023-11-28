@@ -245,6 +245,9 @@ class SM2:
             int: t, will be used in next step.
         """
 
+        if not self.can_exchange_key:
+            raise ValueError("Can't exchange key, missing required args, need 'd', 'id_'")
+
         R, t = self._ecc.begin_key_exchange(self._d)
         return self.point_to_bytes(*R, self._pc_mode), t
 
