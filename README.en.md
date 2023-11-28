@@ -87,6 +87,35 @@ print(cipher.hex())
 print(sm2.decrypt(cipher))
 ```
 
+### SM2 Key exchange
+
+```python
+import gmalg
+
+PA = bytes.fromhex("04 160E1289 7DF4EDB6 1DD812FE B96748FB D3CCF4FF E26AA6F6 DB9540AF 49C94232"
+                   "4A7DAD08 BB9A4595 31694BEB 20AA489D 6649975E 1BFCF8C4 741B78B4 B223007F")
+sm2A = gmalg.SM2(
+    bytes.fromhex("81EB26E9 41BB5AF1 6DF11649 5F906952 72AE2CD6 3D6C4AE1 678418BE 48230029"),
+    b"1234567812345678", PA
+)
+
+PB = bytes.fromhex("04 6AE848C5 7C53C7B1 B5FA99EB 2286AF07 8BA64C64 591B8B56 6F7357D5 76F16DFB"
+                   "EE489D77 1621A27B 36C5C799 2062E9CD 09A92643 86F3FBEA 54DFF693 05621C4D")
+sm2B = gmalg.SM2(
+    bytes.fromhex("78512991 7D45A9EA 5437A593 56B82338 EAADDA6C EB199088 F14AE10D EFA229B5"),
+    b"1234567812345678", PB
+)
+
+RA, tA = sm2A.begin_key_exchange()
+RB, tB = sm2B.begin_key_exchange()
+
+KB = sm2B.end_key_exchange(16, tB, RA, b"1234567812345678", PA, gmalg.sm2.KEYXCHG_MODE.RESPONDER)
+KA = sm2A.end_key_exchange(16, tA, RB, b"1234567812345678", PB, gmalg.sm2.KEYXCHG_MODE.INITIATOR)
+
+print(KA == KB)
+print(KA.hex())
+```
+
 Go to [docs:TODO] see more detailed usages.
 
 ---
