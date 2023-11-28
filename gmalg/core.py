@@ -24,6 +24,61 @@ def _inv(x: int, p: int):
     return t1 % p
 
 
+def _generate_lucas(X: int, Y: int, k: int, p: int) -> Tuple[int, int]:
+    """Lucas Sequence, k begin at 0.
+
+    Uk = X * Uk-1 - Y * Uk-2
+    Vk = X * Vk-1 - Y * Vk-2
+
+    (0, 2) -> (1, X) -> ...
+    """
+
+    delta = (X * X - 4 * Y) % p
+    inv2 = _inv(2, p)
+
+    U, V = 0, 2
+    for i in f"{k:b}":
+        U, V = (U * V) % p, ((V * V + delta * U * U) * inv2) % p
+        if i == "1":
+            U, V = ((X * U + V) * inv2) % p, ((X * V + delta * U) * inv2) % p
+
+    return U, V
+
+
+def _sqrt_4u3(x: int, p: int, u: int):
+    """_sqrt_8u3 and _sqrt_8u7"""
+
+    y = pow(x, u + 1, p)
+    if (y * y) % p == x:
+        return y
+    return -1
+
+
+def _sqrt_8u5(x: int, p: int, u: int):
+    z = pow(x, 2 * u + 1, p)
+    if z == 1:
+        return pow(x, u + 1, p)
+    if z == p - 1:
+        return (2 * x * pow(4 * x, u, p)) % p
+    return -1
+
+
+def _sqrt_8u1(x: int, p: int, u: int):
+    _4u1 = 4 * u + 1
+    p_1 = p - 1
+    Y = x
+    for X in range(1, p):
+        U, V = _generate_lucas(X, Y, _4u1, p)
+
+        if (V * V - 4 * Y) % p == 0:
+            return (V * _inv(2, p)) % p
+
+        if U != 1 or U != p_1:
+            return -1
+
+    return -1
+
+
 class Hash:
     @classmethod
     def max_msg_length(self) -> int:
@@ -116,6 +171,16 @@ class EllipticCurve:
         self.bitlength = self.p.bit_length()
         self.length = (self.bitlength + 7) >> 3
 
+        self._u, self._r = divmod(self.p, 8)
+        if self._r == 3 or self._r == 7:
+            self.get_y = self._get_y_4u3
+        elif self._r == 1:
+            self.get_y = self._get_y_8u1
+        elif self._r == 5:
+            self.get_y = self._get_y_8u5
+        else:
+            raise ValueError(f"p is not a prime number: 0x{p:x}")
+
     def isvalid(self, x: int, y: int) -> bool:
         """Verify if a point is on the curve."""
 
@@ -172,6 +237,22 @@ class EllipticCurve:
                 xk, yk = self.add(xk, yk, x, y)
 
         return xk, yk
+
+    def get_y_sqr(self, x: int) -> int:
+        return (x * x * x + self.a * x + self.b) % self.p
+
+    def _get_y_4u3(self, x: int) -> int:
+        return _sqrt_4u3(self.get_y_sqr(x), self.p, self._u)
+
+    def _get_y_8u5(self, x: int) -> int:
+        return _sqrt_8u5(self.get_y_sqr(x), self.p, self._u)
+
+    def _get_y_8u1(self, x: int) -> int:
+        return _sqrt_8u1(self.get_y_sqr(x), self.p, self._u)
+
+    def get_y(self, x: int) -> int:
+        """Get one of valid y of given x, -1 means no solution."""
+        raise NotImplementedError("Unknown Error.")
 
     def itob(self, i: int) -> bytes:
         """Convert domain elements to bytes."""
@@ -457,3 +538,6 @@ class EllipticCurveCipher:
             raise ValueError("Incorrect hash value.")
 
         return M
+
+    def begin_key_exchange(self) -> Tuple[int, int]:
+        """Generate data to begin key exchange."""

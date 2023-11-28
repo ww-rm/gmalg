@@ -1,6 +1,6 @@
 import enum
 import secrets
-from typing import Callable, Tuple
+from typing import Any, Callable, Generator, Tuple
 
 from .core import ECDLP, EllipticCurveCipher
 from .sm3 import SM3
@@ -33,6 +33,10 @@ class SM2:
         RAW = enum.auto()
         COMPRESS = enum.auto()
         MIXED = enum.auto()
+
+    class KEYXCHG_MODE(enum.Enum):
+        INITIATOR = enum.auto()
+        RESPONDER = enum.auto()
 
     def __init__(self, d: bytes = None, id_: bytes = None, P: bytes = None, *,
                  rnd_fn: Callable[[int], int] = None) -> None:
@@ -73,9 +77,15 @@ class SM2:
         if mode is SM2.PC_MODE.RAW:
             return b"\x04" + ecdlp.itob(x) + ecdlp.itob(y)
         elif mode is SM2.PC_MODE.COMPRESS:
-            raise NotImplementedError(f"{mode} not supported.")
+            if y & 0x1:
+                return b"\x03" + ecdlp.itob(x)
+            else:
+                return b"\x02" + ecdlp.itob(x)
         elif mode is SM2.PC_MODE.MIXED:
-            raise NotImplementedError(f"{mode} not supported.")
+            if y & 0x1:
+                return b"\x07" + ecdlp.itob(x) + ecdlp.itob(y)
+            else:
+                return b"\x06" + ecdlp.itob(x) + ecdlp.itob(y)
         else:
             raise ValueError(f"Invalid mode {mode}")
 
@@ -90,12 +100,17 @@ class SM2:
             return ecdlp.INF
 
         point = p[1:]
-        x = point[:length]
+        x = ecdlp.btoi(point[:length])
         if mode == 0x04 or mode == 0x06 or mode == 0x07:
-            y = point[length:]
-            return ecdlp.btoi(x), ecdlp.btoi(y)
+            return x, ecdlp.btoi(point[length:])
         elif mode == 0x02 or mode == 0x03:
-            raise NotImplementedError(f"PC 0x{mode:02x} not supported.")
+            y = ecdlp.get_y(x)
+            if y < 0:
+                raise ValueError(f"Invalid point x: 0x{x:x}.")
+            ylsb = y & 0x1
+            if mode == 0x02 and ylsb or mode == 0x03 and not ylsb:
+                return x, ecdlp.p - y
+            return x, y
         else:
             raise ValueError(f"Invalid PC byte 0x{mode:02x}")
 
@@ -196,7 +211,8 @@ class SM2:
             C1 = cipher[:1 + self._ecc.ecdlp.length * 2]
             c1_length = 1 + self._ecc.ecdlp.length * 2
         elif mode == 0x02 or mode == 0x03:
-            raise NotImplementedError(f"PC 0x{mode:02x} not supported.")
+            C1 = cipher[:1 + self._ecc.ecdlp.length]
+            c1_length = 1 + self._ecc.ecdlp.length
         else:
             raise ValueError(f"Invalid PC byte 0x{mode:02x}")
 
@@ -205,3 +221,12 @@ class SM2:
         C2 = cipher[c1_length + hash_length:]
 
         return self._ecc.decrypt(*self.bytes_to_point(C1), C2, C3, self._d)
+
+    def begin_key_exchange(self, mode: "SM2.KEYXCHG_MODE") -> Generator[Any, Any, bool]:
+        ...
+
+    def _key_exchange_initiator(self):
+        ...
+
+    def _key_exchange_responder(self):
+        ...
