@@ -5,7 +5,10 @@ from typing import Any, Callable, Generator, Tuple
 from .core import ECDLP, EllipticCurveCipher
 from .sm3 import SM3
 
-__all__ = ["SM2"]
+__all__ = [
+    "SM2",
+    "PC_MODE",
+]
 
 
 def _btoi(b: bytes) -> int:
@@ -26,17 +29,19 @@ _ecdlp = ECDLP(
 )
 
 
+class PC_MODE(enum.Enum):
+    RAW = enum.auto()
+    COMPRESS = enum.auto()
+    MIXED = enum.auto()
+
+
+class KEYXCHG_MODE(enum.Enum):
+    INITIATOR = enum.auto()
+    RESPONDER = enum.auto()
+
+
 class SM2:
     """SM2"""
-
-    class PC_MODE(enum.Enum):
-        RAW = enum.auto()
-        COMPRESS = enum.auto()
-        MIXED = enum.auto()
-
-    class KEYXCHG_MODE(enum.Enum):
-        INITIATOR = enum.auto()
-        RESPONDER = enum.auto()
 
     def __init__(self, d: bytes = None, id_: bytes = None, P: bytes = None, *,
                  rnd_fn: Callable[[int], int] = None) -> None:
@@ -66,7 +71,7 @@ class SM2:
     def _default_rnd_fn(self, k: int) -> int:
         return secrets.randbits(k)
 
-    def point_to_bytes(self, x: int, y: int, mode: "SM2.PC_MODE") -> bytes:
+    def point_to_bytes(self, x: int, y: int, mode: PC_MODE) -> bytes:
         """Convert point to bytes."""
 
         ecdlp = self._ecc.ecdlp
@@ -74,14 +79,14 @@ class SM2:
         if ecdlp.isinf(x, y):
             return b"\x00"
 
-        if mode is SM2.PC_MODE.RAW:
+        if mode is PC_MODE.RAW:
             return b"\x04" + ecdlp.itob(x) + ecdlp.itob(y)
-        elif mode is SM2.PC_MODE.COMPRESS:
+        elif mode is PC_MODE.COMPRESS:
             if y & 0x1:
                 return b"\x03" + ecdlp.itob(x)
             else:
                 return b"\x02" + ecdlp.itob(x)
-        elif mode is SM2.PC_MODE.MIXED:
+        elif mode is PC_MODE.MIXED:
             if y & 0x1:
                 return b"\x07" + ecdlp.itob(x) + ecdlp.itob(y)
             else:
@@ -130,8 +135,11 @@ class SM2:
     def can_decrypt(self) -> bool:
         return bool(self._d)
 
-    def generate_keypair(self) -> Tuple[bytes, bytes]:
+    def generate_keypair(self, pc_mode: PC_MODE = PC_MODE.RAW) -> Tuple[bytes, bytes]:
         """Generate key pair.
+
+        Args:
+            pc_mode (PC_MODE): pc mode for public key point.
 
         Returns:
             bytes: secret key
@@ -139,13 +147,13 @@ class SM2:
         """
 
         d, (x, y) = self._ecc.generate_keypair()
-        P = self.point_to_bytes(x, y, SM2.PC_MODE.RAW)
+        P = self.point_to_bytes(x, y, pc_mode)
         return _itob(d), P
 
-    def get_pubkey(self, d: bytes) -> bytes:
+    def get_pubkey(self, d: bytes, pc_mode: PC_MODE = PC_MODE.RAW) -> bytes:
         """Get public key from secret key."""
 
-        return self.point_to_bytes(*self._ecc.get_pubkey(_btoi(d)), SM2.PC_MODE.RAW)
+        return self.point_to_bytes(*self._ecc.get_pubkey(_btoi(d)), pc_mode)
 
     def verify_pubkey(self, P: bytes) -> bool:
         """Verify if a public key is valid.
@@ -181,8 +189,13 @@ class SM2:
 
         return self._ecc.verify(message, _btoi(r), _btoi(s), self._id, self._xP, self._yP)
 
-    def encrypt(self, plain: bytes) -> bytes:
-        """Encrypt"""
+    def encrypt(self, plain: bytes, pc_mode: PC_MODE = PC_MODE.RAW) -> bytes:
+        """Encrypt
+
+        Args:
+            plain (bytes): plain text to be encrypted.
+            pc_mode (PC_MODE): pc mode for points.
+        """
 
         if not self.can_encrypt:
             raise ValueError("Can't encrypt, missing required args, need 'P'")
@@ -190,7 +203,7 @@ class SM2:
         C1, C2, C3 = self._ecc.encrypt(plain, self._xP, self._yP)
 
         cipher = bytearray()
-        cipher.extend(self.point_to_bytes(*C1, SM2.PC_MODE.RAW))
+        cipher.extend(self.point_to_bytes(*C1, pc_mode))
         cipher.extend(C3)
         cipher.extend(C2)
 
@@ -222,7 +235,7 @@ class SM2:
 
         return self._ecc.decrypt(*self.bytes_to_point(C1), C2, C3, self._d)
 
-    def begin_key_exchange(self, mode: "SM2.KEYXCHG_MODE") -> Generator[Any, Any, bool]:
+    def begin_key_exchange(self, mode: KEYXCHG_MODE) -> Generator[Any, Any, bool]:
         ...
 
     def _key_exchange_initiator(self):

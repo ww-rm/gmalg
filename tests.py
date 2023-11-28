@@ -132,7 +132,14 @@ class TestSM2(unittest.TestCase):
         sm2 = gmalg.SM2(d, P=pk)
 
         plain = b"random SM2 encrypt test random SM2 encrypt test random SM2 encrypt test random SM2 encrypt test random SM2 encrypt test random SM2 encrypt test random SM2 encrypt test"
+
         cipher = sm2.encrypt(plain)
+        self.assertEqual(sm2.decrypt(cipher), plain)
+
+        cipher = sm2.encrypt(plain, gmalg.sm2.PC_MODE.COMPRESS)
+        self.assertEqual(sm2.decrypt(cipher), plain)
+
+        cipher = sm2.encrypt(plain, gmalg.sm2.PC_MODE.MIXED)
         self.assertEqual(sm2.decrypt(cipher), plain)
 
     def test_pc(self):
@@ -142,13 +149,13 @@ class TestSM2(unittest.TestCase):
         p_b = bytes.fromhex("04 09F9DF31 1E5421A1 50DD7D16 1E4BC5C6 72179FAD 1833FC07 6BB08FF3 56F35020"
                             "CCEA490C E26775A5 2DC6EA71 8CC1AA60 0AED05FB F35E084A 6632F607 2DA9AD13")
         p_p = sm2.bytes_to_point(p_b)
-        p_pp = sm2.bytes_to_point(sm2.point_to_bytes(*p_p, sm2.PC_MODE.COMPRESS))
+        p_pp = sm2.bytes_to_point(sm2.point_to_bytes(*p_p, gmalg.sm2.PC_MODE.COMPRESS))
 
         self.assertEqual(p_p, p_pp)
 
         _, p_b = sm2.generate_keypair()
         p_p = sm2.bytes_to_point(p_b)
-        p_pp = sm2.bytes_to_point(sm2.point_to_bytes(*p_p, sm2.PC_MODE.COMPRESS))
+        p_pp = sm2.bytes_to_point(sm2.point_to_bytes(*p_p, gmalg.sm2.PC_MODE.COMPRESS))
 
         self.assertEqual(p_p, p_pp)
 
