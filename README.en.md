@@ -12,6 +12,9 @@ pip install gmalg
 
 - [x] ZUC Stream Cipher Algorithm
 - [x] SM2 Public Key Cryptograhpic Algorithm Based on Elliptic Curves
+  - Sign/Verify
+  - Key exchange
+  - Encrypt/Decrypt
 - [x] SM3 Cryptogrpahic Hash Algorithm
 - [x] SM4 Block Cipher Algorithm
 - [ ] SM9 Identification Cryptographic Algorithm
