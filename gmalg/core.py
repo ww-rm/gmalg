@@ -365,7 +365,7 @@ class EllipticCurveCipher:
         v = self._hash_cls.hash_length()
 
         count, tail = divmod(klen, v)
-        if count + (tail > 0) >= 0xffffffff:
+        if count + (tail > 0) > 0xffffffff:
             raise OverflowError("klen is too big.")
 
         K = bytearray()

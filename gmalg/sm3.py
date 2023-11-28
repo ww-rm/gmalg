@@ -90,7 +90,7 @@ class SM3(Hash):
 
     @classmethod
     def max_msg_length(self) -> int:
-        return 0x2000000000000000  # 1 << 64 >> 3
+        return 0x1fffffffffffffff  # (1 << 64 - 1) >> 3
 
     @classmethod
     def hash_length(self) -> int:
@@ -115,7 +115,7 @@ class SM3(Hash):
         """
 
         if self._msg_len + len(data) > self.max_msg_length():
-            raise OverflowError("Message more than 2^64 bits.")
+            raise OverflowError("Message more than 2^64 - 1 bits.")
 
         B = self._msg_block_buffer
         W1 = self._words_buffer1
