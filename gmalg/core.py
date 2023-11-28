@@ -172,12 +172,16 @@ class EllipticCurve:
         self.length = (self.bitlength + 7) >> 3
 
         self._u, self._r = divmod(self.p, 8)
-        if self._r == 3 or self._r == 7:
-            self.get_y = self._get_y_4u3
-        elif self._r == 1:
+        if self._r == 1:
             self.get_y = self._get_y_8u1
+        elif self._r == 3:
+            self._u = self._u * 2
+            self.get_y = self._get_y_4u3
         elif self._r == 5:
             self.get_y = self._get_y_8u5
+        elif self._r == 7:
+            self._u = self._u * 2 + 1
+            self.get_y = self._get_y_4u3
         else:
             raise ValueError(f"p is not a prime number: 0x{p:x}")
 
@@ -539,5 +543,10 @@ class EllipticCurveCipher:
 
         return M
 
-    def begin_key_exchange(self) -> Tuple[int, int]:
+    def begin_key_exchange(self) -> Tuple[Tuple[int, int], int, int]:
         """Generate data to begin key exchange."""
+
+        ecdlp = self.ecdlp
+
+        r = self._randint(1, ecdlp.n)
+        x, y = ecdlp.kG(r)
