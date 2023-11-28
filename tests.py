@@ -188,6 +188,49 @@ class TestSM2(unittest.TestCase):
         y = 0xAE38F2D8_890838DF_9C19935A_65A8BCC8_994BC792_4672F912
         self.assertEqual(ecdlp.get_y(x), y)
 
+    def _rnd_keyxchg1a(self, k: int):
+        return 0x83A2C9C8_B96E5AF7_0BD480B4_72409A9A_327257F1_EBB73F5B_073354B2_48668563
+
+    def _rnd_keyxchg1b(self, k: int):
+        return 0x33FE2194_0342161C_55619C4A_0C060293_D543C80A_F19748CE_176D8347_7DE71C80
+
+    def test_keyxchg1(self):
+        ecdlp = gmalg.core.ECDLP(
+            0x8542D69E_4C044F18_E8B92435_BF6FF7DE_45728391_5C45517D_722EDB8B_08F1DFC3,
+            0x787968B4_FA32C3FD_2417842E_73BBFEFF_2F3C848B_6831D7E0_EC65228B_3937E498,
+            0x63E4C6D3_B23B0C84_9CF84241_484BFE48_F61D59A5_B16BA06E_6E12D1DA_27C5249A,
+            0x421DEBD6_1B62EAB6_746434EB_C3CC315E_32220B3B_ADD50BDC_4C4E6C14_7FEDD43D,
+            0x0680512B_CBB42C07_D47349D2_153B70C4_E5D7FDFC_BFA36EA1_A85841B9_E46E09A2,
+            0x8542D69E_4C044F18_E8B92435_BF6FF7DD_29772063_0485628D_5AE74EE7_C32E79B7,
+        )
+
+        ecc1 = gmalg.core.EllipticCurveCipher(ecdlp, gmalg.SM3, self._rnd_keyxchg1a)
+        d1 = 0x6FCBA2EF_9AE0AB90_2BC3BDE3_FF915D44_BA4CC78F_88E2F8E7_F8996D3B_8CCEEDEE
+        xP1 = 0x3099093B_F3C137D8_FCBBCDF4_A2AE50F3_B0F216C3_122D7942_5FE03A45_DBFE1655
+        yP1 = 0x3DF79E8D_AC1CF0EC_BAA2F2B4_9D51A4B3_87F2EFAF_48233908_6A27A8E0_5BAED98B
+        id1 = b"ALICE123@YAHOO.COM"
+
+        ecc2 = gmalg.core.EllipticCurveCipher(ecdlp, gmalg.SM3, self._rnd_keyxchg1b)
+        d2 = 0x5E35D7D3_F3C54DBA_C72E6181_9E730B01_9A84208C_A3A35E4C_2E353DFC_CB2A3B53
+        xP2 = 0x245493D4_46C38D8C_C0F11837_4690E7DF_633A8A4B_FB3329B5_ECE604B2_B4F37F43
+        yP2 = 0x53C0869F_4B9E1777_3DE68FEC_45E14904_E0DEA45B_F6CECF99_18C85EA0_47C60A4C
+        id2 = b"BILL456@YAHOO.COM"
+
+        (x1, y1), t1 = ecc1.begin_key_exchange(d1)
+        (x2, y2), t2 = ecc2.begin_key_exchange(d2)
+
+        xv, yv = ecc2.get_secret_point(t2, x1, y1, xP1, yP1)
+        xu, yu = ecc1.get_secret_point(t1, x2, y2, xP2, yP2)
+
+        self.assertEqual((xv, yv), (xu, yu))
+
+        K2 = ecc2.generate_skey(16, xv, yv, id1, xP1, yP1, id2, xP2, yP2)
+        K1 = ecc1.generate_skey(16, xu, yu, id1, xP1, yP1, id2, xP2, yP2)
+
+        self.assertEqual(K2, K1)
+
+        self.assertEqual(K1, bytes.fromhex("55B0AC62 A6B927BA 23703832 C853DED4"))
+
 
 class TestSM3(unittest.TestCase):
     def setUp(self) -> None:

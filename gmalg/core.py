@@ -1,3 +1,4 @@
+import math
 from typing import Callable, Tuple, Type
 
 __all__ = [
@@ -311,6 +312,11 @@ class EllipticCurveCipher:
         self._hash_cls = hash_cls
         self._rnd_fn = rnd_fn
 
+        # used in key exchange
+        w = math.ceil(math.ceil(math.log2(self.ecdlp.n)) / 2) - 1
+        self._2w = 1 << w
+        self._2w_1 = self._2w - 1
+
     def _hash_fn(self, data: bytes) -> bytes:
         hash_obj = self._hash_cls()
         hash_obj.update(data)
@@ -349,7 +355,9 @@ class EllipticCurveCipher:
 
         return True
 
-    def _Z(self, id_: bytes, xP: int, yP: int) -> bytes:
+    def entity_info(self, id_: bytes, xP: int, yP: int) -> bytes:
+        """Generate other entity information bytes."""
+
         ENTL = len(id_) << 3
         if ENTL.bit_length() > 16:
             raise ValueError("ID bit length more than 2 bytes.")
@@ -385,7 +393,7 @@ class EllipticCurveCipher:
         if xP is None or yP is None:
             xP, yP = self.get_pubkey(d)
 
-        e = int.from_bytes(self._hash_fn(self._Z(id_, xP, yP) + message), "big")
+        e = int.from_bytes(self._hash_fn(self.entity_info(id_, xP, yP) + message), "big")
 
         ecdlp = self.ecdlp
         n = self.ecdlp.n
@@ -431,7 +439,7 @@ class EllipticCurveCipher:
         if t == 0:
             return False
 
-        e = int.from_bytes(self._hash_fn(self._Z(id_, xP, yP) + message), "big")
+        e = int.from_bytes(self._hash_fn(self.entity_info(id_, xP, yP) + message), "big")
 
         x, _ = ecdlp.add(*ecdlp.kG(s), *ecdlp.mul(t, xP, yP))
         if (e + x) % n != r:
@@ -439,8 +447,9 @@ class EllipticCurveCipher:
 
         return True
 
-    def _KDF(self, Z: bytes, klen: int) -> bytes:
-        """
+    def key_derivation_fn(self, Z: bytes, klen: int) -> bytes:
+        """KDF
+
         Args:
             Z (bytes): secret byets.
             klen (int): key byte length
@@ -492,7 +501,7 @@ class EllipticCurveCipher:
             x2 = self.ecdlp.itob(x2)
             y2 = self.ecdlp.itob(y2)
 
-            t = self._KDF(x2 + y2, len(plain))
+            t = self.key_derivation_fn(x2 + y2, len(plain))
             if not any(t):
                 continue
 
@@ -532,7 +541,7 @@ class EllipticCurveCipher:
         x2 = self.ecdlp.itob(x2)
         y2 = self.ecdlp.itob(y2)
 
-        t = self._KDF(x2 + y2, len(C2))
+        t = self.key_derivation_fn(x2 + y2, len(C2))
         if not any(t):
             raise ValueError("Invalid key stream.")
 
@@ -543,10 +552,82 @@ class EllipticCurveCipher:
 
         return M
 
-    def begin_key_exchange(self) -> Tuple[Tuple[int, int], int, int]:
-        """Generate data to begin key exchange."""
+    def _x_bar(self, x: int):
+        """Used in key exchange."""
+
+        return self._2w + (x & self._2w_1)
+
+    def begin_key_exchange(self, d: int) -> Tuple[Tuple[int, int], int]:
+        """Generate data to begin key exchange.
+
+        Returns:
+            (int, int): random point, [r]G, r in [1, n - 1]
+            int: t
+        """
+
+        ecdlp = self.ecdlp
+        n = ecdlp.n
+
+        r = self._randint(1, n)
+        x, y = ecdlp.kG(r)
+        t = (d + self._x_bar(x) * r) % n
+
+        return (x, y), t
+
+    def get_secret_point(self, t: int, xR: int, yR: int, xP: int, yP: int) -> Tuple[int, int]:
+        """Generate session key of klen bytes for initiator.
+
+        Args:
+            t (int): generated from `begin_key_exchange`
+            xR (int): x of random point from another user.
+            yR (int): y of random point from another user.
+            xP (int): x of public key of another user.
+            yP (int): y of public key of another user.
+
+        Returns:
+            (int, int): The same secret point as another user.
+        """
 
         ecdlp = self.ecdlp
 
-        r = self._randint(1, ecdlp.n)
-        x, y = ecdlp.kG(r)
+        if not ecdlp.isvalid(xR, yR):
+            raise ValueError(f"Invalid point R")
+
+        x, y = ecdlp.mul(
+            ecdlp.h * t,
+            *ecdlp.add(xP, yP, *ecdlp.mul(self._x_bar(xR), xR, yR))
+        )
+
+        if ecdlp.isinf(x, y):
+            raise ValueError("Infinite point encountered.")
+
+        return x, y
+
+    def generate_skey(self, klen: int, x: int, y: int, id_init: bytes, xP_init: int, yP_init: int, id_resp: bytes, xP_resp: int, yP_resp: int):
+        """Generate secret key of klen bytes.
+
+        Args:
+            klen (int): key length in bytes to generate.
+            x (int): x of secret point.
+            y (int): y of secret point.
+
+            id_init (bytes): id bytes of initiator.
+            xP_init (int): x of public key of initiator.
+            yP_init (int): y of public key of initiator.
+
+            id_resp (bytes): id bytes of responder.
+            xP_resp (int): x of public key of responder.
+            yP_resp (int): y of public key of responder.
+
+        Returns:
+            bytes: secret key of klen bytes.
+        """
+
+        Z = bytearray()
+
+        Z.extend(self.ecdlp.itob(x))
+        Z.extend(self.ecdlp.itob(y))
+        Z.extend(self.entity_info(id_init, xP_init, yP_init))
+        Z.extend(self.entity_info(id_resp, xP_resp, yP_resp))
+
+        return self.key_derivation_fn(Z, klen)
