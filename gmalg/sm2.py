@@ -8,6 +8,7 @@ from .sm3 import SM3
 __all__ = [
     "SM2",
     "PC_MODE",
+    "KEYXCHG_MODE",
 ]
 
 
@@ -136,6 +137,10 @@ class SM2:
     def can_decrypt(self) -> bool:
         return bool(self._d)
 
+    @property
+    def can_exchange_key(self) -> bool:
+        return bool(self._d and self._id)
+
     def generate_keypair(self) -> Tuple[bytes, bytes]:
         """Generate key pair.
 
@@ -232,11 +237,71 @@ class SM2:
 
         return self._ecc.decrypt(*self.bytes_to_point(C1), C2, C3, self._d)
 
-    def begin_key_exchange(self, mode: KEYXCHG_MODE) -> Generator[Any, Any, bool]:
-        ...
+    def begin_key_exchange(self) -> Tuple[bytes, int]:
+        """Begin key exchange.
 
-    def _key_exchange_initiator(self):
-        ...
+        Returns:
+            bytes: random point, will be sent to another user.
+            int: t, will be used in next step.
+        """
 
-    def _key_exchange_responder(self):
-        ...
+        R, t = self._ecc.begin_key_exchange(self._d)
+        return self.point_to_bytes(*R, self._pc_mode), t
+
+    def _end_key_exchange_initiator(self, klen: int, t: int, R: bytes, id_: bytes, P: bytes) -> bytes:
+        """End key exchange for initiator.
+
+        Args:
+            klen (int): length of secret key in bytes to generate.
+            t (int): t value of initiator.
+            R (bytes): random point from responder.
+            P (bytes): public key from responder.
+
+        Returns:
+            bytes: secret key of klen bytes.
+        """
+
+        xR, yR = self.bytes_to_point(R)
+        xP, yP = self.bytes_to_point(P)
+
+        U = self._ecc.get_secret_point(t, xR, yR, xP, yP)
+        return self._ecc.generate_skey(klen, *U, self._id, self._xP, self._yP, id_, xP, yP)
+
+    def _end_key_exchange_responder(self, klen: int, t: int, R: bytes, id_: bytes, P: bytes) -> bytes:
+        """End key exchange for responder.
+
+        Args:
+            klen (int): length of secret key in bytes to generate.
+            t (int): t value of responder.
+            R (bytes): random point from initiator.
+            P (bytes): public key from initiator.
+
+        Returns:
+            bytes: secret key of klen bytes.
+        """
+
+        xR, yR = self.bytes_to_point(R)
+        xP, yP = self.bytes_to_point(P)
+
+        V = self._ecc.get_secret_point(t, xR, yR, xP, yP)
+        return self._ecc.generate_skey(klen, *V, id_, xP, yP, self._id, self._xP, self._yP)
+
+    def end_key_exchange(self, klen: int, t: int, R: bytes, id_: bytes, P: bytes, mode: KEYXCHG_MODE):
+        """End key exchange for initiator.
+
+        Args:
+            klen (int): length of secret key in bytes to generate.
+            t (int): t value of self.
+            R (bytes): random point from another user.
+            P (bytes): public key from another user.
+
+        Returns:
+            bytes: secret key of klen bytes.
+        """
+
+        if mode is KEYXCHG_MODE.INITIATOR:
+            return self._end_key_exchange_initiator(klen, t, R, id_, P)
+        elif mode is KEYXCHG_MODE.RESPONDER:
+            return self._end_key_exchange_responder(klen, t, R, id_, P)
+        else:
+            raise TypeError(f"Invalid key exchange mode: {mode}")

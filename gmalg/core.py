@@ -603,7 +603,9 @@ class EllipticCurveCipher:
 
         return x, y
 
-    def generate_skey(self, klen: int, x: int, y: int, id_init: bytes, xP_init: int, yP_init: int, id_resp: bytes, xP_resp: int, yP_resp: int):
+    def generate_skey(self, klen: int, x: int, y: int,
+                      id_init: bytes, xP_init: int, yP_init: int,
+                      id_resp: bytes, xP_resp: int, yP_resp: int) -> bytes:
         """Generate secret key of klen bytes.
 
         Args:
