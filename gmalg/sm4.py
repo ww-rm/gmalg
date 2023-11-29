@@ -1,7 +1,8 @@
 from typing import List
 
 from . import errors
-from .core import BlockCipher
+from .base import BlockCipher
+from .utils import ROL32
 
 __all__ = ["SM4"]
 
@@ -32,11 +33,6 @@ _CK = [
 ]
 
 
-def _ROL(X, count):
-    count &= 0x1f
-    return ((X << count) | (X >> (32 - count))) & 0xffffffff
-
-
 def _BS(X):
     return ((_S_BOX[(X >> 24) & 0xff] << 24) |
             (_S_BOX[(X >> 16) & 0xff] << 16) |
@@ -46,12 +42,12 @@ def _BS(X):
 
 def _T0(X):
     X = _BS(X)
-    return X ^ _ROL(X, 2) ^ _ROL(X, 10) ^ _ROL(X, 18) ^ _ROL(X, 24)
+    return X ^ ROL32(X, 2) ^ ROL32(X, 10) ^ ROL32(X, 18) ^ ROL32(X, 24)
 
 
 def _T1(X):
     X = _BS(X)
-    return X ^ _ROL(X, 13) ^ _ROL(X, 23)
+    return X ^ ROL32(X, 13) ^ ROL32(X, 23)
 
 
 def _key_expand(key: bytes, rkey: List[int]):

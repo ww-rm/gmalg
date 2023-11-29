@@ -1,12 +1,12 @@
 import unittest
 
 import gmalg
-import gmalg.core
+import gmalg.ecfp
 
 
 class TestSM2(unittest.TestCase):
     def test_sign1(self):
-        ecdlp = gmalg.core.ecfp.ECDLP(
+        ecdlp = gmalg.ecfp.ECDLP(
             0x8542D69E_4C044F18_E8B92435_BF6FF7DE_45728391_5C45517D_722EDB8B_08F1DFC3,
             0x787968B4_FA32C3FD_2417842E_73BBFEFF_2F3C848B_6831D7E0_EC65228B_3937E498,
             0x63E4C6D3_B23B0C84_9CF84241_484BFE48_F61D59A5_B16BA06E_6E12D1DA_27C5249A,
@@ -14,7 +14,7 @@ class TestSM2(unittest.TestCase):
             0x0680512B_CBB42C07_D47349D2_153B70C4_E5D7FDFC_BFA36EA1_A85841B9_E46E09A2,
             0x8542D69E_4C044F18_E8B92435_BF6FF7DD_29772063_0485628D_5AE74EE7_C32E79B7,
         )
-        ecc = gmalg.core.ecfp.EllipticCurveCipher(
+        ecc = gmalg.ecfp.EllipticCurveCipher(
             ecdlp, gmalg.SM3,
             lambda _: 0x6CB28D99_385C175C_94F94E93_4817663F_C176D925_DD72B727_260DBAAE_1FB2F96F
         )
@@ -54,7 +54,7 @@ class TestSM2(unittest.TestCase):
         self.assertEqual(sm2.verify(plain, r, s), True)
 
     def test_encrypt1(self):
-        ecdlp = gmalg.core.ecfp.ECDLP(
+        ecdlp = gmalg.ecfp.ECDLP(
             0xBDB6F4FE_3E8B1D9E_0DA8C0D4_6F4C318C_EFE4AFE3_B6B8551F,
             0xBB8E5E8F_BC115E13_9FE6A814_FE48AAA6_F0ADA1AA_5DF91985,
             0x1854BEBD_C31B21B7_AEFC80AB_0ECD10D5_B1B3308E_6DBF11C1,
@@ -62,7 +62,7 @@ class TestSM2(unittest.TestCase):
             0x02BB3A02_D4AAADAC_AE24817A_4CA3A1B0_14B52704_32DB27D2,
             0xBDB6F4FE_3E8B1D9E_0DA8C0D4_0FC96219_5DFAE76F_56564677,
         )
-        ecc = gmalg.core.ecfp.EllipticCurveCipher(
+        ecc = gmalg.ecfp.EllipticCurveCipher(
             ecdlp, gmalg.SM3,
             lambda _: 0x384F3035_3073AEEC_E7A16543_30A96204_D37982A3_E15B2CB5
         )
@@ -79,7 +79,7 @@ class TestSM2(unittest.TestCase):
         self.assertEqual(ecc.decrypt(x1, y1, c2, c3, d), b"encryption standard")
 
     def test_encrypt2(self):
-        ecdlp = gmalg.core.ecfp.ECDLP(
+        ecdlp = gmalg.ecfp.ECDLP(
             0x8542D69E_4C044F18_E8B92435_BF6FF7DE_45728391_5C45517D_722EDB8B_08F1DFC3,
             0x787968B4_FA32C3FD_2417842E_73BBFEFF_2F3C848B_6831D7E0_EC65228B_3937E498,
             0x63E4C6D3_B23B0C84_9CF84241_484BFE48_F61D59A5_B16BA06E_6E12D1DA_27C5249A,
@@ -87,7 +87,7 @@ class TestSM2(unittest.TestCase):
             0x0680512B_CBB42C07_D47349D2_153B70C4_E5D7FDFC_BFA36EA1_A85841B9_E46E09A2,
             0x8542D69E_4C044F18_E8B92435_BF6FF7DD_29772063_0485628D_5AE74EE7_C32E79B7,
         )
-        ecc = gmalg.core.ecfp.EllipticCurveCipher(
+        ecc = gmalg.ecfp.EllipticCurveCipher(
             ecdlp, gmalg.SM3,
             lambda _: 0x4C62EEFD_6ECFC2B9_5B92FD6C_3D957514_8AFA1742_5546D490_18E5388D_49DD7B4F
         )
@@ -156,7 +156,7 @@ class TestSM2(unittest.TestCase):
 
     def test_y_sqrt(self):
         # 8u3
-        ecdlp = gmalg.core.ecfp.ECDLP(
+        ecdlp = gmalg.ecfp.ECDLP(
             0x8542D69E_4C044F18_E8B92435_BF6FF7DE_45728391_5C45517D_722EDB8B_08F1DFC3,
             0x787968B4_FA32C3FD_2417842E_73BBFEFF_2F3C848B_6831D7E0_EC65228B_3937E498,
             0x63E4C6D3_B23B0C84_9CF84241_484BFE48_F61D59A5_B16BA06E_6E12D1DA_27C5249A,
@@ -172,7 +172,7 @@ class TestSM2(unittest.TestCase):
         self.assertTrue(y_ == y or ecdlp.p - y_ == y)
 
         # 8u7
-        ecdlp = gmalg.core.ecfp.ECDLP(
+        ecdlp = gmalg.ecfp.ECDLP(
             0xBDB6F4FE_3E8B1D9E_0DA8C0D4_6F4C318C_EFE4AFE3_B6B8551F,
             0xBB8E5E8F_BC115E13_9FE6A814_FE48AAA6_F0ADA1AA_5DF91985,
             0x1854BEBD_C31B21B7_AEFC80AB_0ECD10D5_B1B3308E_6DBF11C1,
@@ -187,7 +187,7 @@ class TestSM2(unittest.TestCase):
         self.assertTrue(y_ == y or ecdlp.p - y_ == y)
 
     def test_keyxchg1(self):
-        ecdlp = gmalg.core.ecfp.ECDLP(
+        ecdlp = gmalg.ecfp.ECDLP(
             0x8542D69E_4C044F18_E8B92435_BF6FF7DE_45728391_5C45517D_722EDB8B_08F1DFC3,
             0x787968B4_FA32C3FD_2417842E_73BBFEFF_2F3C848B_6831D7E0_EC65228B_3937E498,
             0x63E4C6D3_B23B0C84_9CF84241_484BFE48_F61D59A5_B16BA06E_6E12D1DA_27C5249A,
@@ -196,7 +196,7 @@ class TestSM2(unittest.TestCase):
             0x8542D69E_4C044F18_E8B92435_BF6FF7DD_29772063_0485628D_5AE74EE7_C32E79B7,
         )
 
-        ecc1 = gmalg.core.ecfp.EllipticCurveCipher(
+        ecc1 = gmalg.ecfp.EllipticCurveCipher(
             ecdlp, gmalg.SM3,
             lambda _: 0x83A2C9C8_B96E5AF7_0BD480B4_72409A9A_327257F1_EBB73F5B_073354B2_48668563
         )
@@ -205,7 +205,7 @@ class TestSM2(unittest.TestCase):
         yP1 = 0x3DF79E8D_AC1CF0EC_BAA2F2B4_9D51A4B3_87F2EFAF_48233908_6A27A8E0_5BAED98B
         id1 = b"ALICE123@YAHOO.COM"
 
-        ecc2 = gmalg.core.ecfp.EllipticCurveCipher(
+        ecc2 = gmalg.ecfp.EllipticCurveCipher(
             ecdlp, gmalg.SM3,
             lambda _: 0x33FE2194_0342161C_55619C4A_0C060293_D543C80A_F19748CE_176D8347_7DE71C80
         )

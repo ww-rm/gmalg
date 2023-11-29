@@ -1,6 +1,7 @@
 from typing import List
 
 from . import errors
+from .utils import ROL32
 
 __all__ = ["ZUC"]
 
@@ -59,17 +60,12 @@ def _BS(X):
     )
 
 
-def _ROL(X, count):
-    count &= 0x1f
-    return ((X << count) | (X >> (32 - count))) & 0xffffffff
-
-
 def _L1(X):
-    return X ^ _ROL(X, 2) ^ _ROL(X, 10) ^ _ROL(X, 18) ^ _ROL(X, 24)
+    return X ^ ROL32(X, 2) ^ ROL32(X, 10) ^ ROL32(X, 18) ^ ROL32(X, 24)
 
 
 def _L2(X):
-    return X ^ _ROL(X, 8) ^ _ROL(X, 14) ^ _ROL(X, 22) ^ _ROL(X, 30)
+    return X ^ ROL32(X, 8) ^ ROL32(X, 14) ^ ROL32(X, 22) ^ ROL32(X, 30)
 
 
 class ZUC:

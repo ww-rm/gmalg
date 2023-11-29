@@ -2,23 +2,15 @@ import enum
 import secrets
 from typing import Callable, Tuple
 
-from . import errors
-from .core import ecfp
+from . import ecfp, errors
 from .sm3 import SM3
+from .utils import bytes_to_int, int_to_bytes
 
 __all__ = [
     "SM2",
     "PC_MODE",
     "KEYXCHG_MODE",
 ]
-
-
-def _btoi(b: bytes) -> int:
-    return int.from_bytes(b, "big")
-
-
-def _itob(i: int) -> bytes:
-    return i.to_bytes((i.bit_length() + 7) >> 3, "big")
 
 
 _ecdlp = ecfp.ECDLP(
@@ -59,7 +51,7 @@ class SM2:
         """
 
         self._ecc = ecfp.EllipticCurveCipher(_ecdlp, SM3, rnd_fn or self._default_rnd_fn)
-        self._d = _btoi(d) if d else None
+        self._d = bytes_to_int(d) if d else None
 
         if P:
             self._xP, self._yP = self.bytes_to_point(P)
@@ -153,12 +145,12 @@ class SM2:
 
         d, (x, y) = self._ecc.generate_keypair()
         P = self.point_to_bytes(x, y, self._pc_mode)
-        return _itob(d), P
+        return int_to_bytes(d), P
 
     def get_pubkey(self, d: bytes) -> bytes:
         """Get public key from secret key."""
 
-        return self.point_to_bytes(*self._ecc.get_pubkey(_btoi(d)), self._pc_mode)
+        return self.point_to_bytes(*self._ecc.get_pubkey(bytes_to_int(d)), self._pc_mode)
 
     def verify_pubkey(self, P: bytes) -> bool:
         """Verify if a public key is valid.
@@ -184,7 +176,7 @@ class SM2:
             raise errors.RequireArgumentError("sign", "d", "id")
 
         r, s = self._ecc.sign(message, self._d, self._id, self._xP, self._yP)
-        return _itob(r), _itob(s)
+        return int_to_bytes(r), int_to_bytes(s)
 
     def verify(self, message: bytes, r: bytes, s: bytes) -> bool:
         """Verify a message and it's signature."""
@@ -192,7 +184,7 @@ class SM2:
         if not self.can_verify:
             raise errors.RequireArgumentError("verify", "P", "id")
 
-        return self._ecc.verify(message, _btoi(r), _btoi(s), self._id, self._xP, self._yP)
+        return self._ecc.verify(message, bytes_to_int(r), bytes_to_int(s), self._id, self._xP, self._yP)
 
     def encrypt(self, plain: bytes) -> bytes:
         """Encrypt

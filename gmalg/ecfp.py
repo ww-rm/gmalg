@@ -1,84 +1,15 @@
 import math
 from typing import Callable, Tuple, Type
 
-from .. import errors
+from . import errors
 from .base import Hash
+from .utils import inverse, sqrt_4u3, sqrt_8u1, sqrt_8u5
 
 __all__ = [
     "ECDLP",
     "EllipticCurve",
     "EllipticCurveCipher",
 ]
-
-
-def _inv(x: int, p: int):
-    r1 = p
-    r2 = x
-    t1 = 0
-    t2 = 1
-    while r2 > 0:
-        q, r = divmod(r1, r2)
-        r1 = r2
-        r2 = r
-        t = t1 - q * t2
-        t1 = t2
-        t2 = t
-    return t1 % p
-
-
-def _generate_lucas(X: int, Y: int, k: int, p: int) -> Tuple[int, int]:
-    """Lucas Sequence, k begin at 0.
-
-    Uk = X * Uk-1 - Y * Uk-2
-    Vk = X * Vk-1 - Y * Vk-2
-
-    (0, 2) -> (1, X) -> ...
-    """
-
-    delta = (X * X - 4 * Y) % p
-    inv2 = _inv(2, p)
-
-    U, V = 0, 2
-    for i in f"{k:b}":
-        U, V = (U * V) % p, ((V * V + delta * U * U) * inv2) % p
-        if i == "1":
-            U, V = ((X * U + V) * inv2) % p, ((X * V + delta * U) * inv2) % p
-
-    return U, V
-
-
-def _sqrt_4u3(x: int, p: int, u: int):
-    """_sqrt_8u3 and _sqrt_8u7"""
-
-    y = pow(x, u + 1, p)
-    if (y * y) % p == x:
-        return y
-    return -1
-
-
-def _sqrt_8u5(x: int, p: int, u: int):
-    z = pow(x, 2 * u + 1, p)
-    if z == 1:
-        return pow(x, u + 1, p)
-    if z == p - 1:
-        return (2 * x * pow(4 * x, u, p)) % p
-    return -1
-
-
-def _sqrt_8u1(x: int, p: int, u: int):
-    _4u1 = 4 * u + 1
-    p_1 = p - 1
-    Y = x
-    for X in range(1, p):
-        U, V = _generate_lucas(X, Y, _4u1, p)
-
-        if (V * V - 4 * Y) % p == 0:
-            return (V * _inv(2, p)) % p
-
-        if U != 1 or U != p_1:
-            return -1
-
-    return -1
 
 
 class EllipticCurve:
@@ -147,14 +78,14 @@ class EllipticCurve:
             if y1 + y2 == p:
                 return -1, -1
             elif y1 == y2:
-                lam = (3 * x1 * x1 + a) * _inv(2 * y1, p)
+                lam = (3 * x1 * x1 + a) * inverse(2 * y1, p)
             else:
                 raise errors.UnknownError(f"0x{y1:x} and 0x{y2:x} is neither equal nor opposite.")
         else:
             if x2 > x1:
-                lam = (y2 - y1) * _inv(x2 - x1, p)
+                lam = (y2 - y1) * inverse(x2 - x1, p)
             else:
-                lam = (y1 - y2) * _inv(x1 - x2, p)
+                lam = (y1 - y2) * inverse(x1 - x2, p)
 
         x3 = (lam * lam - x1 - x2) % p
         y3 = (lam * (x1 - x3) - y1) % p
@@ -183,13 +114,13 @@ class EllipticCurve:
         return (x * x * x + self.a * x + self.b) % self.p
 
     def _get_y_4u3(self, x: int) -> int:
-        return _sqrt_4u3(self.get_y_sqr(x), self.p, self._u)
+        return sqrt_4u3(self.get_y_sqr(x), self.p, self._u)
 
     def _get_y_8u5(self, x: int) -> int:
-        return _sqrt_8u5(self.get_y_sqr(x), self.p, self._u)
+        return sqrt_8u5(self.get_y_sqr(x), self.p, self._u)
 
     def _get_y_8u1(self, x: int) -> int:
-        return _sqrt_8u1(self.get_y_sqr(x), self.p, self._u)
+        return sqrt_8u1(self.get_y_sqr(x), self.p, self._u)
 
     def get_y(self, x: int) -> int:
         """Get one of valid y of given x, -1 means no solution."""
@@ -345,7 +276,7 @@ class EllipticCurveCipher:
             if r == 0 or (r + k == n):
                 continue
 
-            s = (_inv(1 + d, n) * (k - r * d)) % n
+            s = (inverse(1 + d, n) * (k - r * d)) % n
             if s == 0:
                 continue
 

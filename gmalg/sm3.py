@@ -1,7 +1,8 @@
 from typing import List
 
 from . import errors
-from .core import Hash
+from .base import Hash
+from .utils import ROL32
 
 __all__ = ["SM3"]
 
@@ -18,7 +19,7 @@ _ROL_T_TABLE = [
 
 
 def _precomp_rol_table():
-    return [_ROL(_T(i), i) for i in range(64)]
+    return [ROL32(_T(i), i) for i in range(64)]
 
 
 def _T(i):
@@ -33,17 +34,12 @@ def _GG(i, X, Y, Z):
     return (X ^ Y ^ Z) if i <= 15 else ((X & Y) | (~X & Z))
 
 
-def _ROL(X, count):
-    count &= 0x1f
-    return ((X << count) | (X >> (32 - count))) & 0xffffffff
-
-
 def _P0(X):
-    return X ^ _ROL(X, 9) ^ _ROL(X, 17)
+    return X ^ ROL32(X, 9) ^ ROL32(X, 17)
 
 
 def _P1(X):
-    return X ^ _ROL(X, 15) ^ _ROL(X, 23)
+    return X ^ ROL32(X, 15) ^ ROL32(X, 23)
 
 
 def _expand(B: bytes, W1: List[int], W2: List[int]):
@@ -52,7 +48,7 @@ def _expand(B: bytes, W1: List[int], W2: List[int]):
     for i in range(16):
         W1[i] = int.from_bytes(B[i * 4:i * 4 + 4], "big")
     for i in range(16, 68):
-        W1[i] = _P1(W1[i - 16] ^ W1[i - 9] ^ _ROL(W1[i - 3], 15)) ^ _ROL(W1[i - 13], 7) ^ W1[i - 6]
+        W1[i] = _P1(W1[i - 16] ^ W1[i - 9] ^ ROL32(W1[i - 3], 15)) ^ ROL32(W1[i - 13], 7) ^ W1[i - 6]
     for i in range(64):
         W2[i] = W1[i] ^ W1[i + 4]
 
@@ -63,16 +59,16 @@ def _compress(W1: List[int], W2: List[int], V: List[int]):
     A, B, C, D, E, F, G, H = V
 
     for i in range(64):
-        SS1 = _ROL((_ROL(A, 12) + E + _ROL_T_TABLE[i]) & 0xffffffff, 7)
-        SS2 = SS1 ^ _ROL(A, 12)
+        SS1 = ROL32((ROL32(A, 12) + E + _ROL_T_TABLE[i]) & 0xffffffff, 7)
+        SS2 = SS1 ^ ROL32(A, 12)
         TT1 = (_FF(i, A, B, C) + D + SS2 + W2[i]) & 0xffffffff
         TT2 = (_GG(i, E, F, G) + H + SS1 + W1[i]) & 0xffffffff
         D = C
-        C = _ROL(B, 9)
+        C = ROL32(B, 9)
         B = A
         A = TT1
         H = G
-        G = _ROL(F, 19)
+        G = ROL32(F, 19)
         F = E
         E = _P0(TT2)
 
