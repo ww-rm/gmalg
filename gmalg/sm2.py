@@ -1,7 +1,8 @@
 import enum
 import secrets
-from typing import Any, Callable, Generator, Tuple
+from typing import Callable, Tuple
 
+from . import errors
 from .core import ECDLP, EllipticCurveCipher
 from .sm3 import SM3
 
@@ -54,6 +55,7 @@ class SM2:
             id_ (bytes): user id used in sign.
 
             rnd_fn ((int) -> int): random function used to generate k-bit random number, default to `secrets.randbits`
+            pc_mode (PC_MODE): pc_mode used for generated data, no effects on the data to be parsed.
         """
 
         self._ecc = EllipticCurveCipher(_ecdlp, SM3, rnd_fn or self._default_rnd_fn)
@@ -94,7 +96,7 @@ class SM2:
             else:
                 return b"\x06" + ecdlp.itob(x) + ecdlp.itob(y)
         else:
-            raise ValueError(f"Invalid mode {mode}")
+            raise TypeError(f"Invalid mode {mode}")
 
     def bytes_to_point(self, p: bytes) -> Tuple[int, int]:
         """Convert bytes to point."""
@@ -113,13 +115,13 @@ class SM2:
         elif mode == 0x02 or mode == 0x03:
             y = ecdlp.get_y(x)
             if y < 0:
-                raise ValueError(f"Invalid point x: 0x{x:x}.")
+                raise errors.PointNotOnCurveError(x, -1)
             ylsb = y & 0x1
             if mode == 0x02 and ylsb or mode == 0x03 and not ylsb:
                 return x, ecdlp.p - y
             return x, y
         else:
-            raise ValueError(f"Invalid PC byte 0x{mode:02x}")
+            raise errors.InvalidPCError(mode)
 
     @property
     def can_sign(self) -> bool:
@@ -179,7 +181,7 @@ class SM2:
         """
 
         if not self.can_sign:
-            raise ValueError("Can't sign, need 'd' and 'id_'")
+            raise errors.RequireArgumentError("sign", "d", "id")
 
         r, s = self._ecc.sign(message, self._d, self._id, self._xP, self._yP)
         return _itob(r), _itob(s)
@@ -188,7 +190,7 @@ class SM2:
         """Verify a message and it's signature."""
 
         if not self.can_verify:
-            raise ValueError("Can't verify, missing required args, need 'P', 'id_'")
+            raise errors.RequireArgumentError("verify", "P", "id")
 
         return self._ecc.verify(message, _btoi(r), _btoi(s), self._id, self._xP, self._yP)
 
@@ -200,7 +202,7 @@ class SM2:
         """
 
         if not self.can_encrypt:
-            raise ValueError("Can't encrypt, missing required args, need 'P'")
+            raise errors.RequireArgumentError("encrypt", "P")
 
         C1, C2, C3 = self._ecc.encrypt(plain, self._xP, self._yP)
 
@@ -219,7 +221,7 @@ class SM2:
         """
 
         if not self.can_decrypt:
-            raise ValueError("Can't decrypt, missing required args, need 'd'")
+            raise errors.RequireArgumentError("decrypt", "d")
 
         mode = cipher[0]
         if mode == 0x04 or mode == 0x06 or mode == 0x07:
@@ -229,7 +231,7 @@ class SM2:
             C1 = cipher[:1 + self._ecc.ecdlp.length]
             c1_length = 1 + self._ecc.ecdlp.length
         else:
-            raise ValueError(f"Invalid PC byte 0x{mode:02x}")
+            raise errors.InvalidPCError(mode)
 
         hash_length = self._ecc._hash_cls.hash_length()
         C3 = cipher[c1_length:c1_length + hash_length]
@@ -246,7 +248,7 @@ class SM2:
         """
 
         if not self.can_exchange_key:
-            raise ValueError("Can't exchange key, missing required args, need 'd', 'id_'")
+            raise errors.RequireArgumentError("key exchange", "d", "id")
 
         R, t = self._ecc.begin_key_exchange(self._d)
         return self.point_to_bytes(*R, self._pc_mode), t
@@ -289,7 +291,7 @@ class SM2:
         V = self._ecc.get_secret_point(t, xR, yR, xP, yP)
         return self._ecc.generate_skey(klen, *V, id_, xP, yP, self._id, self._xP, self._yP)
 
-    def end_key_exchange(self, klen: int, t: int, R: bytes, id_: bytes, P: bytes, mode: KEYXCHG_MODE):
+    def end_key_exchange(self, klen: int, t: int, R: bytes, id_: bytes, P: bytes, mode: KEYXCHG_MODE, extra_hash: bool = False) -> bytes:
         """End key exchange for initiator.
 
         Args:
@@ -297,10 +299,15 @@ class SM2:
             t (int): t value of self.
             R (bytes): random point from another user.
             P (bytes): public key from another user.
+            mode (KEYXCHG_MODE): key exchange mode, initiator or responder.
+            extra_hash (bool): Whether generate extra hash value to confirm.
 
         Returns:
             bytes: secret key of klen bytes.
         """
+
+        if extra_hash:
+            raise NotImplementedError
 
         if mode is KEYXCHG_MODE.INITIATOR:
             return self._end_key_exchange_initiator(klen, t, R, id_, P)

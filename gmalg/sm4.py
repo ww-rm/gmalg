@@ -1,5 +1,6 @@
 from typing import List
 
+from . import errors
 from .core import BlockCipher
 
 __all__ = ["SM4"]
@@ -88,10 +89,13 @@ class SM4(BlockCipher):
 
         Args:
             key (bytes): 16 bytes key.
+
+        Raises:
+            IncorrectLengthError: Incorrect key length.
         """
 
         if len(key) != self.key_length():
-            raise ValueError(f"Invalid key length {len(key)} bytes, key must be {self.key_length()} bytes.")
+            raise errors.IncorrectLengthError("Key", f"{self.key_length()} bytes", f"{len(key)} bytes")
 
         self._key: bytes = key
         self._rkey: List[int] = [0] * 32
@@ -109,11 +113,11 @@ class SM4(BlockCipher):
             bytes: 16 bytes cipher block.
 
         Raises:
-            ValueError: Invalid block length.
+            IncorrectLengthError: Incorrect block length.
         """
 
         if len(block) != self.block_length():
-            raise ValueError(f"Invalid block length {len(block)} bytes, block must be {self.block_length()} bytes.")
+            raise errors.IncorrectLengthError("Block", f"{self.block_length()} bytes", f"{len(block)} bytes")
 
         RK = self._rkey
 
@@ -146,11 +150,11 @@ class SM4(BlockCipher):
             bytes: 16 bytes plain block.
 
         Raises:
-            ValueError: Invalid block length.
+            IncorrectLengthError: Incorrect block length.
         """
 
         if len(block) != self.block_length():
-            raise ValueError(f"Invalid block length {len(block)} bytes, block must be {self.block_length()} bytes.")
+            raise errors.IncorrectLengthError("Block", f"{self.block_length()} bytes", f"{len(block)} bytes")
 
         RK = self._rkey
 

@@ -1,5 +1,7 @@
 from typing import List
 
+from . import errors
+
 __all__ = ["ZUC"]
 
 _S0 = bytes([
@@ -87,12 +89,16 @@ class ZUC:
         Args:
             key (bytes): 16 bytes key.
             iv (bytes): 16 bytes key.
+
+        Raises:
+            IncorrectLengthError: Incorrect key length.
+            IncorrectLengthError: Incorrect iv length.
         """
 
         if len(key) != self.key_length():
-            raise ValueError(f"Invalid key length {len(key)} bytes, key must be {self.key_length()} bytes.")
+            raise errors.IncorrectLengthError("Key", f"{self.key_length()} bytes", f"{len(key)} bytes")
         if len(iv) != self.iv_length():
-            raise ValueError(f"Invalid iv length {len(iv)} bytes, iv must be {self.iv_length()} bytes.")
+            raise errors.IncorrectLengthError("IV", f"{self.iv_length()} bytes", f"{len(iv)} bytes")
 
         self._key: bytes = key
         self._iv: bytes = iv

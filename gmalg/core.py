@@ -1,6 +1,8 @@
 import math
 from typing import Callable, Tuple, Type
 
+from . import errors
+
 __all__ = [
     "Hash",
     "BlockCipher",
@@ -163,6 +165,9 @@ class EllipticCurve:
         """Elliptic Curve (Fp)
 
         y^2 = x^3 + ax + b (mod p)
+
+        Raises:
+            InvalidArgumentError: p is not a prime number.
         """
 
         self.p = p
@@ -184,7 +189,7 @@ class EllipticCurve:
             self._u = self._u * 2 + 1
             self.get_y = self._get_y_4u3
         else:
-            raise ValueError(f"p is not a prime number: 0x{p:x}")
+            raise errors.InvalidArgumentError(f"0x{p:x} is not a prime number.")
 
     def isvalid(self, x: int, y: int) -> bool:
         """Verify if a point is on the curve."""
@@ -213,7 +218,7 @@ class EllipticCurve:
             elif y1 == y2:
                 lam = (3 * x1 * x1 + a) * _inv(2 * y1, p)
             else:
-                raise ValueError(f"{hex(y1)} and {hex(y2)} is neither equal nor opposite.")
+                raise errors.UnknownError(f"0x{y1:x} and 0x{y2:x} is neither equal nor opposite.")
         else:
             if x2 > x1:
                 lam = (y2 - y1) * _inv(x2 - x1, p)
@@ -257,7 +262,7 @@ class EllipticCurve:
 
     def get_y(self, x: int) -> int:
         """Get one of valid y of given x, -1 means no solution."""
-        raise NotImplementedError("Unknown Error.")
+        raise errors.UnknownError("Unknown Error.")
 
     def itob(self, i: int) -> bytes:
         """Convert domain elements to bytes."""
@@ -356,11 +361,15 @@ class EllipticCurveCipher:
         return True
 
     def entity_info(self, id_: bytes, xP: int, yP: int) -> bytes:
-        """Generate other entity information bytes."""
+        """Generate other entity information bytes.
+
+        Raises:
+            DataOverflowError: ID more than 2 bytes.
+        """
 
         ENTL = len(id_) << 3
         if ENTL.bit_length() > 16:
-            raise ValueError("ID bit length more than 2 bytes.")
+            raise errors.DataOverflowError("ID", "2 bytes")
 
         itob = self.ecdlp.itob
 
@@ -451,8 +460,11 @@ class EllipticCurveCipher:
         """KDF
 
         Args:
-            Z (bytes): secret byets.
+            Z (bytes): secret bytes.
             klen (int): key byte length
+
+        Raises:
+            DataOverflowError: klen is too large.
         """
 
         hash_fn = self._hash_fn
@@ -460,7 +472,7 @@ class EllipticCurveCipher:
 
         count, tail = divmod(klen, v)
         if count + (tail > 0) > 0xffffffff:
-            raise OverflowError("klen is too big.")
+            raise errors.DataOverflowError("Key stream", f"{0xffffffff * v} bytes")
 
         K = bytearray()
         for ct in range(1, count + 1):
@@ -485,7 +497,7 @@ class EllipticCurveCipher:
             bytes: C3, hash value
 
         Raises:
-            ValueError: Infinite point encountered.
+            InfinitePointError: Infinite point encountered.
 
         The return order is `C1, C2, C3`, **NOT** `C1, C3, C2`.
         """
@@ -495,7 +507,7 @@ class EllipticCurveCipher:
             x1, y1 = self.ecdlp.kG(k)  # C1
 
             if self.ecdlp.isinf(*self.ecdlp.mul(self.ecdlp.h, xP, yP)):
-                raise ValueError("Infinite point encountered.")
+                raise errors.InfinitePointError(f"Infinite point encountered, [0x{self.ecdlp.h:x}](0x{xP:x}, 0x{yP:x})")
 
             x2, y2 = self.ecdlp.mul(k, xP, yP)
             x2 = self.ecdlp.itob(x2)
@@ -525,17 +537,17 @@ class EllipticCurveCipher:
             bytes: plain text.
 
         Raises:
-            ValueError: Invalid C1 point, not on curve.
-            ValueError: Infinite point encountered.
-            ValueError: Invalid key stream.
-            ValueError: Incorrect hash value.
+            PointNotOnCurveError: Invalid C1 point, not on curve.
+            InfinitePointError: Infinite point encountered.
+            UnknownError: Zero bytes key stream.
+            CheckFailedError: Incorrect hash value.
         """
 
         if not self.ecdlp.isvalid(x1, y1):
-            raise ValueError("Invalid C1 point, not on curve.")
+            raise errors.PointNotOnCurveError(x1, x2)
 
         if self.ecdlp.isinf(*self.ecdlp.mul(self.ecdlp.h, x1, y1)):
-            raise ValueError("Infinite point encountered.")
+            raise errors.InfinitePointError(f"Infinite point encountered, [0x{self.ecdlp.h:x}](0x{x1:x}, 0x{y1:x})")
 
         x2, y2 = self.ecdlp.mul(d, x1, y1)
         x2 = self.ecdlp.itob(x2)
@@ -543,12 +555,12 @@ class EllipticCurveCipher:
 
         t = self.key_derivation_fn(x2 + y2, len(C2))
         if not any(t):
-            raise ValueError("Invalid key stream.")
+            raise errors.UnknownError("Zero bytes key stream.")
 
         M = bytes(map(lambda b1, b2: b1 ^ b2, C2, t))
 
         if self._hash_fn(x2 + M + y2) != C3:
-            raise ValueError("Incorrect hash value.")
+            raise errors.CheckFailedError("Incorrect hash value.")
 
         return M
 
@@ -586,12 +598,16 @@ class EllipticCurveCipher:
 
         Returns:
             (int, int): The same secret point as another user.
+
+        Raises:
+            PointNotOnCurveError
+            InfinitePointError
         """
 
         ecdlp = self.ecdlp
 
         if not ecdlp.isvalid(xR, yR):
-            raise ValueError(f"Invalid point R")
+            raise errors.PointNotOnCurveError(xR, yR)
 
         x, y = ecdlp.mul(
             ecdlp.h * t,
@@ -599,7 +615,7 @@ class EllipticCurveCipher:
         )
 
         if ecdlp.isinf(x, y):
-            raise ValueError("Infinite point encountered.")
+            raise errors.InfinitePointError("Infinite point encountered.")
 
         return x, y
 

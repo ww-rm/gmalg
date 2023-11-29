@@ -1,5 +1,6 @@
 from typing import List
 
+from . import errors
 from .core import Hash
 
 __all__ = ["SM3"]
@@ -111,11 +112,11 @@ class SM3(Hash):
             data (bytes): data stream to be updated.
 
         Raises:
-            OverflowError: Message too long.
+            DataOverflowError: Message too long.
         """
 
         if self._msg_len + len(data) > self.max_msg_length():
-            raise OverflowError("Message more than 2^64 - 1 bits.")
+            raise errors.DataOverflowError("Message", f"0x{self.max_msg_length():x} bytes")
 
         B = self._msg_block_buffer
         W1 = self._words_buffer1
