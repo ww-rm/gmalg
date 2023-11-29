@@ -3,7 +3,7 @@ import secrets
 from typing import Callable, Tuple
 
 from . import errors
-from .core import ECDLP, EllipticCurveCipher
+from .core import ecfp
 from .sm3 import SM3
 
 __all__ = [
@@ -21,7 +21,7 @@ def _itob(i: int) -> bytes:
     return i.to_bytes((i.bit_length() + 7) >> 3, "big")
 
 
-_ecdlp = ECDLP(
+_ecdlp = ecfp.ECDLP(
     0xFFFFFFFE_FFFFFFFF_FFFFFFFF_FFFFFFFF_FFFFFFFF_00000000_FFFFFFFF_FFFFFFFF,
     0xFFFFFFFE_FFFFFFFF_FFFFFFFF_FFFFFFFF_FFFFFFFF_00000000_FFFFFFFF_FFFFFFFC,
     0x28E9FA9E_9D9F5E34_4D5A9E4B_CF6509A7_F39789F5_15AB8F92_DDBCBD41_4D940E93,
@@ -58,7 +58,7 @@ class SM2:
             pc_mode (PC_MODE): pc_mode used for generated data, no effects on the data to be parsed.
         """
 
-        self._ecc = EllipticCurveCipher(_ecdlp, SM3, rnd_fn or self._default_rnd_fn)
+        self._ecc = ecfp.EllipticCurveCipher(_ecdlp, SM3, rnd_fn or self._default_rnd_fn)
         self._d = _btoi(d) if d else None
 
         if P:
