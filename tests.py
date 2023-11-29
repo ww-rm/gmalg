@@ -310,10 +310,10 @@ class TestSM4(unittest.TestCase):
         self.assertEqual(plain, bytes.fromhex("0123456789ABCDEFFEDCBA9876543210"))
 
     def test_raises(self):
-        self.assertRaises(ValueError, self.c.encrypt, b"123456781234567")
-        self.assertRaises(ValueError, self.c.encrypt, b"12345678123456781")
-        self.assertRaises(ValueError, self.c.decrypt, b"123456781234567")
-        self.assertRaises(ValueError, self.c.decrypt, b"12345678123456781")
+        self.assertRaises(gmalg.errors.IncorrectLengthError, self.c.encrypt, b"123456781234567")
+        self.assertRaises(gmalg.errors.IncorrectLengthError, self.c.encrypt, b"12345678123456781")
+        self.assertRaises(gmalg.errors.IncorrectLengthError, self.c.decrypt, b"123456781234567")
+        self.assertRaises(gmalg.errors.IncorrectLengthError, self.c.decrypt, b"12345678123456781")
 
 
 class TestZUC(unittest.TestCase):

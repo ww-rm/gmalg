@@ -291,7 +291,7 @@ class SM2:
         V = self._ecc.get_secret_point(t, xR, yR, xP, yP)
         return self._ecc.generate_skey(klen, *V, id_, xP, yP, self._id, self._xP, self._yP)
 
-    def end_key_exchange(self, klen: int, t: int, R: bytes, id_: bytes, P: bytes, mode: KEYXCHG_MODE, extra_hash: bool = False) -> bytes:
+    def end_key_exchange(self, klen: int, t: int, R: bytes, id_: bytes, P: bytes, mode: KEYXCHG_MODE) -> bytes:
         """End key exchange for initiator.
 
         Args:
@@ -300,14 +300,10 @@ class SM2:
             R (bytes): random point from another user.
             P (bytes): public key from another user.
             mode (KEYXCHG_MODE): key exchange mode, initiator or responder.
-            extra_hash (bool): Whether generate extra hash value to confirm.
 
         Returns:
             bytes: secret key of klen bytes.
         """
-
-        if extra_hash:
-            raise NotImplementedError
 
         if mode is KEYXCHG_MODE.INITIATOR:
             return self._end_key_exchange_initiator(klen, t, R, id_, P)
