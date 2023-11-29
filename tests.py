@@ -5,9 +5,6 @@ import gmalg.core
 
 
 class TestSM2(unittest.TestCase):
-    def _rnd_sign1(self, k: int) -> int:
-        return 0x6CB28D99_385C175C_94F94E93_4817663F_C176D925_DD72B727_260DBAAE_1FB2F96F
-
     def test_sign1(self):
         ecdlp = gmalg.core.ECDLP(
             0x8542D69E_4C044F18_E8B92435_BF6FF7DE_45728391_5C45517D_722EDB8B_08F1DFC3,
@@ -17,7 +14,10 @@ class TestSM2(unittest.TestCase):
             0x0680512B_CBB42C07_D47349D2_153B70C4_E5D7FDFC_BFA36EA1_A85841B9_E46E09A2,
             0x8542D69E_4C044F18_E8B92435_BF6FF7DD_29772063_0485628D_5AE74EE7_C32E79B7,
         )
-        ecc = gmalg.core.EllipticCurveCipher(ecdlp, gmalg.SM3, self._rnd_sign1)
+        ecc = gmalg.core.EllipticCurveCipher(
+            ecdlp, gmalg.SM3,
+            lambda _: 0x6CB28D99_385C175C_94F94E93_4817663F_C176D925_DD72B727_260DBAAE_1FB2F96F
+        )
         d = 0x128B2FA8_BD433C6C_068C8D80_3DFF7979_2A519A55_171B1B65_0C23661D_15897263
         id_ = b"ALICE123@YAHOO.COM"
         xP = 0x0AE4C779_8AA0F119_471BEE11_825BE462_02BB79E2_A5844495_E97C04FF_4DF2548A
@@ -29,9 +29,6 @@ class TestSM2(unittest.TestCase):
 
         self.assertEqual(ecc.verify(b"message digest", r, s, id_, xP, yP), True)
 
-    def _rnd_sign2(self, k: int) -> int:
-        return 0x59276E27_D506861A_16680F3A_D9C02DCC_EF3CC1FA_3CDBE4CE_6D54B80D_EAC1BC21
-
     def test_sign2(self):
         sm2 = gmalg.SM2(
             bytes.fromhex("3945208F 7B2144B1 3F36E38A C6D39F95 88939369 2860B51A 42FB81EF 4DF7C5B8"),
@@ -39,7 +36,7 @@ class TestSM2(unittest.TestCase):
             bytes.fromhex("04"
                           "09F9DF31 1E5421A1 50DD7D16 1E4BC5C6 72179FAD 1833FC07 6BB08FF3 56F35020"
                           "CCEA490C E26775A5 2DC6EA71 8CC1AA60 0AED05FB F35E084A 6632F607 2DA9AD13"),
-            rnd_fn=self._rnd_sign2
+            rnd_fn=lambda _: 0x59276E27_D506861A_16680F3A_D9C02DCC_EF3CC1FA_3CDBE4CE_6D54B80D_EAC1BC21
         )
 
         r, s = sm2.sign(b"message digest")
@@ -56,9 +53,6 @@ class TestSM2(unittest.TestCase):
         r, s = sm2.sign(plain)
         self.assertEqual(sm2.verify(plain, r, s), True)
 
-    def _rnd_encrypt1(self, k: int) -> int:
-        return 0x384F3035_3073AEEC_E7A16543_30A96204_D37982A3_E15B2CB5
-
     def test_encrypt1(self):
         ecdlp = gmalg.core.ECDLP(
             0xBDB6F4FE_3E8B1D9E_0DA8C0D4_6F4C318C_EFE4AFE3_B6B8551F,
@@ -68,7 +62,10 @@ class TestSM2(unittest.TestCase):
             0x02BB3A02_D4AAADAC_AE24817A_4CA3A1B0_14B52704_32DB27D2,
             0xBDB6F4FE_3E8B1D9E_0DA8C0D4_0FC96219_5DFAE76F_56564677,
         )
-        ecc = gmalg.core.EllipticCurveCipher(ecdlp, gmalg.SM3, self._rnd_encrypt1)
+        ecc = gmalg.core.EllipticCurveCipher(
+            ecdlp, gmalg.SM3,
+            lambda _: 0x384F3035_3073AEEC_E7A16543_30A96204_D37982A3_E15B2CB5
+        )
         d = 0x58892B80_7074F53F_BF67288A_1DFAA1AC_313455FE_60355AFD
         xP = 0x79F0A954_7AC6D100_531508B3_0D30A565_36BCFC81_49F4AF4A
         yP = 0xAE38F2D8_890838DF_9C19935A_65A8BCC8_994BC792_4672F912
@@ -81,9 +78,6 @@ class TestSM2(unittest.TestCase):
 
         self.assertEqual(ecc.decrypt(x1, y1, c2, c3, d), b"encryption standard")
 
-    def _rnd_encrypt2(self, k: int) -> int:
-        return 0x4C62EEFD_6ECFC2B9_5B92FD6C_3D957514_8AFA1742_5546D490_18E5388D_49DD7B4F
-
     def test_encrypt2(self):
         ecdlp = gmalg.core.ECDLP(
             0x8542D69E_4C044F18_E8B92435_BF6FF7DE_45728391_5C45517D_722EDB8B_08F1DFC3,
@@ -93,7 +87,10 @@ class TestSM2(unittest.TestCase):
             0x0680512B_CBB42C07_D47349D2_153B70C4_E5D7FDFC_BFA36EA1_A85841B9_E46E09A2,
             0x8542D69E_4C044F18_E8B92435_BF6FF7DD_29772063_0485628D_5AE74EE7_C32E79B7,
         )
-        ecc = gmalg.core.EllipticCurveCipher(ecdlp, gmalg.SM3, self._rnd_encrypt2)
+        ecc = gmalg.core.EllipticCurveCipher(
+            ecdlp, gmalg.SM3,
+            lambda _: 0x4C62EEFD_6ECFC2B9_5B92FD6C_3D957514_8AFA1742_5546D490_18E5388D_49DD7B4F
+        )
         d = 0x1649AB77_A00637BD_5E2EFE28_3FBF3535_34AA7F7C_B89463F2_08DDBC29_20BB0DA0
         xP = 0x435B39CC_A8F3B508_C1488AFC_67BE491A_0F7BA07E_581A0E48_49A5CF70_628A7E0A
         yP = 0x75DDBA78_F15FEECB_4C7895E2_C1CDF5FE_01DEBB2C_DBADF453_99CCF77B_BA076A42
@@ -106,16 +103,13 @@ class TestSM2(unittest.TestCase):
 
         self.assertEqual(ecc.decrypt(x1, y1, c2, c3, d), b"encryption standard")
 
-    def _rnd_encrypt3(self, k: int) -> int:
-        return 0x59276E27_D506861A_16680F3A_D9C02DCC_EF3CC1FA_3CDBE4CE_6D54B80D_EAC1BC21
-
     def test_encrypt3(self):
         sm2 = gmalg.SM2(
             bytes.fromhex("3945208F 7B2144B1 3F36E38A C6D39F95 88939369 2860B51A 42FB81EF 4DF7C5B8"),
             P=bytes.fromhex("04"
                             "09F9DF31 1E5421A1 50DD7D16 1E4BC5C6 72179FAD 1833FC07 6BB08FF3 56F35020"
                             "CCEA490C E26775A5 2DC6EA71 8CC1AA60 0AED05FB F35E084A 6632F607 2DA9AD13"),
-            rnd_fn=self._rnd_encrypt3,
+            rnd_fn=lambda _: 0x59276E27_D506861A_16680F3A_D9C02DCC_EF3CC1FA_3CDBE4CE_6D54B80D_EAC1BC21,
         )
 
         cipher = sm2.encrypt(b"encryption standard")
@@ -173,7 +167,9 @@ class TestSM2(unittest.TestCase):
 
         x = 0x0AE4C779_8AA0F119_471BEE11_825BE462_02BB79E2_A5844495_E97C04FF_4DF2548A
         y = 0x7C0240F8_8F1CD4E1_6352A73C_17B7F16F_07353E53_A176D684_A9FE0C6B_B798E857
-        self.assertEqual(ecdlp.get_y(x), y)
+
+        y_ = ecdlp.get_y(x)
+        self.assertTrue(y_ == y or ecdlp.p - y_ == y)
 
         # 8u7
         ecdlp = gmalg.core.ECDLP(
@@ -186,13 +182,9 @@ class TestSM2(unittest.TestCase):
         )
         x = 0x79F0A954_7AC6D100_531508B3_0D30A565_36BCFC81_49F4AF4A
         y = 0xAE38F2D8_890838DF_9C19935A_65A8BCC8_994BC792_4672F912
-        self.assertEqual(ecdlp.get_y(x), y)
 
-    def _rnd_keyxchg1a(self, k: int):
-        return 0x83A2C9C8_B96E5AF7_0BD480B4_72409A9A_327257F1_EBB73F5B_073354B2_48668563
-
-    def _rnd_keyxchg1b(self, k: int):
-        return 0x33FE2194_0342161C_55619C4A_0C060293_D543C80A_F19748CE_176D8347_7DE71C80
+        y_ = ecdlp.get_y(x)
+        self.assertTrue(y_ == y or ecdlp.p - y_ == y)
 
     def test_keyxchg1(self):
         ecdlp = gmalg.core.ECDLP(
@@ -204,13 +196,19 @@ class TestSM2(unittest.TestCase):
             0x8542D69E_4C044F18_E8B92435_BF6FF7DD_29772063_0485628D_5AE74EE7_C32E79B7,
         )
 
-        ecc1 = gmalg.core.EllipticCurveCipher(ecdlp, gmalg.SM3, self._rnd_keyxchg1a)
+        ecc1 = gmalg.core.EllipticCurveCipher(
+            ecdlp, gmalg.SM3,
+            lambda _: 0x83A2C9C8_B96E5AF7_0BD480B4_72409A9A_327257F1_EBB73F5B_073354B2_48668563
+        )
         d1 = 0x6FCBA2EF_9AE0AB90_2BC3BDE3_FF915D44_BA4CC78F_88E2F8E7_F8996D3B_8CCEEDEE
         xP1 = 0x3099093B_F3C137D8_FCBBCDF4_A2AE50F3_B0F216C3_122D7942_5FE03A45_DBFE1655
         yP1 = 0x3DF79E8D_AC1CF0EC_BAA2F2B4_9D51A4B3_87F2EFAF_48233908_6A27A8E0_5BAED98B
         id1 = b"ALICE123@YAHOO.COM"
 
-        ecc2 = gmalg.core.EllipticCurveCipher(ecdlp, gmalg.SM3, self._rnd_keyxchg1b)
+        ecc2 = gmalg.core.EllipticCurveCipher(
+            ecdlp, gmalg.SM3,
+            lambda _: 0x33FE2194_0342161C_55619C4A_0C060293_D543C80A_F19748CE_176D8347_7DE71C80
+        )
         d2 = 0x5E35D7D3_F3C54DBA_C72E6181_9E730B01_9A84208C_A3A35E4C_2E353DFC_CB2A3B53
         xP2 = 0x245493D4_46C38D8C_C0F11837_4690E7DF_633A8A4B_FB3329B5_ECE604B2_B4F37F43
         yP2 = 0x53C0869F_4B9E1777_3DE68FEC_45E14904_E0DEA45B_F6CECF99_18C85EA0_47C60A4C
@@ -231,12 +229,6 @@ class TestSM2(unittest.TestCase):
 
         self.assertEqual(K1, bytes.fromhex("55B0AC62 A6B927BA 23703832 C853DED4"))
 
-    def _rnd_keyxchg2a(self, k: int):
-        return 0xD4DE1547_4DB74D06_491C440D_305E0124_00990F3E_390C7E87_153C12DB_2EA60BB3
-
-    def _rnd_keyxchg2b(self, k: int):
-        return 0x7E071248_14B30948_9125EAED_10111316_4EBF0F34_58C5BD88_335C1F9D_596243D6
-
     def test_keyxchg2(self):
         PA = bytes.fromhex("04"
                            "160E1289 7DF4EDB6 1DD812FE B96748FB D3CCF4FF E26AA6F6 DB9540AF 49C94232"
@@ -244,7 +236,7 @@ class TestSM2(unittest.TestCase):
         sm2A = gmalg.SM2(
             bytes.fromhex("81EB26E9 41BB5AF1 6DF11649 5F906952 72AE2CD6 3D6C4AE1 678418BE 48230029"),
             b"1234567812345678", PA,
-            rnd_fn=self._rnd_keyxchg2a
+            rnd_fn=lambda _: 0xD4DE1547_4DB74D06_491C440D_305E0124_00990F3E_390C7E87_153C12DB_2EA60BB3
         )
 
         PB = bytes.fromhex("04"
@@ -253,7 +245,7 @@ class TestSM2(unittest.TestCase):
         sm2B = gmalg.SM2(
             bytes.fromhex("78512991 7D45A9EA 5437A593 56B82338 EAADDA6C EB199088 F14AE10D EFA229B5"),
             b"1234567812345678", PB,
-            rnd_fn=self._rnd_keyxchg2b
+            rnd_fn=lambda _: 0x7E071248_14B30948_9125EAED_10111316_4EBF0F34_58C5BD88_335C1F9D_596243D6
         )
 
         RA, tA = sm2A.begin_key_exchange()
