@@ -252,6 +252,7 @@ class SM2:
             klen (int): length of secret key in bytes to generate.
             t (int): t value of initiator.
             R (bytes): random point from responder.
+            id_ (bytes): id from responder.
             P (bytes): public key from responder.
 
         Returns:
@@ -271,6 +272,7 @@ class SM2:
             klen (int): length of secret key in bytes to generate.
             t (int): t value of responder.
             R (bytes): random point from initiator.
+            id_ (bytes): id from initiator.
             P (bytes): public key from initiator.
 
         Returns:
@@ -290,6 +292,7 @@ class SM2:
             klen (int): length of secret key in bytes to generate.
             t (int): t value of self.
             R (bytes): random point from another user.
+            id_ (bytes): id from another user.
             P (bytes): public key from another user.
             mode (KEYXCHG_MODE): key exchange mode, initiator or responder.
 
