@@ -258,6 +258,21 @@ class TestSM2(unittest.TestCase):
         self.assertEqual(KA, KB)
         self.assertEqual(KA, bytes.fromhex("6C893473 54DE2484 C60B4AB1 FDE4C6E5"))
 
+    def test_keyxchg3(self):
+        _sm2 = gmalg.SM2()
+        dA, PA = _sm2.generate_keypair()
+        dB, PB = _sm2.generate_keypair()
+        sm2A = gmalg.SM2(dA, b"abcdefghijklmnop", PA)
+        sm2B = gmalg.SM2(dB, b"1234567812345678", PB)
+
+        RA, tA = sm2A.begin_key_exchange()
+        RB, tB = sm2B.begin_key_exchange()
+
+        KB = sm2B.end_key_exchange(16, tB, RA, b"abcdefghijklmnop", PA, gmalg.sm2.KEYXCHG_MODE.RESPONDER)
+        KA = sm2A.end_key_exchange(16, tA, RB, b"1234567812345678", PB, gmalg.sm2.KEYXCHG_MODE.INITIATOR)
+
+        self.assertEqual(KA, KB)
+
 
 class TestSM3(unittest.TestCase):
     def setUp(self) -> None:
