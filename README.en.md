@@ -99,7 +99,7 @@ PA = bytes.fromhex("04 160E1289 7DF4EDB6 1DD812FE B96748FB D3CCF4FF E26AA6F6 DB9
                    "4A7DAD08 BB9A4595 31694BEB 20AA489D 6649975E 1BFCF8C4 741B78B4 B223007F")
 sm2A = gmalg.SM2(
     bytes.fromhex("81EB26E9 41BB5AF1 6DF11649 5F906952 72AE2CD6 3D6C4AE1 678418BE 48230029"),
-    b"1234567812345678", PA
+    b"abcdefghijklmnopqrstuvwxyz", PA
 )
 
 PB = bytes.fromhex("04 6AE848C5 7C53C7B1 B5FA99EB 2286AF07 8BA64C64 591B8B56 6F7357D5 76F16DFB"
@@ -112,7 +112,7 @@ sm2B = gmalg.SM2(
 RA, tA = sm2A.begin_key_exchange()
 RB, tB = sm2B.begin_key_exchange()
 
-KB = sm2B.end_key_exchange(16, tB, RA, b"1234567812345678", PA, gmalg.sm2.KEYXCHG_MODE.RESPONDER)
+KB = sm2B.end_key_exchange(16, tB, RA, b"abcdefghijklmnopqrstuvwxyz", PA, gmalg.sm2.KEYXCHG_MODE.RESPONDER)
 KA = sm2A.end_key_exchange(16, tA, RB, b"1234567812345678", PB, gmalg.sm2.KEYXCHG_MODE.INITIATOR)
 
 print(KA == KB)
