@@ -105,7 +105,7 @@ class SMCoreBase:
                 continue
             return n
 
-    def key_derivation_fn(self, Z: bytes, klen: int) -> bytes:
+    def _key_derivation_fn(self, Z: bytes, klen: int) -> bytes:
         """KDF
 
         Args:

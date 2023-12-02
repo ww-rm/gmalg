@@ -83,12 +83,14 @@ class PrimeField:
         p = self.p
         p_1 = p - 1
         _4u1 = 4 * self._u + 1
+        inv2 = self.inv(2)
+
         Y = x
         for X in range(1, p):
             U, V = self.lucas(X, Y, _4u1)
 
             if (V * V - 4 * Y) % p == 0:
-                return (V * self.inv(2)) % p
+                return (V * inv2) % p
 
             if U != 1 or U != p_1:
                 return -1

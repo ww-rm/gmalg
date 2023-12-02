@@ -210,7 +210,7 @@ class SM2Core(SMCoreBase):
             x2 = self.ecdlp.fp.ele_to_bytes(x2)
             y2 = self.ecdlp.fp.ele_to_bytes(y2)
 
-            t = self.key_derivation_fn(x2 + y2, len(plain))
+            t = self._key_derivation_fn(x2 + y2, len(plain))
             if not any(t):
                 continue
 
@@ -250,7 +250,7 @@ class SM2Core(SMCoreBase):
         x2 = self.ecdlp.fp.ele_to_bytes(x2)
         y2 = self.ecdlp.fp.ele_to_bytes(y2)
 
-        t = self.key_derivation_fn(x2 + y2, len(C2))
+        t = self._key_derivation_fn(x2 + y2, len(C2))
         if not any(t):
             raise errors.UnknownError("Zero bytes key stream.")
 
@@ -345,7 +345,7 @@ class SM2Core(SMCoreBase):
         Z.extend(self.entity_info(id_init, xP_init, yP_init))
         Z.extend(self.entity_info(id_resp, xP_resp, yP_resp))
 
-        return self.key_derivation_fn(Z, klen)
+        return self._key_derivation_fn(Z, klen)
 
 
 class PC_MODE(enum.Enum):
