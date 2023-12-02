@@ -28,7 +28,7 @@ _ecdlp = ECDLP(
 class SM2Core(SMCoreBase):
     """SM2 Core Algorithms."""
 
-    def __init__(self, ecdlp: ECDLP, hash_cls: Type[Hash], rnd_fn: Callable[[int], int]) -> None:
+    def __init__(self, ecdlp: ECDLP, hash_cls: Type[Hash], rnd_fn: Callable[[int], int] = None) -> None:
         """Elliptic Curve Cipher
 
         Args:
@@ -37,27 +37,14 @@ class SM2Core(SMCoreBase):
             rnd_fn ((int) -> int): random function used to generate k-bit random number.
         """
 
+        super().__init__(hash_cls, rnd_fn)
+
         self.ecdlp = ecdlp
-        self._hash_cls = hash_cls
-        self._rnd_fn = rnd_fn
 
         # used in key exchange
         w = math.ceil(math.ceil(math.log2(self.ecdlp.n)) / 2) - 1
         self._2w = 1 << w
         self._2w_1 = self._2w - 1
-
-    def _hash_fn(self, data: bytes) -> bytes:
-        hash_obj = self._hash_cls()
-        hash_obj.update(data)
-        return hash_obj.value()
-
-    def _randint(self, a: int, b: int) -> int:
-        bitlength = b.bit_length()
-        while True:
-            n = self._rnd_fn(bitlength)
-            if n < a or n > b:
-                continue
-            return n
 
     def generate_keypair(self) -> Tuple[int, Tuple[int, int]]:
         """Generate key pair."""
@@ -375,7 +362,7 @@ class SM2:
             pc_mode (PC_MODE): pc_mode used for generated data, no effects on the data to be parsed.
         """
 
-        self._core = SM2Core(_ecdlp, SM3, rnd_fn or self._default_rnd_fn)
+        self._core = SM2Core(_ecdlp, SM3, rnd_fn)
         self._d = bytes_to_int(d) if d else None
 
         if P:
@@ -388,9 +375,6 @@ class SM2:
 
         self._id = id_
         self._pc_mode = pc_mode
-
-    def _default_rnd_fn(self, k: int) -> int:
-        return secrets.randbits(k)
 
     def point_to_bytes(self, x: int, y: int, mode: PC_MODE) -> bytes:
         """Convert point to bytes."""

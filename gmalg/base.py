@@ -1,5 +1,6 @@
 """Base abstract classes."""
 
+import secrets
 from typing import Callable, Type
 
 from . import errors
@@ -81,7 +82,7 @@ class BlockCipher:
 class SMCoreBase:
     """SM Core base."""
 
-    def __init__(self, hash_cls: Type[Hash], rnd_fn: Callable[[int], int]) -> None:
+    def __init__(self, hash_cls: Type[Hash], rnd_fn: Callable[[int], int] = None) -> None:
         """SM Core Base.
 
         Args:
@@ -90,7 +91,10 @@ class SMCoreBase:
         """
 
         self._hash_cls = hash_cls
-        self._rnd_fn = rnd_fn
+        self._rnd_fn = rnd_fn or self._default_rnd_fn
+
+    def _default_rnd_fn(self, k: int) -> int:
+        return secrets.randbits(k)
 
     def _hash_fn(self, data: bytes) -> bytes:
         hash_obj = self._hash_cls()
