@@ -82,17 +82,17 @@ class SM2Core(SMCoreBase):
         if ENTL.bit_length() > 16:
             raise errors.DataOverflowError("ID", "2 bytes")
 
-        itob = self.ecdlp.fp.ele_to_bytes
+        etob = self.ecdlp.etob
 
         Z = bytearray()
         Z.extend(ENTL.to_bytes(2, "big"))
         Z.extend(id_)
-        Z.extend(itob(self.ecdlp.a))
-        Z.extend(itob(self.ecdlp.b))
-        Z.extend(itob(self.ecdlp.xG))
-        Z.extend(itob(self.ecdlp.yG))
-        Z.extend(itob(xP))
-        Z.extend(itob(yP))
+        Z.extend(etob(self.ecdlp.a))
+        Z.extend(etob(self.ecdlp.b))
+        Z.extend(etob(self.ecdlp.xG))
+        Z.extend(etob(self.ecdlp.yG))
+        Z.extend(etob(xP))
+        Z.extend(etob(yP))
 
         return self._hash_fn(Z)
 
@@ -194,8 +194,8 @@ class SM2Core(SMCoreBase):
                 raise errors.InfinitePointError(f"Infinite point encountered, [0x{self.ecdlp.h:x}](0x{xP:x}, 0x{yP:x})")
 
             x2, y2 = self.ecdlp.mul(k, xP, yP)
-            x2 = self.ecdlp.fp.ele_to_bytes(x2)
-            y2 = self.ecdlp.fp.ele_to_bytes(y2)
+            x2 = self.ecdlp.etob(x2)
+            y2 = self.ecdlp.etob(y2)
 
             t = self._key_derivation_fn(x2 + y2, len(plain))
             if not any(t):
@@ -234,8 +234,8 @@ class SM2Core(SMCoreBase):
             raise errors.InfinitePointError(f"Infinite point encountered, [0x{self.ecdlp.h:x}](0x{x1:x}, 0x{y1:x})")
 
         x2, y2 = self.ecdlp.mul(d, x1, y1)
-        x2 = self.ecdlp.fp.ele_to_bytes(x2)
-        y2 = self.ecdlp.fp.ele_to_bytes(y2)
+        x2 = self.ecdlp.etob(x2)
+        y2 = self.ecdlp.etob(y2)
 
         t = self._key_derivation_fn(x2 + y2, len(C2))
         if not any(t):
@@ -327,8 +327,8 @@ class SM2Core(SMCoreBase):
 
         Z = bytearray()
 
-        Z.extend(self.ecdlp.fp.ele_to_bytes(x))
-        Z.extend(self.ecdlp.fp.ele_to_bytes(y))
+        Z.extend(self.ecdlp.etob(x))
+        Z.extend(self.ecdlp.etob(y))
         Z.extend(self.entity_info(id_init, xP_init, yP_init))
         Z.extend(self.entity_info(id_resp, xP_resp, yP_resp))
 
@@ -379,23 +379,23 @@ class SM2:
     def point_to_bytes(self, x: int, y: int, mode: PC_MODE) -> bytes:
         """Convert point to bytes."""
 
-        if self._core.ecdlp.isinf(x, y):
+        ecdlp = self._core.ecdlp
+
+        if ecdlp.isinf(x, y):
             return b"\x00"
 
-        fp = self._core.ecdlp.fp
-
         if mode is PC_MODE.RAW:
-            return b"\x04" + fp.ele_to_bytes(x) + fp.ele_to_bytes(y)
+            return b"\x04" + ecdlp.etob(x) + ecdlp.etob(y)
         elif mode is PC_MODE.COMPRESS:
             if y & 0x1:
-                return b"\x03" + fp.ele_to_bytes(x)
+                return b"\x03" + ecdlp.etob(x)
             else:
-                return b"\x02" + fp.ele_to_bytes(x)
+                return b"\x02" + ecdlp.etob(x)
         elif mode is PC_MODE.MIXED:
             if y & 0x1:
-                return b"\x07" + fp.ele_to_bytes(x) + fp.ele_to_bytes(y)
+                return b"\x07" + ecdlp.etob(x) + ecdlp.etob(y)
             else:
-                return b"\x06" + fp.ele_to_bytes(x) + fp.ele_to_bytes(y)
+                return b"\x06" + ecdlp.etob(x) + ecdlp.etob(y)
         else:
             raise TypeError(f"Invalid mode {mode}")
 
@@ -403,23 +403,22 @@ class SM2:
         """Convert bytes to point."""
 
         ecdlp = self._core.ecdlp
-        fp = ecdlp.fp
 
         mode = p[0]
         if mode == 0x00:
             return ecdlp.INF
 
         point = p[1:]
-        x = fp.bytes_to_ele(point[:fp.length])
+        x = ecdlp.btoe(point[:ecdlp.length])
         if mode == 0x04 or mode == 0x06 or mode == 0x07:
-            return x, fp.bytes_to_ele(point[fp.length:])
+            return x, ecdlp.btoe(point[ecdlp.length:])
         elif mode == 0x02 or mode == 0x03:
             y = ecdlp.get_y(x)
             if y < 0:
                 raise errors.PointNotOnCurveError(x, -1)
             ylsb = y & 0x1
             if mode == 0x02 and ylsb or mode == 0x03 and not ylsb:
-                return x, fp.p - y
+                return x, ecdlp.p - y
             return x, y
         else:
             raise errors.InvalidPCError(mode)
@@ -524,7 +523,7 @@ class SM2:
         if not self.can_decrypt:
             raise errors.RequireArgumentError("decrypt", "d")
 
-        length = self._core.ecdlp.fp.length
+        length = self._core.ecdlp.length
         mode = cipher[0]
         if mode == 0x04 or mode == 0x06 or mode == 0x07:
             C1 = cipher[:1 + length * 2]

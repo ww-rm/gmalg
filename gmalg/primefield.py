@@ -121,6 +121,9 @@ class PrimeFiledEx(PrimeField):
     def subex(self, X: FpExEle, Y: FpExEle) -> FpExEle:
         return tuple((i - j) % self.p for i, j in zip(X, Y))
 
+    def smulex(self, k: int, X: FpExEle) -> FpExEle:
+        return tuple((k * i) % self.p for i in X)
+
     def mul2(self, X: Fp2Ele, Y: Fp2Ele) -> Fp2Ele:
         x1, x0 = X
         y1, y0 = Y

@@ -26,15 +26,23 @@ class EllipticCurve:
 
         self.a = a
         self.b = b
-        self.fp = PrimeField(p)
+        self._fp = PrimeField(p)
+
+    @property
+    def p(self) -> int:
+        return self._fp.p
+
+    @property
+    def length(self) -> int:
+        return self._fp.length
 
     def isvalid(self, x: int, y: int) -> bool:
         """Verify if a point is on the curve."""
 
-        if x >= self.fp.p or y >= self.fp.p:
+        if x >= self._fp.p or y >= self._fp.p:
             return False
 
-        if (y * y - x * x * x - self.a * x - self.b) % self.fp.p != 0:
+        if (y * y - x * x * x - self.a * x - self.b) % self._fp.p != 0:
             return False
 
         return True
@@ -42,7 +50,7 @@ class EllipticCurve:
     def add(self, x1: int, y1: int, x2: int, y2: int) -> Tuple[int, int]:
         """Add two points. Negative numbers means infinite point."""
 
-        fp = self.fp
+        fp = self._fp
         a = self.a
 
         if self.isinf(x1, y1):
@@ -70,7 +78,7 @@ class EllipticCurve:
     def sub(self, x1: int, y1: int, x2: int, y2: int) -> Tuple[int, int]:
         """Sub two points."""
 
-        return self.add(x1, y1, x2, self.fp.p - y2)
+        return self.add(x1, y1, x2, self._fp.p - y2)
 
     def mul(self, k: int, x: int, y: int) -> Tuple[int, int]:
         """Scalar multiplication by k."""
@@ -86,11 +94,11 @@ class EllipticCurve:
         return xk, yk
 
     def get_y_sqr(self, x: int) -> int:
-        return (x * x * x + self.a * x + self.b) % self.fp.p
+        return (x * x * x + self.a * x + self.b) % self._fp.p
 
     def get_y(self, x: int) -> int:
         """Get one of valid y of given x, -1 means no solution."""
-        return self.fp.sqrt(self.get_y_sqr(x))
+        return self._fp.sqrt(self.get_y_sqr(x))
 
 
 class ECDLP(EllipticCurve):
@@ -117,6 +125,12 @@ class ECDLP(EllipticCurve):
         """Scalar multiplication of G by k."""
 
         return self.mul(k, self.xG, self.yG)
+
+    def etob(self, e: int) -> bytes:
+        return self._fp.ele_to_bytes(e)
+
+    def btoe(self, b: bytes) -> int:
+        return self._fp.bytes_to_ele(b)
 
 
 class EllipticCurveEx(EllipticCurve):

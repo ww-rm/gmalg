@@ -2,6 +2,7 @@
 
 __all__ = [
     "GMError",
+    "CheckFailedError",
     "DataOverflowError",
     "IncorrectLengthError",
     "InfinitePointError",
@@ -15,6 +16,10 @@ __all__ = [
 
 class GMError(Exception):
     """Base class of all errors in GM algorithms."""
+
+
+class CheckFailedError(GMError):
+    """Check failed."""
 
 
 class DataOverflowError(GMError):
