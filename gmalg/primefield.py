@@ -116,10 +116,13 @@ class PrimeFiledEx(PrimeField):
     """Fp2, Fp4, Fp12 operations."""
 
     def addex(self, X: FpExEle, Y: FpExEle) -> FpExEle:
-        return tuple((i + j) % self.p for i, j in zip(X, Y))
+        return tuple((i1 + i2) % self.p for i1, i2 in zip(X, Y))
 
     def subex(self, X: FpExEle, Y: FpExEle) -> FpExEle:
-        return tuple((i - j) % self.p for i, j in zip(X, Y))
+        return tuple((i1 - i2) % self.p for i1, i2 in zip(X, Y))
+
+    def negex(self, X: FpExEle) -> FpExEle:
+        return tuple(self.p - i for i in X)
 
     def smulex(self, k: int, X: FpExEle) -> FpExEle:
         return tuple((k * i) % self.p for i in X)
@@ -127,27 +130,90 @@ class PrimeFiledEx(PrimeField):
     def mul2(self, X: Fp2Ele, Y: Fp2Ele) -> Fp2Ele:
         x1, x0 = X
         y1, y0 = Y
-        return ((x1 * y0 + x0 * y1) % self.p,
-                (x0 * y0 - 2 * x1 * y1) % self.p)
+        x1y1 = x1 * y1
+        x0y0 = x0 * y0
+        z1 = ((x1 + x0) * (y1 + y0) - x1y1 - x0y0) % self.p
+        z0 = (x0y0 - 2 * x1y1) % self.p
+        return z1, z0
 
     def inv2(self, X: Fp2Ele) -> Fp2Ele:
         x1, x0 = X
-        invdet = self.inv(2 * x1 * x1 + x0 * x0, self.p)
-        return ((-x1 * invdet) % self.p,
-                (x0 * invdet) % self.p)
+        invdet = self.inv(2 * x1 * x1 + x0 * x0)
+        y1 = (-x1 * invdet) % self.p
+        y0 = (x0 * invdet) % self.p
+        return y1, y0
 
     def mul4(self, X: Fp4Ele, Y: Fp4Ele) -> Fp4Ele:
+        a, m = self.addex, self.mul2
         X1, X0 = X[:2], X[2:]
         Y1, Y0 = Y[:2], Y[2:]
+        U = (1, 0)
+
+        X1mY1 = m(X1, Y1)
+        X0mY0 = m(X0, Y0)
+
+        X1aX0_m_Y1aY0 = m(a(X1, X0), a(Y1, Y0))
+        Z1 = tuple((i1 - i2 - i3) % self.p for i1, i2, i3 in zip(X1aX0_m_Y1aY0, X1mY1, X0mY0))
+        Z0 = a(m(U, X1mY1), X0mY0)
+
+        return Z1 + Z0
 
     def inv4(self, X: Fp4Ele) -> Fp4Ele:
-        ...
+        m, n, s = self.mul2, self.negex, self.subex
+        X1, X0 = X[:2], X[2:]
+        U = (1, 0)
+
+        UmX1mX1_s_X0mX0 = s(m(U, m(X1, X1)), m(X0, X0))
+        invdet = self.inv2(UmX1mX1_s_X0mX0)
+
+        Y1 = m(X1, invdet)
+        Y0 = m(n(X0), invdet)
+
+        return Y1 + Y0
 
     def mul12(self, X: Fp12Ele, Y: Fp12Ele) -> Fp12Ele:
-        ...
+        a, m = self.addex, self.mul4
+        X2, X1, X0 = X[:4], X[4:8], X[8:]
+        Y2, Y1, Y0 = Y[:4], Y[4:8], Y[8:]
+        V = (0, 1, 0, 0)
+
+        X2mY2, X1mY1, X0mY0 = m(X2, Y2), m(X1, Y1), m(X0, Y0)
+        X2aX1, X2aX0, X1aX0 = a(X2, X1), a(X2, X0), a(X1, X0)
+        Y2aY1, Y2aY0, Y1aY0 = a(Y2, Y1), a(Y2, Y0), a(Y1, Y0)
+
+        X2aX1_m_Y2aY1 = m(X2aX1, Y2aY1)
+        X2aX0_m_Y2aY0 = m(X2aX0, Y2aY0)
+        X1aX0_m_Y1aY0 = m(X1aX0, Y1aY0)
+
+        VmX2mY2 = m(V, X2mY2)
+        X2mY1_a_X1Y2 = tuple((i1 - i2 - i3) % self.p for i1, i2, i3 in zip(X2aX1_m_Y2aY1, X2mY2, X1mY1))
+
+        Z2 = tuple((i1 - i2 - i3 + i4) % self.p for i1, i2, i3, i4 in zip(X2aX0_m_Y2aY0, X2mY2, X0mY0, X1mY1))
+        Z1 = tuple((i1 + i2 - i3 - i4) % self.p for i1, i2, i3, i4 in zip(VmX2mY2, X1aX0_m_Y1aY0, X1mY1, X0mY0))
+        Z0 = a(m(V, X2mY1_a_X1Y2), X0mY0)
+
+        return Z2 + Z1 + Z0
 
     def inv12(self, X: Fp12Ele) -> Fp12Ele:
-        ...
+        m, s = self.mul4, self.subex
+        X2, X1, X0 = X[:4], X[4:8], X[8:]
+        V = (0, 1, 0, 0)
+
+        VmX2 = m(V, X2)
+        VmX1 = m(V, X1)
+
+        X1mX1_s_X2mX0 = s(m(X1, X1), m(X2, X0))
+        VmX2mX2_s_X1X0 = s(m(VmX2, X2), m(X1, X0))
+        X0mX0_s_VmX2mX1 = s(m(X0, X0), m(VmX2, X1))
+
+        det = tuple((i1 + i2 + i3) % self.p for i1, i2, i3 in zip(m(VmX2, VmX2mX2_s_X1X0), m(VmX1, X1mX1_s_X2mX0), m(X0, X0mX0_s_VmX2mX1)))
+        invdet = self.inv4(det)
+
+        Y2 = m(X1mX1_s_X2mX0, invdet)
+        Y1 = m(VmX2mX2_s_X1X0, invdet)
+        Y0 = m(X0mX0_s_VmX2mX1, invdet)
+
+        return Y2 + Y1 + Y0
 
     def sqrt2(self, X: Fp2Ele) -> Fp2Ele:
         ...
