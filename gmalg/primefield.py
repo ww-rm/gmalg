@@ -115,6 +115,15 @@ class PrimeField:
 class PrimeFiledEx(PrimeField):
     """Fp2, Fp4, Fp12 operations."""
 
+    def iszeroex(self, X: FpExEle) -> bool:
+        return all(i == 0 for i in X)
+
+    def isoneex(self, X: FpExEle) -> bool:
+        return all(i == 0 for i in X[:-1]) and X[-1] == 1
+
+    def isoppoex(self, X: FpExEle, Y: FpExEle) -> bool:
+        return all((i1 + i2) == self.p for i1, i2 in zip(X, Y))
+
     def addex(self, X: FpExEle, Y: FpExEle) -> FpExEle:
         return tuple((i1 + i2) % self.p for i1, i2 in zip(X, Y))
 
@@ -123,6 +132,11 @@ class PrimeFiledEx(PrimeField):
 
     def negex(self, X: FpExEle) -> FpExEle:
         return tuple(self.p - i for i in X)
+
+    def saddex(self, n: int, X: FpExEle) -> FpExEle:
+        _X = list(X)
+        _X[-1] = (X[-1] + n) % self.p
+        return tuple(_X)
 
     def smulex(self, k: int, X: FpExEle) -> FpExEle:
         return tuple((k * i) % self.p for i in X)
@@ -224,9 +238,16 @@ class PrimeFiledEx(PrimeField):
     def exele_to_bytes(self, e: FpExEle) -> bytes:
         """Convert extended domain elements to bytes."""
 
-        ...
+        b = bytearray()
+        for i in e:
+            b.extend(self.ele_to_bytes(i))
+        return bytes(b)
 
     def bytes_to_exele(self, b: bytes) -> FpExEle:
         """Convert bytes to extended domain elements."""
 
-        ...
+        length = self.length
+        e = []
+        for i in range(0, len(b) - length, length):
+            e.append(self.bytes_to_ele(b[i:i+length]))
+        return tuple(e)
