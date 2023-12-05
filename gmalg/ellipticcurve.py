@@ -1,22 +1,28 @@
-from typing import Callable, Tuple
+from typing import Tuple, Union
+
+from gmalg import primefield as Fp
 
 from . import errors
-from .primefield import (Fp2Ele, Fp4Ele, Fp12Ele, FpExEle, PrimeField,
-                         PrimeFiledEx)
+from . import primefield as Fp
 
 
-class EllipticCurve:
-    """Elliptic Curve (Fp)"""
+class EllipticCurveBase:
+    """Base class of Elliptic Curve (Fp)"""
 
-    INF = (-1, -1)
+    @classmethod
+    def _get_fp(cls, p: int) -> Fp.PrimeFieldBase:
+        raise NotImplementedError
 
-    @staticmethod
-    def isinf(x: int, y: int) -> bool:
+    @classmethod
+    def infpoint(cls) -> Tuple[Fp.FpEle, Fp.FpEle]:
+        raise NotImplementedError
+
+    @classmethod
+    def isinf(cls, x: int, y: int) -> bool:
         """Check if a point is a infinite point."""
+        raise NotImplementedError
 
-        return x < 0 or y < 0
-
-    def __init__(self, p: int, a: int, b: int) -> None:
+    def __init__(self, p: int, a: Fp.FpEle, b: Fp.FpEle) -> None:
         """Elliptic Curve (Fp)
 
         y^2 = x^3 + ax + b (mod p)
@@ -27,7 +33,7 @@ class EllipticCurve:
 
         self.a = a
         self.b = b
-        self._fp = PrimeField(p)
+        self._fp = self._get_fp(p)
 
     @property
     def p(self) -> int:
@@ -37,9 +43,46 @@ class EllipticCurve:
     def length(self) -> int:
         return self._fp.length
 
-    def isvalid(self, x: int, y: int) -> bool:
+    def isvalid(self, x: Fp.FpEle, y: Fp.FpEle) -> bool:
         """Verify if a point is on the curve."""
+        raise NotImplementedError
 
+    def get_y_sqr(self, x: Fp.FpEle) -> Fp.FpEle:
+        raise NotImplementedError
+
+    def get_y(self, x: Fp.FpEle) -> Fp.FpEle:
+        """Get one of valid y of given x, -1 means no solution."""
+        raise NotImplementedError
+
+    def add(self, x1: Fp.FpEle, y1: Fp.FpEle, x2: Fp.FpEle, y2: Fp.FpEle) -> Tuple[Fp.FpEle, Fp.FpEle]:
+        """Add two points. Negative numbers means infinite point."""
+        raise NotImplementedError
+
+    def sub(self, x1: Fp.FpEle, y1: Fp.FpEle, x2: Fp.FpEle, y2: Fp.FpEle) -> Tuple[Fp.FpEle, Fp.FpEle]:
+        """Sub two points."""
+        raise NotImplementedError
+
+    def mul(self, k: Fp.FpEle, x: Fp.FpEle, y: Fp.FpEle) -> Tuple[Fp.FpEle, Fp.FpEle]:
+        """Scalar multiplication by k."""
+        raise NotImplementedError
+
+
+class EllipticCurve(EllipticCurveBase):
+    """Elliptic Curve (Fp)"""
+
+    @classmethod
+    def _get_fp(cls, p: int) -> Fp.PrimeField:
+        return Fp.PrimeField(p)
+
+    @classmethod
+    def infpoint(cls) -> Tuple[int, int]:
+        return (-1, -1)
+
+    @classmethod
+    def isinf(cls, x: int, y: int) -> bool:
+        return x < 0 or y < 0
+
+    def isvalid(self, x: int, y: int) -> bool:
         if x >= self._fp.p or y >= self._fp.p:
             return False
 
@@ -48,9 +91,14 @@ class EllipticCurve:
 
         return True
 
-    def add(self, x1: int, y1: int, x2: int, y2: int) -> Tuple[int, int]:
-        """Add two points. Negative numbers means infinite point."""
+    def get_y_sqr(self, x: int) -> int:
+        return (x * x * x + self.a * x + self.b) % self._fp.p
 
+    def get_y(self, x: int) -> int:
+        """Get one of valid y of given x, -1 means no solution."""
+        return self._fp.sqrt(self.get_y_sqr(x))
+
+    def add(self, x1: int, y1: int, x2: int, y2: int) -> Tuple[int, int]:
         fp = self._fp
 
         if self.isinf(x1, y1):
@@ -58,7 +106,7 @@ class EllipticCurve:
         if self.isinf(x2, y2):
             return x1, y1
         if x1 == x2:
-            if y1 + y2 == fp.p:
+            if y1 == 0 and y2 == 0 or y1 + y2 == fp.p:
                 return -1, -1
             elif y1 == y2:
                 lam = (3 * x1 * x1 + self.a) * fp.inv(2 * y1)
@@ -76,13 +124,9 @@ class EllipticCurve:
         return x3, y3
 
     def sub(self, x1: int, y1: int, x2: int, y2: int) -> Tuple[int, int]:
-        """Sub two points."""
-
         return self.add(x1, y1, x2, self._fp.p - y2)
 
     def mul(self, k: int, x: int, y: int) -> Tuple[int, int]:
-        """Scalar multiplication by k."""
-
         xk = -1
         yk = -1
 
@@ -93,12 +137,86 @@ class EllipticCurve:
 
         return xk, yk
 
-    def get_y_sqr(self, x: int) -> int:
-        return (x * x * x + self.a * x + self.b) % self._fp.p
 
-    def get_y(self, x: int) -> int:
-        """Get one of valid y of given x, -1 means no solution."""
-        return self._fp.sqrt(self.get_y_sqr(x))
+class EllipticCurve2(EllipticCurve):
+    """Elliptic Curve (Fp2)"""
+
+    @classmethod
+    def _get_fp(cls, p: int) -> Fp.PrimeField2:
+        return Fp.PrimeField2(p)
+
+    @classmethod
+    def infpoint(cls) -> Tuple[int, int]:
+        return ((-1, ) * 2, (-1, ) * 2)
+
+    @classmethod
+    def isinf(cls, x: Fp.FpExEle, y: Fp.FpExEle) -> bool:
+        return any(i < 0 for i in x) or any(i < 0 for i in y)
+
+    def isvalid(self, x: Fp.FpExEle, y: Fp.FpExEle) -> bool:
+        return self._fp.mul(y, y) == self.get_y_sqr(x)
+
+    def get_y_sqr(self, x: Fp.FpExEle) -> Fp.FpExEle:
+        fp = self._fp
+        return fp.add(fp.pow(x, 3), fp.add(fp.mul(self.a, x), self.b))
+
+    def get_y(self, x: Fp.Fp2Ele) -> Fp.Fp2Ele:
+        raise NotImplementedError
+
+    def add(self, x1: Fp.FpExEle, y1: Fp.FpExEle, x2: Fp.FpExEle, y2: Fp.FpExEle) -> Tuple[Fp.FpExEle, Fp.FpExEle]:
+        fp = self._fp
+
+        if self.isinf(x1, y1):
+            return x2, y2
+        if self.isinf(x2, y2):
+            return x1, y1
+        if x1 == x2:
+            if fp.isoppo(y1, y2):
+                return self.infpoint()
+            elif y1 == y2:
+                _t1 = fp.add(self.a, fp.smul(3, fp.mul(x1, x1)))
+                _t2 = fp.inv(fp.smul(2, y1))
+                lam = fp.mul(_t1, _t2)
+            else:
+                raise errors.UnknownError(f"y1 and y2 is neither equal nor opposite.")
+        else:
+            lam = fp.mul(fp.sub(y2, y1), fp.inv(fp.sub(x2, x1)))
+
+        x3 = tuple((i1 - i2 - i3) % fp.p for i1, i2, i3 in zip(fp.mul(lam, lam), x1, x2))
+        y3 = fp.sub(fp.mul(lam, fp.sub(x1, x3)), y1)
+        return x3, y3
+
+    def mul(self, k: int, x: Fp.FpExEle, y: Fp.FpExEle) -> Tuple[Fp.FpExEle, Fp.FpExEle]:
+        xk, yk = x, y
+        for i in f"{k:b}"[1:]:
+            xk, yk = self.add(xk, yk, xk, yk)
+            if i == "1":
+                xk, yk = self.add(xk, yk, x, y)
+        return xk, yk
+
+
+class EllipticCurve4(EllipticCurve2):
+    """Elliptic Curve (Fp4)"""
+
+    @classmethod
+    def _get_fp(cls, p: int) -> Fp.PrimeField4:
+        return Fp.PrimeField4(p)
+
+    @classmethod
+    def infpoint(cls) -> Tuple[int, int]:
+        return ((-1, ) * 4, (-1, ) * 4)
+
+
+class EllipticCurve12(EllipticCurve2):
+    """Elliptic Curve (Fp12)"""
+
+    @classmethod
+    def _get_fp(cls, p: int) -> Fp.PrimeField12:
+        return Fp.PrimeField12(p)
+
+    @classmethod
+    def infpoint(cls) -> Tuple[int, int]:
+        return ((-1, ) * 12, (-1, ) * 12)
 
 
 class ECDLP(EllipticCurve):
@@ -127,140 +245,11 @@ class ECDLP(EllipticCurve):
         return self.mul(k, self.xG, self.yG)
 
     def etob(self, e: int) -> bytes:
-        return self._fp.ele_to_bytes(e)
+        return self._fp.etob(e)
 
     def btoe(self, b: bytes) -> int:
-        return self._fp.bytes_to_ele(b)
+        return self._fp.btoe(b)
 
 
-class EllipticCurveEx(EllipticCurve):
-    """Elliptic Curve (Fp) over extended field."""
-
-    INF2 = ((-1,) * 2, (-1,) * 2)
-    INF4 = ((-1,) * 4, (-1,) * 4)
-    INF12 = ((-1,) * 12, (-1,) * 12)
-
-    @staticmethod
-    def isinfex(x: FpExEle, y: FpExEle) -> bool:
-        return any(i < 0 for i in x) or any(i < 0 for i in y)
-
-    def __init__(self, p: int, a: int, b: int) -> None:
-        super().__init__(p, a, b)
-
-        self._fpex = PrimeFiledEx(p)
-
-        self.add2 = self._mk_addex_fn(2)
-        self.add4 = self._mk_addex_fn(4)
-        self.add12 = self._mk_addex_fn(12)
-
-        self.mul2 = self._mk_mulex_fn(2)
-        self.mul4 = self._mk_mulex_fn(4)
-        self.mul12 = self._mk_mulex_fn(12)
-
-    def _mk_addex_fn(self, exlen: int) -> Callable[[FpExEle, FpExEle, FpExEle, FpExEle], Tuple[FpExEle, FpExEle]]:
-        fpex = self._fpex
-        if exlen == 2:
-            INF = self.INF2
-            mul = fpex.mul2
-            inv = fpex.inv2
-        elif exlen == 4:
-            INF = self.INF4
-            mul = fpex.mul4
-            inv = fpex.inv4
-        elif exlen == 12:
-            INF = self.INF12
-            mul = fpex.mul12
-            inv = fpex.inv12
-        else:
-            raise NotImplementedError(f"Unsupported extension length: {exlen}.")
-
-        def _addn(x1: FpExEle, y1: FpExEle, x2: FpExEle, y2: FpExEle) -> Tuple[FpExEle, FpExEle]:
-            """Add two points. Negative numbers means infinite point."""
-
-            if self.isinfex(x1, y1):
-                return x2, y2
-            if self.isinfex(x2, y2):
-                return x1, y1
-            if x1 == x2:
-                if fpex.isoppoex(y1, y2):
-                    return INF
-                elif y1 == y2:
-                    _t1 = fpex.saddex(self.a, fpex.smulex(3, mul(x1, x1)))
-                    _t2 = inv(fpex.smulex(2, y1))
-                    lam = mul(_t1, _t2)
-                else:
-                    raise errors.UnknownError(f"y1 and y2 is neither equal nor opposite.")
-            else:
-                lam = mul(fpex.subex(y2, y1), inv(fpex.subex(x2, x1)))
-
-            x3 = tuple((i1 - i2 - i3) % fpex.p for i1, i2, i3 in zip(mul(lam, lam), x1, x2))
-            y3 = fpex.subex(mul(lam, fpex.subex(x1, x3)), y1)
-            return x3, y3
-
-        return _addn
-
-    def add2(self, x1: Fp2Ele, y1: Fp2Ele, x2: Fp2Ele, y2: Fp2Ele) -> Tuple[Fp2Ele, Fp2Ele]:
-        """Add two points over extension 2. Negative numbers means infinite point."""
-        raise NotImplementedError
-
-    def add4(self, x1: Fp4Ele, y1: Fp4Ele, x2: Fp4Ele, y2: Fp4Ele) -> Tuple[Fp4Ele, Fp4Ele]:
-        """Add two points over extension 4. Negative numbers means infinite point."""
-        raise NotImplementedError
-
-    def add12(self, x1: Fp12Ele, y1: Fp12Ele, x2: Fp12Ele, y2: Fp12Ele) -> Tuple[Fp12Ele, Fp12Ele]:
-        """Add two points over extension 12. Negative numbers means infinite point."""
-        raise NotImplementedError
-
-    def _mk_mulex_fn(self, exlen: int) -> Callable[[int, FpExEle, FpExEle], Tuple[FpExEle, FpExEle]]:
-        if exlen == 2:
-            add = self.add2
-        elif exlen == 4:
-            add = self.add4
-        elif exlen == 12:
-            add = self.add12
-        else:
-            raise NotImplementedError(f"Unsupported extension length: {exlen}.")
-
-        def _muln(k: int, x: FpExEle, y: FpExEle) -> Tuple[FpExEle, FpExEle]:
-            """Scalar multiplication by k."""
-
-            xk, yk = x, y
-
-            for i in f"{k:b}"[1:]:
-                xk, yk = add(xk, yk, xk, yk)
-                if i == "1":
-                    xk, yk = add(xk, yk, x, y)
-
-            return xk, yk
-
-        return _muln
-
-    def mul2(self, k: int, x: Fp2Ele, y: Fp2Ele) -> Tuple[Fp2Ele, Fp2Ele]:
-        """Scalar multiplication by k over extended 2."""
-        raise NotImplementedError
-
-    def mul4(self, k: int, x: Fp4Ele, y: Fp4Ele) -> Tuple[Fp4Ele, Fp4Ele]:
-        """Scalar multiplication by k over extension 4."""
-        raise NotImplementedError
-
-    def mul12(self, k: int, x: Fp12Ele, y: Fp12Ele) -> Tuple[Fp12Ele, Fp12Ele]:
-        """Scalar multiplication by k over extension 12."""
-        raise NotImplementedError
-
-    def get_y_sqr_2(self, x: Fp2Ele) -> int:
-        raise NotImplementedError
-
-    def get_y_sqr_4(self, x: Fp4Ele) -> int:
-        raise NotImplementedError
-
-    def get_y_sqr_12(self, x: Fp12Ele) -> int:
-        raise NotImplementedError
-
-    def get_y_2(self, x: Fp2Ele) -> int:
-        raise NotImplementedError
-
-    def get_y_4(self, x: Fp4Ele) -> int:
-        raise NotImplementedError
-
-    def get_y_12(self, x: Fp12Ele) -> int:
-        raise NotImplementedError
+class ECBIDH:
+    ...

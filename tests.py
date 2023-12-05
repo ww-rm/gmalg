@@ -5,8 +5,11 @@ import gmalg.ellipticcurve
 
 
 class TestEllipticCurve(unittest.TestCase):
-    def test_ecex(self):
-        ec = gmalg.ellipticcurve.EllipticCurveEx(0xB6400000_02A3A6F1_D603AB4F_F58EC745_21F2934B_1A7AEEDB_E56F9B27_E351457D, 0, 5)
+    def test_ec(self):
+        p = 0xB6400000_02A3A6F1_D603AB4F_F58EC745_21F2934B_1A7AEEDB_E56F9B27_E351457D
+
+        ec = gmalg.ellipticcurve.EllipticCurve(p, 0, 5)
+        ec2 = gmalg.ellipticcurve.EllipticCurve2(p, (0, 0), (5, 0))
         n = 0xB6400000_02A3A6F1_D603AB4F_F58EC744_49F2934B_18EA8BEE_E56EE19C_D69ECF25
 
         x1 = 0x93DE051D_62BF718F_F5ED0704_487D01D6_E1E40869_09DC3280_E8C4E481_7C66DDDD
@@ -17,10 +20,14 @@ class TestEllipticCurve(unittest.TestCase):
         y2 = (0x17509B09_2E845C12_66BA0D26_2CBEE6ED_0736A96F_A347C8BD_856DC76B_84EBEB96,
               0xA7CF28D5_19BE3DA6_5F317015_3D278FF2_47EFBA98_A71A0811_6215BBA5_C999A7C7)
 
+        self.assertTrue(ec.isvalid(x1, y1), "Not on curve")
+
         x3, y3 = ec.mul(n, x1, y1)
-        self.assertTrue(ec.isinf(x3, y3))
-        x4, y4 = ec.mul2(n, x2, y2)
-        self.assertTrue(ec.isinfex(x4, y4))
+        self.assertTrue(ec.isinf(x3, y3), "Invalid G")
+
+        self.assertTrue(ec2.isvalid(x2, y2), "Not on curve")
+        x4, y4 = ec2.mul(n, x2, y2)
+        self.assertTrue(ec2.isinf(x4, y4))
 
 
 class TestSM2(unittest.TestCase):

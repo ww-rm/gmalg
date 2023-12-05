@@ -406,7 +406,7 @@ class SM2:
 
         mode = p[0]
         if mode == 0x00:
-            return ecdlp.INF
+            return ecdlp.infpoint()
 
         point = p[1:]
         x = ecdlp.btoe(point[:ecdlp.length])
