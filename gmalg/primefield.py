@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Union
 
 from . import errors
 from .utils import inverse
@@ -6,18 +6,77 @@ from .utils import inverse
 Fp2Ele = Tuple[int, int]
 Fp4Ele = Tuple[int, int, int, int]
 Fp12Ele = Tuple[int, int, int, int, int, int, int, int, int, int, int, int]
-FpExEle = Tuple[int, ...]
+FpExEle = Union[Fp2Ele, Fp4Ele, Fp12Ele]
+FpEle = Union[int, FpExEle]
 
 
-class PrimeField:
-    """Fp operations."""
+class PrimeFieldBase:
+    """Base class of Fp operations."""
+
+    @classmethod
+    def extend(cls, x: FpEle) -> FpExEle:
+        """Extend element."""
+        raise NotImplementedError
 
     def __init__(self, p: int) -> None:
         self.p = p
         self.bitlength = self.p.bit_length()
         self.length = (self.bitlength + 7) >> 3
-
         self._u, self._r = divmod(self.p, 8)
+
+    def iszero(self, x: FpExEle) -> bool:
+        raise NotImplementedError
+
+    def isone(self, x: FpExEle) -> bool:
+        raise NotImplementedError
+
+    def isoppo(self, x: FpExEle, y: FpExEle) -> bool:
+        raise NotImplementedError
+
+    def neg(self, x: FpExEle) -> FpExEle:
+        raise NotImplementedError
+
+    def sadd(self, n: int, x: FpExEle) -> FpExEle:
+        """Scalar add."""
+        raise NotImplementedError
+
+    def smul(self, k: int, x: FpExEle) -> FpExEle:
+        """Scalar mul."""
+        raise NotImplementedError
+
+    def add(self, x: FpExEle, y: FpExEle) -> FpExEle:
+        raise NotImplementedError
+
+    def sub(self, x: FpExEle, y: FpExEle) -> FpExEle:
+        raise NotImplementedError
+
+    def mul(self, x: FpExEle, y: FpExEle) -> FpExEle:
+        raise NotImplementedError
+
+    def inv(self, x: FpEle) -> FpEle:
+        raise NotImplementedError
+
+    def pow(self, x: FpExEle, e: int) -> FpExEle:
+        raise NotImplementedError
+
+    def sqrt(self, x: FpEle) -> FpEle:
+        raise NotImplementedError
+
+    def etob(self, e: FpExEle) -> bytes:
+        """Convert domain element to bytes."""
+        raise NotImplementedError
+
+    def btoe(self, b: bytes) -> FpExEle:
+        """Convert bytes to domain element."""
+        raise NotImplementedError
+
+
+class PrimeField(PrimeFieldBase):
+    """Fp operations."""
+
+    def __init__(self, p: int) -> None:
+        super().__init__(p)
+
         if self._r == 1:
             self.sqrt = self._sqrt_8u1
         elif self._r == 3:
@@ -36,7 +95,7 @@ class PrimeField:
 
         return inverse(x, self.p)
 
-    def lucas(self, X: int, Y: int, k: int) -> Tuple[int, int]:
+    def _lucas(self, X: int, Y: int, k: int) -> Tuple[int, int]:
         """Lucas Sequence, k begin at 0.
 
         Uk = X * Uk-1 - Y * Uk-2
@@ -87,7 +146,7 @@ class PrimeField:
 
         Y = x
         for X in range(1, p):
-            U, V = self.lucas(X, Y, _4u1)
+            U, V = self._lucas(X, Y, _4u1)
 
             if (V * V - 4 * Y) % p == 0:
                 return (V * inv2) % p
@@ -101,47 +160,51 @@ class PrimeField:
         """Square root."""
         raise NotImplementedError
 
-    def ele_to_bytes(self, e: int) -> bytes:
-        """Convert domain elements to bytes."""
-
+    def etob(self, e: int) -> bytes:
+        """Convert domain element to bytes."""
         return e.to_bytes(self.length, "big")
 
-    def bytes_to_ele(self, b: bytes) -> int:
-        """Convert bytes to domain elements."""
-
+    def btoe(self, b: bytes) -> int:
+        """Convert bytes to domain element."""
         return int.from_bytes(b, "big")
 
 
-class PrimeFiledEx(PrimeField):
-    """Fp2, Fp4, Fp12 operations."""
+class PrimeField2(PrimeField):
+    """Fp2 operations."""
 
-    def iszeroex(self, X: FpExEle) -> bool:
+    @classmethod
+    def extend(cls, x: FpEle) -> Fp2Ele:
+        if isinstance(x, int):
+            return (0, x)
+        return x
+
+    def iszero(self, X: FpExEle) -> bool:
         return all(i == 0 for i in X)
 
-    def isoneex(self, X: FpExEle) -> bool:
+    def isone(self, X: FpExEle) -> bool:
         return all(i == 0 for i in X[:-1]) and X[-1] == 1
 
-    def isoppoex(self, X: FpExEle, Y: FpExEle) -> bool:
-        return all((i1 + i2) == self.p for i1, i2 in zip(X, Y))
+    def isoppo(self, X: FpExEle, Y: FpExEle) -> bool:
+        return all(i1 == 0 and i2 == 0 or (i1 + i2) == self.p for i1, i2 in zip(X, Y))
 
-    def addex(self, X: FpExEle, Y: FpExEle) -> FpExEle:
-        return tuple((i1 + i2) % self.p for i1, i2 in zip(X, Y))
-
-    def subex(self, X: FpExEle, Y: FpExEle) -> FpExEle:
-        return tuple((i1 - i2) % self.p for i1, i2 in zip(X, Y))
-
-    def negex(self, X: FpExEle) -> FpExEle:
+    def neg(self, X: FpExEle) -> FpExEle:
         return tuple(self.p - i for i in X)
 
-    def saddex(self, n: int, X: FpExEle) -> FpExEle:
-        _X = list(X)
-        _X[-1] = (X[-1] + n) % self.p
-        return tuple(_X)
+    def sadd(self, n: int, x: FpExEle) -> FpExEle:
+        x = list(x)
+        x[-1] = (x[-1] + n) % self.p
+        return tuple(x)
 
-    def smulex(self, k: int, X: FpExEle) -> FpExEle:
-        return tuple((k * i) % self.p for i in X)
+    def smul(self, k: int, x: FpExEle) -> FpExEle:
+        return tuple((k * i) % self.p for i in x)
 
-    def mul2(self, X: Fp2Ele, Y: Fp2Ele) -> Fp2Ele:
+    def add(self, X: FpExEle, Y: FpExEle) -> FpExEle:
+        return tuple((i1 + i2) % self.p for i1, i2 in zip(X, Y))
+
+    def sub(self, X: FpExEle, Y: FpExEle) -> FpExEle:
+        return tuple((i1 - i2) % self.p for i1, i2 in zip(X, Y))
+
+    def mul(self, X: Fp2Ele, Y: Fp2Ele) -> Fp2Ele:
         x1, x0 = X
         y1, y0 = Y
         x1y1 = x1 * y1
@@ -150,15 +213,53 @@ class PrimeFiledEx(PrimeField):
         z0 = (x0y0 - 2 * x1y1) % self.p
         return z1, z0
 
-    def inv2(self, X: Fp2Ele) -> Fp2Ele:
+    def inv(self, X: Fp2Ele) -> Fp2Ele:
         x1, x0 = X
-        invdet = self.inv(2 * x1 * x1 + x0 * x0)
+        invdet = super().inv(2 * x1 * x1 + x0 * x0)
         y1 = (-x1 * invdet) % self.p
         y0 = (x0 * invdet) % self.p
         return y1, y0
 
-    def mul4(self, X: Fp4Ele, Y: Fp4Ele) -> Fp4Ele:
-        a, m = self.addex, self.mul2
+    def pow(self, X: FpExEle, e: int) -> FpExEle:
+        Y = X
+        for i in f"{e:b}"[1:]:
+            Y = self.mul(Y, Y)
+            if i == "1":
+                Y = self.mul(Y, X)
+        return Y
+
+    def sqrt(self, x: Fp2Ele) -> Fp2Ele:
+        raise NotImplementedError
+
+    def etob(self, e: FpExEle) -> bytes:
+        """Convert domain element to bytes."""
+        b = bytearray()
+        for i in e:
+            b.extend(super().etob(i))
+        return bytes(b)
+
+    def btoe(self, b: bytes) -> FpExEle:
+        """Convert bytes to domain element."""
+        length = self.length
+        e = []
+        for i in range(0, len(b) - length, length):
+            e.append(super().btoe(b[i:i+length]))
+        return tuple(e)
+
+
+class PrimeField4(PrimeField2):
+    """Fp4 operations."""
+
+    @classmethod
+    def extend(cls, x: FpEle) -> Fp4Ele:
+        if isinstance(x, int):
+            return (0, 0, 0, x)
+        elif len(x) == 2:
+            return (0, x[0], 0, x[1])
+        return x
+
+    def mul(self, X: Fp4Ele, Y: Fp4Ele) -> Fp4Ele:
+        a, m = self.add, super().mul
         X1, X0 = X[:2], X[2:]
         Y1, Y0 = Y[:2], Y[2:]
         U = (1, 0)
@@ -172,21 +273,35 @@ class PrimeFiledEx(PrimeField):
 
         return Z1 + Z0
 
-    def inv4(self, X: Fp4Ele) -> Fp4Ele:
-        m, n, s = self.mul2, self.negex, self.subex
+    def inv(self, X: Fp4Ele) -> Fp4Ele:
+        m, n, s = super().mul, self.neg, self.sub
         X1, X0 = X[:2], X[2:]
         U = (1, 0)
 
         UmX1mX1_s_X0mX0 = s(m(U, m(X1, X1)), m(X0, X0))
-        invdet = self.inv2(UmX1mX1_s_X0mX0)
+        invdet = super().inv(UmX1mX1_s_X0mX0)
 
         Y1 = m(X1, invdet)
         Y0 = m(n(X0), invdet)
 
         return Y1 + Y0
 
-    def mul12(self, X: Fp12Ele, Y: Fp12Ele) -> Fp12Ele:
-        a, m = self.addex, self.mul4
+
+class PrimeField12(PrimeField4):
+    """Fp12 operations."""
+
+    @classmethod
+    def extend(cls, x: FpEle) -> Fp12Ele:
+        if isinstance(x, int):
+            return (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, x)
+        elif len(x) == 2:
+            return (0, 0, 0, 0, 0, x[0], 0, 0, 0, 0, 0, x[1])
+        elif len(x) == 4:
+            return (0, 0, x[0], 0, 0, x[1], 0, 0, x[2], 0, 0, x[3])
+        return x
+
+    def mul(self, X: Fp12Ele, Y: Fp12Ele) -> Fp12Ele:
+        a, m = self.add, super().mul
         X2, X1, X0 = X[:4], X[4:8], X[8:]
         Y2, Y1, Y0 = Y[:4], Y[4:8], Y[8:]
         V = (0, 1, 0, 0)
@@ -208,8 +323,8 @@ class PrimeFiledEx(PrimeField):
 
         return Z2 + Z1 + Z0
 
-    def inv12(self, X: Fp12Ele) -> Fp12Ele:
-        m, s = self.mul4, self.subex
+    def inv(self, X: Fp12Ele) -> Fp12Ele:
+        m, s = super().mul, self.sub
         X2, X1, X0 = X[:4], X[4:8], X[8:]
         V = (0, 1, 0, 0)
 
@@ -221,33 +336,10 @@ class PrimeFiledEx(PrimeField):
         X0mX0_s_VmX2mX1 = s(m(X0, X0), m(VmX2, X1))
 
         det = tuple((i1 + i2 + i3) % self.p for i1, i2, i3 in zip(m(VmX2, VmX2mX2_s_X1X0), m(VmX1, X1mX1_s_X2mX0), m(X0, X0mX0_s_VmX2mX1)))
-        invdet = self.inv4(det)
+        invdet = super().inv(det)
 
         Y2 = m(X1mX1_s_X2mX0, invdet)
         Y1 = m(VmX2mX2_s_X1X0, invdet)
         Y0 = m(X0mX0_s_VmX2mX1, invdet)
 
         return Y2 + Y1 + Y0
-
-    def sqrt2(self, X: Fp2Ele) -> Fp2Ele:
-        ...
-
-    def sqrtex(self, X: FpExEle) -> FpExEle:
-        ...
-
-    def exele_to_bytes(self, e: FpExEle) -> bytes:
-        """Convert extended domain elements to bytes."""
-
-        b = bytearray()
-        for i in e:
-            b.extend(self.ele_to_bytes(i))
-        return bytes(b)
-
-    def bytes_to_exele(self, b: bytes) -> FpExEle:
-        """Convert bytes to extended domain elements."""
-
-        length = self.length
-        e = []
-        for i in range(0, len(b) - length, length):
-            e.append(self.bytes_to_ele(b[i:i+length]))
-        return tuple(e)
