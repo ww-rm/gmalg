@@ -1,6 +1,4 @@
-from typing import Tuple, Union
-
-from gmalg import primefield as Fp
+from typing import Tuple
 
 from . import errors
 from . import primefield as Fp
@@ -186,6 +184,9 @@ class EllipticCurve2(EllipticCurve):
         y3 = fp.sub(fp.mul(lam, fp.sub(x1, x3)), y1)
         return x3, y3
 
+    def sub(self, x1: Fp.FpExEle, y1: Fp.FpExEle, x2: Fp.FpExEle, y2: Fp.FpExEle) -> Tuple[Fp.FpExEle, Fp.FpExEle]:
+        return self.add(x1, y1, x2, self._fp.neg(y2))
+
     def mul(self, k: int, x: Fp.FpExEle, y: Fp.FpExEle) -> Tuple[Fp.FpExEle, Fp.FpExEle]:
         xk, yk = x, y
         for i in f"{k:b}"[1:]:
@@ -193,6 +194,52 @@ class EllipticCurve2(EllipticCurve):
             if i == "1":
                 xk, yk = self.add(xk, yk, x, y)
         return xk, yk
+
+    def _g_fn(self, xU: Fp.FpExEle, yU: Fp.FpExEle, xV: Fp.FpExEle, yV: Fp.FpExEle, xQ: Fp.FpExEle, yQ: Fp.FpExEle) -> Fp.FpExEle:
+        """g(U, V)(Q)"""
+
+        fp = self._fp
+
+        if self.isinf(xU, yU) or self.isinf(xV, yV) or self.isinf(xQ, yQ):
+            return fp.one()
+
+        if xU == xV:
+            if fp.isoppo(yU, yV):
+                return fp.sub(xQ - xV)
+            elif yU == yV:
+                _t1 = fp.add(self.a, fp.smul(3, fp.mul(xV, xV)))
+                _t2 = fp.inv(fp.smul(2, yV))
+                lam = fp.mul(_t1, _t2)
+            else:
+                raise errors.UnknownError(f"y1 and y2 is neither equal nor opposite.")
+        else:
+            lam = fp.mul(fp.sub(yU, yV), fp.inv(fp.sub(xU, xV)))
+
+        _t = fp.mul(lam, fp.sub(xQ - xV))
+        g = tuple((i1 - i2 + i3) % fp.p for i1, i2, i3 in zip(_t, yQ, yV))
+        return g
+
+    def miller(self, c: int, xP: Fp.FpExEle, yP: Fp.FpExEle, xQ: Fp.FpExEle, yQ: Fp.FpExEle) -> Fp.FpExEle:
+        """Miller function."""
+
+        fp = self._fp
+        g = self._g_fn
+
+        f = fp.one()
+        xV, yV = xP, yP
+        for i in f"{c:b}"[1:]:
+            gVV = g(xV, yV, xV, yV, xQ, yQ)
+            xV, yV = self.add(xV, yV)
+            g2V = g(xV, yV, xV, fp.neg(yV), xQ, yQ)
+            f = fp.mul(fp.mul(f, f), fp.mul(gVV, fp.inv(g2V)))
+
+            if i == "1":
+                gVP = g(xV, yV, xP, yP, xQ, yQ)
+                xV, yV = self.add(xV, yV, xP, yP)
+                gVaP = g(xV, yV, xV, fp.neg(yV), xQ, yQ)
+                f = fp.mul(f, fp.mul(gVP, fp.inv(gVaP)))
+
+        return f
 
 
 class EllipticCurve4(EllipticCurve2):

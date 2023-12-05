@@ -14,6 +14,16 @@ class PrimeFieldBase:
     """Base class of Fp operations."""
 
     @classmethod
+    def zero(cls) -> FpExEle:
+        """Get Zero."""
+        raise NotImplementedError
+
+    @classmethod
+    def one(cls) -> FpExEle:
+        """Get One."""
+        raise NotImplementedError
+
+    @classmethod
     def extend(cls, x: FpEle) -> FpExEle:
         """Extend element."""
         raise NotImplementedError
@@ -178,6 +188,14 @@ class PrimeField2(PrimeField):
             return (0, x)
         return x
 
+    @classmethod
+    def zero(cls) -> Fp2Ele:
+        return (0, 0)
+
+    @classmethod
+    def one(cls) -> Fp2Ele:
+        return (0, 1)
+
     def iszero(self, X: FpExEle) -> bool:
         return all(i == 0 for i in X)
 
@@ -258,6 +276,14 @@ class PrimeField4(PrimeField2):
             return (0, x[0], 0, x[1])
         return x
 
+    @classmethod
+    def zero(cls) -> Fp4Ele:
+        return (0, 0, 0, 0)
+
+    @classmethod
+    def one(cls) -> Fp4Ele:
+        return (0, 0, 0, 1)
+
     def mul(self, X: Fp4Ele, Y: Fp4Ele) -> Fp4Ele:
         a, m = self.add, super().mul
         X1, X0 = X[:2], X[2:]
@@ -299,6 +325,14 @@ class PrimeField12(PrimeField4):
         elif len(x) == 4:
             return (0, 0, x[0], 0, 0, x[1], 0, 0, x[2], 0, 0, x[3])
         return x
+
+    @classmethod
+    def zero(cls) -> Fp12Ele:
+        return (0, ) * 12
+
+    @classmethod
+    def one(cls) -> Fp12Ele:
+        return (0, ) * 11 + (1, )
 
     def mul(self, X: Fp12Ele, Y: Fp12Ele) -> Fp12Ele:
         a, m = self.add, super().mul
