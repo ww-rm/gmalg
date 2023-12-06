@@ -291,17 +291,6 @@ class PrimeField2(PrimeField):
         return tuple(f(i1, i2) for i1, i2 in zip(X, Y))
 
     def sub(self, X: Fp2Ele, Y: Fp2Ele) -> Fp2Ele:
-        # 1. 预先获得方法
-        # s = super().sub
-        # return tuple(s(i1, i2) for i1, i2 in zip(X, Y))
-
-        # 2. 显式指定参数
-        # return tuple(super(PrimeField2, self).sub(i1, i2) for i1, i2 in zip(X, Y))
-
-        # 3. 如下, 报错
-        # ......   in <genexpr>
-        #     return tuple(super().sub(i1, i2) for i1, i2 in zip(X, Y))
-        # TypeError: super(type, obj): obj must be an instance or subtype of type
         f = super().sub
         return tuple(f(i1, i2) for i1, i2 in zip(X, Y))
 
