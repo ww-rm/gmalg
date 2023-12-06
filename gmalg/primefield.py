@@ -403,7 +403,7 @@ class PrimeField4(PrimeField2):
         a, s, m = super().add, super().sub, super().mul
         X1, X0 = X
         Y1, Y0 = Y
-        U = -2
+        U = (1, 0)
 
         X1mY1 = m(X1, Y1)
         X0mY0 = m(X0, Y0)
@@ -417,7 +417,7 @@ class PrimeField4(PrimeField2):
     def inv(self, X: Fp4Ele) -> Fp4Ele:
         n, s, m = super().neg, super().sub, super().mul
         X1, X0 = X
-        U = -2
+        U = (1, 0)
 
         UmX1mX1_s_X0mX0 = s(m(U, m(X1, X1)), m(X0, X0))
         invdet = super().inv(UmX1mX1_s_X0mX0)
