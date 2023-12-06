@@ -1,13 +1,12 @@
 import enum
 import math
-import secrets
 from typing import Callable, Tuple, Type
 
 from . import errors
 from .base import Hash, SMCoreBase
-from .ellipticcurve import ECDLP
+from .ellipticcurve import ECDLP, EcPoint
 from .sm3 import SM3
-from .utils import bytes_to_int, int_to_bytes, inverse
+from .utils import bytes_to_int, int_to_bytes
 
 __all__ = [
     "SM2",
@@ -19,8 +18,8 @@ _ecdlp = ECDLP(
     0xFFFFFFFE_FFFFFFFF_FFFFFFFF_FFFFFFFF_FFFFFFFF_00000000_FFFFFFFF_FFFFFFFF,
     0xFFFFFFFE_FFFFFFFF_FFFFFFFF_FFFFFFFF_FFFFFFFF_00000000_FFFFFFFF_FFFFFFFC,
     0x28E9FA9E_9D9F5E34_4D5A9E4B_CF6509A7_F39789F5_15AB8F92_DDBCBD41_4D940E93,
-    0x32C4AE2C_1F198119_5F990446_6A39C994_8FE30BBF_F2660BE1_715A4589_334C74C7,
-    0xBC3736A2_F4F6779C_59BDCEE3_6B692153_D0A9877C_C62A4740_02DF32E5_2139F0A0,
+    (0x32C4AE2C_1F198119_5F990446_6A39C994_8FE30BBF_F2660BE1_715A4589_334C74C7,
+     0xBC3736A2_F4F6779C_59BDCEE3_6B692153_D0A9877C_C62A4740_02DF32E5_2139F0A0),
     0xFFFFFFFE_FFFFFFFF_FFFFFFFF_FFFFFFFF_7203DF6B_21C6052B_53BBF409_39D54123,
 )
 
@@ -42,36 +41,37 @@ class SM2Core(SMCoreBase):
         self.ecdlp = ecdlp
 
         # used in key exchange
-        w = math.ceil(math.ceil(math.log2(self.ecdlp.n)) / 2) - 1
+        w = math.ceil(math.ceil(math.log2(self.ecdlp.fpn.p)) / 2) - 1
         self._2w = 1 << w
         self._2w_1 = self._2w - 1
 
-    def generate_keypair(self) -> Tuple[int, Tuple[int, int]]:
+    def generate_keypair(self) -> Tuple[int, EcPoint]:
         """Generate key pair."""
 
-        d = self._randint(1, self.ecdlp.n - 2)
+        d = self._randint(1, self.ecdlp.fpn.p - 2)
         return d, self.ecdlp.kG(d)
 
-    def get_pubkey(self, d: int) -> Tuple[int, int]:
+    def get_pubkey(self, d: int) -> EcPoint:
         """Generate public key by secret key d."""
 
         return self.ecdlp.kG(d)
 
-    def verify_pubkey(self, x: int, y: int) -> bool:
+    def verify_pubkey(self, P: EcPoint) -> bool:
         """Verify if a public key is valid."""
+        ec = self.ecdlp.ec
 
-        if self.ecdlp.isinf(x, y):
+        if P == ec.INF:
             return False
 
-        if not self.ecdlp.isvalid(x, y):
+        if not ec.isvalid(P):
             return False
 
-        if not self.ecdlp.isinf(self.ecdlp.mul(self.ecdlp.n, x, y)):
+        if ec.mul(self.ecdlp.fpn.p, P) != ec.INF:
             return False
 
         return True
 
-    def entity_info(self, id_: bytes, xP: int, yP: int) -> bytes:
+    def entity_info(self, id_: bytes, P: EcPoint) -> bytes:
         """Generate other entity information bytes.
 
         Raises:
@@ -83,20 +83,22 @@ class SM2Core(SMCoreBase):
             raise errors.DataOverflowError("ID", "2 bytes")
 
         etob = self.ecdlp.etob
+        xP, yP = P
+        xG, yG = self.ecdlp.G
 
         Z = bytearray()
         Z.extend(ENTL.to_bytes(2, "big"))
         Z.extend(id_)
-        Z.extend(etob(self.ecdlp.a))
-        Z.extend(etob(self.ecdlp.b))
-        Z.extend(etob(self.ecdlp.xG))
-        Z.extend(etob(self.ecdlp.yG))
+        Z.extend(etob(self.ecdlp.ec.a))
+        Z.extend(etob(self.ecdlp.ec.b))
+        Z.extend(etob(xG))
+        Z.extend(etob(yG))
         Z.extend(etob(xP))
         Z.extend(etob(yP))
 
         return self._hash_fn(Z)
 
-    def sign(self, message: bytes, d: int, id_: bytes, xP: int = None, yP: int = None) -> Tuple[int, int]:
+    def sign(self, message: bytes, d: int, id_: bytes, P: EcPoint = None) -> Tuple[int, int]:
         """Generate signature on the message.
 
         Args:
@@ -110,28 +112,28 @@ class SM2Core(SMCoreBase):
             (int, int): (r, s)
         """
 
-        if xP is None or yP is None:
-            xP, yP = self.get_pubkey(d)
+        if P is None:
+            P = self.get_pubkey(d)
 
-        e = int.from_bytes(self._hash_fn(self.entity_info(id_, xP, yP) + message), "big")
+        e = bytes_to_int(self._hash_fn(self.entity_info(id_, P) + message))
 
         ecdlp = self.ecdlp
-        n = self.ecdlp.n
+        fpn = self.ecdlp.fpn
         while True:
-            k = self._randint(1, n - 1)
+            k = self._randint(1, fpn.p - 1)
             x, _ = ecdlp.kG(k)
 
-            r = (e + x) % n
-            if r == 0 or (r + k == n):
+            r = fpn.add(e, x)
+            if fpn.iszero(r) or fpn.iszero(fpn.add(r, k)):
                 continue
 
-            s = (inverse(1 + d, n) * (k - r * d)) % n
-            if s == 0:
+            s = fpn.mul(fpn.sub(k, fpn.mul(r, d)), fpn.inv(1 + d))
+            if fpn.iszero(s):
                 continue
 
             return r, s
 
-    def verify(self, message: bytes, r: int, s: int, id_: bytes, xP: int, yP: int) -> bool:
+    def verify(self, message: bytes, r: int, s: int, id_: bytes, P: EcPoint) -> bool:
         """Verify the signature on the message.
 
         Args:
@@ -146,28 +148,28 @@ class SM2Core(SMCoreBase):
             bool: Whether OK.
         """
 
-        ecdlp = self.ecdlp
-        n = self.ecdlp.n
+        ec = self.ecdlp.ec
+        fpn = self.ecdlp.fpn
 
-        if r < 1 or r > n - 1:
+        if r < 1 or r > fpn.p - 1:
             return False
 
-        if s < 1 or s > n - 1:
+        if s < 1 or s > fpn.p - 1:
             return False
 
-        t = (r + s) % n
-        if t == 0:
+        t = fpn.add(r, s)
+        if fpn.iszero(t):
             return False
 
-        e = int.from_bytes(self._hash_fn(self.entity_info(id_, xP, yP) + message), "big")
+        e = int.from_bytes(self._hash_fn(self.entity_info(id_, P) + message), "big")
 
-        x, _ = ecdlp.add(*ecdlp.kG(s), *ecdlp.mul(t, xP, yP))
-        if (e + x) % n != r:
+        x, _ = ec.add(self.ecdlp.kG(s), ec.mul(t, P))
+        if fpn.add(e, x) != r:
             return False
 
         return True
 
-    def encrypt(self, plain: bytes, xP: int, yP: int) -> Tuple[Tuple[int, int], bytes, bytes]:
+    def encrypt(self, plain: bytes, P: EcPoint) -> Tuple[EcPoint, bytes, bytes]:
         """Encrypt.
 
         Args:
@@ -186,14 +188,16 @@ class SM2Core(SMCoreBase):
         The return order is `C1, C2, C3`, **NOT** `C1, C3, C2`.
         """
 
+        ec = self.ecdlp.ec
+
         while True:
-            k = self._randint(1, self.ecdlp.n - 1)
+            k = self._randint(1, self.ecdlp.fpn.p - 1)
             x1, y1 = self.ecdlp.kG(k)  # C1
 
-            if self.ecdlp.isinf(*self.ecdlp.mul(self.ecdlp.h, xP, yP)):
-                raise errors.InfinitePointError(f"Infinite point encountered, [0x{self.ecdlp.h:x}](0x{xP:x}, 0x{yP:x})")
+            if ec.mul(self.ecdlp.h, P) == ec.INF:
+                raise errors.InfinitePointError(f"Infinite point encountered, [0x{self.ecdlp.h:x}](0x{P[0]:x}, 0x{P[1]:x})")
 
-            x2, y2 = self.ecdlp.mul(k, xP, yP)
+            x2, y2 = ec.mul(k, P)
             x2 = self.ecdlp.etob(x2)
             y2 = self.ecdlp.etob(y2)
 
@@ -206,7 +210,7 @@ class SM2Core(SMCoreBase):
 
             return (x1, y1), C2, C3
 
-    def decrypt(self, x1: int, y1: int, C2: bytes, C3: bytes, d: int) -> bytes:
+    def decrypt(self, C1: EcPoint, C2: bytes, C3: bytes, d: int) -> bytes:
         """Decrypt.
 
         Args:
@@ -227,13 +231,15 @@ class SM2Core(SMCoreBase):
             CheckFailedError: Incorrect hash value.
         """
 
-        if not self.ecdlp.isvalid(x1, y1):
-            raise errors.PointNotOnCurveError(x1, x2)
+        ec = self.ecdlp.ec
 
-        if self.ecdlp.isinf(*self.ecdlp.mul(self.ecdlp.h, x1, y1)):
-            raise errors.InfinitePointError(f"Infinite point encountered, [0x{self.ecdlp.h:x}](0x{x1:x}, 0x{y1:x})")
+        if not ec.isvalid(C1):
+            raise errors.PointNotOnCurveError(C1)
 
-        x2, y2 = self.ecdlp.mul(d, x1, y1)
+        if ec.mul(self.ecdlp.h, C1) == ec.INF:
+            raise errors.InfinitePointError(f"Infinite point encountered, [0x{self.ecdlp.h:x}](0x{C1[0]:x}, 0x{C1[1]:x})")
+
+        x2, y2 = ec.mul(d, C1)
         x2 = self.ecdlp.etob(x2)
         y2 = self.ecdlp.etob(y2)
 
@@ -253,7 +259,7 @@ class SM2Core(SMCoreBase):
 
         return self._2w + (x & self._2w_1)
 
-    def begin_key_exchange(self, d: int) -> Tuple[Tuple[int, int], int]:
+    def begin_key_exchange(self, d: int) -> Tuple[EcPoint, int]:
         """Generate data to begin key exchange.
 
         Returns:
@@ -262,15 +268,15 @@ class SM2Core(SMCoreBase):
         """
 
         ecdlp = self.ecdlp
-        n = ecdlp.n
+        fpn = ecdlp.fpn
 
-        r = self._randint(1, n)
-        x, y = ecdlp.kG(r)
-        t = (d + self._x_bar(x) * r) % n
+        r = self._randint(1, fpn.p - 1)
+        R = ecdlp.kG(r)
+        t = fpn.add(d, fpn.mul(self._x_bar(R[0]), r))
 
-        return (x, y), t
+        return R, t
 
-    def get_secret_point(self, t: int, xR: int, yR: int, xP: int, yP: int) -> Tuple[int, int]:
+    def get_secret_point(self, t: int, R: EcPoint, P: EcPoint) -> EcPoint:
         """Generate session key of klen bytes for initiator.
 
         Args:
@@ -288,24 +294,21 @@ class SM2Core(SMCoreBase):
             InfinitePointError
         """
 
-        ecdlp = self.ecdlp
+        ec = self.ecdlp.ec
 
-        if not ecdlp.isvalid(xR, yR):
-            raise errors.PointNotOnCurveError(xR, yR)
+        if not ec.isvalid(R):
+            raise errors.PointNotOnCurveError(R)
 
-        x, y = ecdlp.mul(
-            ecdlp.h * t,
-            *ecdlp.add(xP, yP, *ecdlp.mul(self._x_bar(xR), xR, yR))
-        )
+        S = ec.mul(self.ecdlp.h * t, ec.add(P, ec.mul(self._x_bar(R[0]), R)))
 
-        if ecdlp.isinf(x, y):
+        if S == ec.INF:
             raise errors.InfinitePointError("Infinite point encountered.")
 
-        return x, y
+        return S
 
-    def generate_skey(self, klen: int, x: int, y: int,
-                      id_init: bytes, xP_init: int, yP_init: int,
-                      id_resp: bytes, xP_resp: int, yP_resp: int) -> bytes:
+    def generate_skey(self, klen: int, S: EcPoint,
+                      id_init: bytes, P_init: EcPoint,
+                      id_resp: bytes, P_resp: EcPoint) -> bytes:
         """Generate secret key of klen bytes.
 
         Args:
@@ -325,12 +328,14 @@ class SM2Core(SMCoreBase):
             bytes: secret key of klen bytes.
         """
 
+        x, y = S
+
         Z = bytearray()
 
         Z.extend(self.ecdlp.etob(x))
         Z.extend(self.ecdlp.etob(y))
-        Z.extend(self.entity_info(id_init, xP_init, yP_init))
-        Z.extend(self.entity_info(id_resp, xP_resp, yP_resp))
+        Z.extend(self.entity_info(id_init, P_init))
+        Z.extend(self.entity_info(id_resp, P_resp))
 
         return self._key_derivation_fn(Z, klen)
 
@@ -366,23 +371,25 @@ class SM2:
         self._d = bytes_to_int(d) if d else None
 
         if P:
-            self._xP, self._yP = self.bytes_to_point(P)
+            self._P = self.bytes_to_point(P)
         else:
             if self._d:
-                self._xP, self._yP = self._core.get_pubkey(self._d)  # try generate public key
+                self._P = self._core.get_pubkey(self._d)  # try generate public key
             else:
-                self._xP, self._yP = None, None
+                self._P = None
 
         self._id = id_
         self._pc_mode = pc_mode
 
-    def point_to_bytes(self, x: int, y: int, mode: PC_MODE) -> bytes:
+    def point_to_bytes(self, P: EcPoint, mode: PC_MODE) -> bytes:
         """Convert point to bytes."""
 
         ecdlp = self._core.ecdlp
 
-        if ecdlp.isinf(x, y):
+        if P == ecdlp.ec.INF:
             return b"\x00"
+
+        x, y = P
 
         if mode is PC_MODE.RAW:
             return b"\x04" + ecdlp.etob(x) + ecdlp.etob(y)
@@ -399,26 +406,26 @@ class SM2:
         else:
             raise TypeError(f"Invalid mode {mode}")
 
-    def bytes_to_point(self, p: bytes) -> Tuple[int, int]:
+    def bytes_to_point(self, p: bytes) -> EcPoint:
         """Convert bytes to point."""
 
         ecdlp = self._core.ecdlp
 
         mode = p[0]
         if mode == 0x00:
-            return ecdlp.infpoint()
+            return ecdlp.ec.INF
 
         point = p[1:]
-        x = ecdlp.btoe(point[:ecdlp.length])
+        x = ecdlp.btoe(point[:ecdlp.fp.e_length])
         if mode == 0x04 or mode == 0x06 or mode == 0x07:
-            return x, ecdlp.btoe(point[ecdlp.length:])
+            return x, ecdlp.btoe(point[ecdlp.fp.e_length:])
         elif mode == 0x02 or mode == 0x03:
-            y = ecdlp.get_y(x)
+            y = ecdlp.ec.get_y(x)
             if y < 0:
                 raise errors.PointNotOnCurveError(x, -1)
             ylsb = y & 0x1
             if mode == 0x02 and ylsb or mode == 0x03 and not ylsb:
-                return x, ecdlp.p - y
+                return x, ecdlp.fp.neg(y)
             return x, y
         else:
             raise errors.InvalidPCError(mode)
@@ -429,11 +436,11 @@ class SM2:
 
     @property
     def can_verify(self) -> bool:
-        return bool(self._xP and self._yP and self._id)
+        return bool(self._P and self._id)
 
     @property
     def can_encrypt(self) -> bool:
-        return bool(self._xP and self._yP)
+        return bool(self._P)
 
     @property
     def can_decrypt(self) -> bool:
@@ -451,14 +458,14 @@ class SM2:
             bytes: public key point (xP, yP)
         """
 
-        d, (x, y) = self._core.generate_keypair()
-        P = self.point_to_bytes(x, y, self._pc_mode)
+        d, P = self._core.generate_keypair()
+        P = self.point_to_bytes(P, self._pc_mode)
         return int_to_bytes(d), P
 
     def get_pubkey(self, d: bytes) -> bytes:
         """Get public key from secret key."""
 
-        return self.point_to_bytes(*self._core.get_pubkey(bytes_to_int(d)), self._pc_mode)
+        return self.point_to_bytes(self._core.get_pubkey(bytes_to_int(d)), self._pc_mode)
 
     def verify_pubkey(self, P: bytes) -> bool:
         """Verify if a public key is valid.
@@ -483,7 +490,7 @@ class SM2:
         if not self.can_sign:
             raise errors.RequireArgumentError("sign", "d", "id")
 
-        r, s = self._core.sign(message, self._d, self._id, self._xP, self._yP)
+        r, s = self._core.sign(message, self._d, self._id, self._P)
         return int_to_bytes(r), int_to_bytes(s)
 
     def verify(self, message: bytes, r: bytes, s: bytes) -> bool:
@@ -492,7 +499,7 @@ class SM2:
         if not self.can_verify:
             raise errors.RequireArgumentError("verify", "P", "id")
 
-        return self._core.verify(message, bytes_to_int(r), bytes_to_int(s), self._id, self._xP, self._yP)
+        return self._core.verify(message, bytes_to_int(r), bytes_to_int(s), self._id, self._P)
 
     def encrypt(self, plain: bytes) -> bytes:
         """Encrypt
@@ -504,10 +511,10 @@ class SM2:
         if not self.can_encrypt:
             raise errors.RequireArgumentError("encrypt", "P")
 
-        C1, C2, C3 = self._core.encrypt(plain, self._xP, self._yP)
+        C1, C2, C3 = self._core.encrypt(plain, self._P)
 
         cipher = bytearray()
-        cipher.extend(self.point_to_bytes(*C1, self._pc_mode))
+        cipher.extend(self.point_to_bytes(C1, self._pc_mode))
         cipher.extend(C3)
         cipher.extend(C2)
 
@@ -523,7 +530,7 @@ class SM2:
         if not self.can_decrypt:
             raise errors.RequireArgumentError("decrypt", "d")
 
-        length = self._core.ecdlp.length
+        length = self._core.ecdlp.fp.e_length
         mode = cipher[0]
         if mode == 0x04 or mode == 0x06 or mode == 0x07:
             C1 = cipher[:1 + length * 2]
@@ -538,7 +545,7 @@ class SM2:
         C3 = cipher[c1_length:c1_length + hash_length]
         C2 = cipher[c1_length + hash_length:]
 
-        return self._core.decrypt(*self.bytes_to_point(C1), C2, C3, self._d)
+        return self._core.decrypt(self.bytes_to_point(C1), C2, C3, self._d)
 
     def begin_key_exchange(self) -> Tuple[bytes, int]:
         """Begin key exchange.
@@ -552,7 +559,7 @@ class SM2:
             raise errors.RequireArgumentError("key exchange", "d", "id")
 
         R, t = self._core.begin_key_exchange(self._d)
-        return self.point_to_bytes(*R, self._pc_mode), t
+        return self.point_to_bytes(R, self._pc_mode), t
 
     def _end_key_exchange_initiator(self, klen: int, t: int, R: bytes, id_: bytes, P: bytes) -> bytes:
         """End key exchange for initiator.
@@ -568,11 +575,11 @@ class SM2:
             bytes: secret key of klen bytes.
         """
 
-        xR, yR = self.bytes_to_point(R)
-        xP, yP = self.bytes_to_point(P)
+        R = self.bytes_to_point(R)
+        P = self.bytes_to_point(P)
 
-        U = self._core.get_secret_point(t, xR, yR, xP, yP)
-        return self._core.generate_skey(klen, *U, self._id, self._xP, self._yP, id_, xP, yP)
+        U = self._core.get_secret_point(t, R, P)
+        return self._core.generate_skey(klen, U, self._id, self._P, id_, P)
 
     def _end_key_exchange_responder(self, klen: int, t: int, R: bytes, id_: bytes, P: bytes) -> bytes:
         """End key exchange for responder.
@@ -588,11 +595,11 @@ class SM2:
             bytes: secret key of klen bytes.
         """
 
-        xR, yR = self.bytes_to_point(R)
-        xP, yP = self.bytes_to_point(P)
+        R = self.bytes_to_point(R)
+        P = self.bytes_to_point(P)
 
-        V = self._core.get_secret_point(t, xR, yR, xP, yP)
-        return self._core.generate_skey(klen, *V, id_, xP, yP, self._id, self._xP, self._yP)
+        V = self._core.get_secret_point(t, R, P)
+        return self._core.generate_skey(klen, V, id_, P, self._id, self._P)
 
     def end_key_exchange(self, klen: int, t: int, R: bytes, id_: bytes, P: bytes, mode: KEYXCHG_MODE) -> bytes:
         """End key exchange for initiator.

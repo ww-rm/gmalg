@@ -18,20 +18,3 @@ def int_to_bytes(i: int) -> bytes:
     """Convert integer to minimum number of bytes required to store its value."""
 
     return i.to_bytes((i.bit_length() + 7) >> 3, "big")
-
-
-def inverse(x: int, p: int):
-    """Modular inverse of p."""
-
-    r1 = p
-    r2 = x
-    t1 = 0
-    t2 = 1
-    while r2 > 0:
-        q, r = divmod(r1, r2)
-        r1 = r2
-        r2 = r
-        t = t1 - q * t2
-        t1 = t2
-        t2 = t
-    return t1 % p

@@ -1,43 +1,43 @@
 import unittest
 
 import gmalg
-import gmalg.ellipticcurve
+import gmalg.ellipticcurve as Ec
+import gmalg.primefield as Fp
 
 
 class TestEllipticCurve(unittest.TestCase):
     def test_ec(self):
         p = 0xB6400000_02A3A6F1_D603AB4F_F58EC745_21F2934B_1A7AEEDB_E56F9B27_E351457D
 
-        ec = gmalg.ellipticcurve.EllipticCurve(p, 0, 5)
-        ec2 = gmalg.ellipticcurve.EllipticCurve2(p, (0, 0), (5, 0))
+        ec = Ec.EllipticCurve(Fp.PrimeField(p), 0, 5)
+        ec2 = Ec.EllipticCurve(Fp.PrimeField2(p), (0, 0), (5, 0))
         n = 0xB6400000_02A3A6F1_D603AB4F_F58EC744_49F2934B_18EA8BEE_E56EE19C_D69ECF25
 
-        x1 = 0x93DE051D_62BF718F_F5ED0704_487D01D6_E1E40869_09DC3280_E8C4E481_7C66DDDD
-        y1 = 0x21FE8DDA_4F21E607_63106512_5C395BBC_1C1C00CB_FA602435_0C464CD7_0A3EA616
+        P1 = (0x93DE051D_62BF718F_F5ED0704_487D01D6_E1E40869_09DC3280_E8C4E481_7C66DDDD,
+              0x21FE8DDA_4F21E607_63106512_5C395BBC_1C1C00CB_FA602435_0C464CD7_0A3EA616)
 
-        x2 = (0x85AEF3D0_78640C98_597B6027_B441A01F_F1DD2C19_0F5E93C4_54806C11_D8806141,
-              0x37227552_92130B08_D2AAB97F_D34EC120_EE265948_D19C17AB_F9B7213B_AF82D65B)
-        y2 = (0x17509B09_2E845C12_66BA0D26_2CBEE6ED_0736A96F_A347C8BD_856DC76B_84EBEB96,
-              0xA7CF28D5_19BE3DA6_5F317015_3D278FF2_47EFBA98_A71A0811_6215BBA5_C999A7C7)
+        P2 = ((0x85AEF3D0_78640C98_597B6027_B441A01F_F1DD2C19_0F5E93C4_54806C11_D8806141,
+              0x37227552_92130B08_D2AAB97F_D34EC120_EE265948_D19C17AB_F9B7213B_AF82D65B),
+              (0x17509B09_2E845C12_66BA0D26_2CBEE6ED_0736A96F_A347C8BD_856DC76B_84EBEB96,
+              0xA7CF28D5_19BE3DA6_5F317015_3D278FF2_47EFBA98_A71A0811_6215BBA5_C999A7C7))
 
-        self.assertTrue(ec.isvalid(x1, y1), "Not on curve")
+        self.assertTrue(ec.isvalid(P1), "Not on curve")
 
-        x3, y3 = ec.mul(n, x1, y1)
-        self.assertTrue(ec.isinf(x3, y3), "Invalid G")
+        self.assertTrue(ec.mul(n, P1) == ec.INF, "Invalid G")
 
-        self.assertTrue(ec2.isvalid(x2, y2), "Not on curve")
-        x4, y4 = ec2.mul(n, x2, y2)
-        self.assertTrue(ec2.isinf(x4, y4))
+        self.assertTrue(ec2.isvalid(P2), "Not on curve")
+
+        self.assertTrue(ec2.mul(n, P2) == ec2.INF)
 
 
 class TestSM2(unittest.TestCase):
     def test_sign1(self):
-        ecdlp = gmalg.ellipticcurve.ECDLP(
+        ecdlp = Ec.ECDLP(
             0x8542D69E_4C044F18_E8B92435_BF6FF7DE_45728391_5C45517D_722EDB8B_08F1DFC3,
             0x787968B4_FA32C3FD_2417842E_73BBFEFF_2F3C848B_6831D7E0_EC65228B_3937E498,
             0x63E4C6D3_B23B0C84_9CF84241_484BFE48_F61D59A5_B16BA06E_6E12D1DA_27C5249A,
-            0x421DEBD6_1B62EAB6_746434EB_C3CC315E_32220B3B_ADD50BDC_4C4E6C14_7FEDD43D,
-            0x0680512B_CBB42C07_D47349D2_153B70C4_E5D7FDFC_BFA36EA1_A85841B9_E46E09A2,
+            (0x421DEBD6_1B62EAB6_746434EB_C3CC315E_32220B3B_ADD50BDC_4C4E6C14_7FEDD43D,
+             0x0680512B_CBB42C07_D47349D2_153B70C4_E5D7FDFC_BFA36EA1_A85841B9_E46E09A2),
             0x8542D69E_4C044F18_E8B92435_BF6FF7DD_29772063_0485628D_5AE74EE7_C32E79B7,
         )
         ecc = gmalg.sm2.SM2Core(
@@ -46,14 +46,14 @@ class TestSM2(unittest.TestCase):
         )
         d = 0x128B2FA8_BD433C6C_068C8D80_3DFF7979_2A519A55_171B1B65_0C23661D_15897263
         id_ = b"ALICE123@YAHOO.COM"
-        xP = 0x0AE4C779_8AA0F119_471BEE11_825BE462_02BB79E2_A5844495_E97C04FF_4DF2548A
-        yP = 0x7C0240F8_8F1CD4E1_6352A73C_17B7F16F_07353E53_A176D684_A9FE0C6B_B798E857
+        P = (0x0AE4C779_8AA0F119_471BEE11_825BE462_02BB79E2_A5844495_E97C04FF_4DF2548A,
+             0x7C0240F8_8F1CD4E1_6352A73C_17B7F16F_07353E53_A176D684_A9FE0C6B_B798E857)
 
-        r, s = ecc.sign(b"message digest", d, id_, xP, yP)
+        r, s = ecc.sign(b"message digest", d, id_, P)
         self.assertEqual(r, 0x40F1EC59_F793D9F4_9E09DCEF_49130D41_94F79FB1_EED2CAA5_5BACDB49_C4E755D1)
         self.assertEqual(s, 0x6FC6DAC3_2C5D5CF1_0C77DFB2_0F7C2EB6_67A45787_2FB09EC5_6327A67E_C7DEEBE7)
 
-        self.assertEqual(ecc.verify(b"message digest", r, s, id_, xP, yP), True)
+        self.assertEqual(ecc.verify(b"message digest", r, s, id_, P), True)
 
     def test_sign2(self):
         sm2 = gmalg.SM2(
@@ -80,12 +80,12 @@ class TestSM2(unittest.TestCase):
         self.assertEqual(sm2.verify(plain, r, s), True)
 
     def test_encrypt1(self):
-        ecdlp = gmalg.ellipticcurve.ECDLP(
+        ecdlp = Ec.ECDLP(
             0xBDB6F4FE_3E8B1D9E_0DA8C0D4_6F4C318C_EFE4AFE3_B6B8551F,
             0xBB8E5E8F_BC115E13_9FE6A814_FE48AAA6_F0ADA1AA_5DF91985,
             0x1854BEBD_C31B21B7_AEFC80AB_0ECD10D5_B1B3308E_6DBF11C1,
-            0x4AD5F704_8DE709AD_51236DE6_5E4D4B48_2C836DC6_E4106640,
-            0x02BB3A02_D4AAADAC_AE24817A_4CA3A1B0_14B52704_32DB27D2,
+            (0x4AD5F704_8DE709AD_51236DE6_5E4D4B48_2C836DC6_E4106640,
+             0x02BB3A02_D4AAADAC_AE24817A_4CA3A1B0_14B52704_32DB27D2),
             0xBDB6F4FE_3E8B1D9E_0DA8C0D4_0FC96219_5DFAE76F_56564677,
         )
         ecc = gmalg.sm2.SM2Core(
@@ -93,24 +93,24 @@ class TestSM2(unittest.TestCase):
             lambda _: 0x384F3035_3073AEEC_E7A16543_30A96204_D37982A3_E15B2CB5
         )
         d = 0x58892B80_7074F53F_BF67288A_1DFAA1AC_313455FE_60355AFD
-        xP = 0x79F0A954_7AC6D100_531508B3_0D30A565_36BCFC81_49F4AF4A
-        yP = 0xAE38F2D8_890838DF_9C19935A_65A8BCC8_994BC792_4672F912
+        P = (0x79F0A954_7AC6D100_531508B3_0D30A565_36BCFC81_49F4AF4A,
+             0xAE38F2D8_890838DF_9C19935A_65A8BCC8_994BC792_4672F912)
 
-        (x1, y1), c2, c3 = ecc.encrypt(b"encryption standard", xP, yP)
+        (x1, y1), c2, c3 = ecc.encrypt(b"encryption standard", P)
         self.assertEqual(x1, 0x23FC680B_124294DF_DF34DBE7_6E0C38D8_83DE4D41_FA0D4CF5)
         self.assertEqual(y1, 0x70CF14F2_0DAF0C4D_777F738D_16B16824_D31EEFB9_DE31EE1F)
         self.assertEqual(c2, bytes.fromhex("610567 DBD4854F 51F4F00A DCC01CFE 90B1FB1C"))
         self.assertEqual(c3, bytes.fromhex("6AFB3BCE BD76F82B 252CE5EB 25B57996 86902B8C F2FD8753 6E55EF76 03B09E7C"))
 
-        self.assertEqual(ecc.decrypt(x1, y1, c2, c3, d), b"encryption standard")
+        self.assertEqual(ecc.decrypt((x1, y1), c2, c3, d), b"encryption standard")
 
     def test_encrypt2(self):
-        ecdlp = gmalg.ellipticcurve.ECDLP(
+        ecdlp = Ec.ECDLP(
             0x8542D69E_4C044F18_E8B92435_BF6FF7DE_45728391_5C45517D_722EDB8B_08F1DFC3,
             0x787968B4_FA32C3FD_2417842E_73BBFEFF_2F3C848B_6831D7E0_EC65228B_3937E498,
             0x63E4C6D3_B23B0C84_9CF84241_484BFE48_F61D59A5_B16BA06E_6E12D1DA_27C5249A,
-            0x421DEBD6_1B62EAB6_746434EB_C3CC315E_32220B3B_ADD50BDC_4C4E6C14_7FEDD43D,
-            0x0680512B_CBB42C07_D47349D2_153B70C4_E5D7FDFC_BFA36EA1_A85841B9_E46E09A2,
+            (0x421DEBD6_1B62EAB6_746434EB_C3CC315E_32220B3B_ADD50BDC_4C4E6C14_7FEDD43D,
+             0x0680512B_CBB42C07_D47349D2_153B70C4_E5D7FDFC_BFA36EA1_A85841B9_E46E09A2),
             0x8542D69E_4C044F18_E8B92435_BF6FF7DD_29772063_0485628D_5AE74EE7_C32E79B7,
         )
         ecc = gmalg.sm2.SM2Core(
@@ -118,16 +118,16 @@ class TestSM2(unittest.TestCase):
             lambda _: 0x4C62EEFD_6ECFC2B9_5B92FD6C_3D957514_8AFA1742_5546D490_18E5388D_49DD7B4F
         )
         d = 0x1649AB77_A00637BD_5E2EFE28_3FBF3535_34AA7F7C_B89463F2_08DDBC29_20BB0DA0
-        xP = 0x435B39CC_A8F3B508_C1488AFC_67BE491A_0F7BA07E_581A0E48_49A5CF70_628A7E0A
-        yP = 0x75DDBA78_F15FEECB_4C7895E2_C1CDF5FE_01DEBB2C_DBADF453_99CCF77B_BA076A42
+        P = (0x435B39CC_A8F3B508_C1488AFC_67BE491A_0F7BA07E_581A0E48_49A5CF70_628A7E0A,
+             0x75DDBA78_F15FEECB_4C7895E2_C1CDF5FE_01DEBB2C_DBADF453_99CCF77B_BA076A42)
 
-        (x1, y1), c2, c3 = ecc.encrypt(b"encryption standard", xP, yP)
+        (x1, y1), c2, c3 = ecc.encrypt(b"encryption standard", P)
         self.assertEqual(x1, 0x245C26FB_68B1DDDD_B12C4B6B_F9F2B6D5_FE60A383_B0D18D1C_4144ABF1_7F6252E7)
         self.assertEqual(y1, 0x76CB9264_C2A7E88E_52B19903_FDC47378_F605E368_11F5C074_23A24B84_400F01B8)
         self.assertEqual(c2, bytes.fromhex("650053 A89B41C4 18B0C3AA D00D886C 00286467"))
         self.assertEqual(c3, bytes.fromhex("9C3D7360 C30156FA B7C80A02 76712DA9 D8094A63 4B766D3A 285E0748 0653426D"))
 
-        self.assertEqual(ecc.decrypt(x1, y1, c2, c3, d), b"encryption standard")
+        self.assertEqual(ecc.decrypt((x1, y1), c2, c3, d), b"encryption standard")
 
     def test_encrypt3(self):
         sm2 = gmalg.SM2(
@@ -170,55 +170,55 @@ class TestSM2(unittest.TestCase):
         p_b = bytes.fromhex("04 09F9DF31 1E5421A1 50DD7D16 1E4BC5C6 72179FAD 1833FC07 6BB08FF3 56F35020"
                             "CCEA490C E26775A5 2DC6EA71 8CC1AA60 0AED05FB F35E084A 6632F607 2DA9AD13")
         p_p = sm2.bytes_to_point(p_b)
-        p_pp = sm2.bytes_to_point(sm2.point_to_bytes(*p_p, gmalg.sm2.PC_MODE.COMPRESS))
+        p_pp = sm2.bytes_to_point(sm2.point_to_bytes(p_p, gmalg.sm2.PC_MODE.COMPRESS))
 
         self.assertEqual(p_p, p_pp)
 
         _, p_b = sm2.generate_keypair()
         p_p = sm2.bytes_to_point(p_b)
-        p_pp = sm2.bytes_to_point(sm2.point_to_bytes(*p_p, gmalg.sm2.PC_MODE.COMPRESS))
+        p_pp = sm2.bytes_to_point(sm2.point_to_bytes(p_p, gmalg.sm2.PC_MODE.COMPRESS))
 
         self.assertEqual(p_p, p_pp)
 
     def test_y_sqrt(self):
         # 8u3
-        ecdlp = gmalg.ellipticcurve.ECDLP(
+        ecdlp = Ec.ECDLP(
             0x8542D69E_4C044F18_E8B92435_BF6FF7DE_45728391_5C45517D_722EDB8B_08F1DFC3,
             0x787968B4_FA32C3FD_2417842E_73BBFEFF_2F3C848B_6831D7E0_EC65228B_3937E498,
             0x63E4C6D3_B23B0C84_9CF84241_484BFE48_F61D59A5_B16BA06E_6E12D1DA_27C5249A,
-            0x421DEBD6_1B62EAB6_746434EB_C3CC315E_32220B3B_ADD50BDC_4C4E6C14_7FEDD43D,
-            0x0680512B_CBB42C07_D47349D2_153B70C4_E5D7FDFC_BFA36EA1_A85841B9_E46E09A2,
+            (0x421DEBD6_1B62EAB6_746434EB_C3CC315E_32220B3B_ADD50BDC_4C4E6C14_7FEDD43D,
+             0x0680512B_CBB42C07_D47349D2_153B70C4_E5D7FDFC_BFA36EA1_A85841B9_E46E09A2),
             0x8542D69E_4C044F18_E8B92435_BF6FF7DD_29772063_0485628D_5AE74EE7_C32E79B7,
         )
 
         x = 0x0AE4C779_8AA0F119_471BEE11_825BE462_02BB79E2_A5844495_E97C04FF_4DF2548A
         y = 0x7C0240F8_8F1CD4E1_6352A73C_17B7F16F_07353E53_A176D684_A9FE0C6B_B798E857
 
-        y_ = ecdlp.get_y(x)
-        self.assertTrue(y_ == y or ecdlp.p - y_ == y)
+        y_ = ecdlp.ec.get_y(x)
+        self.assertTrue(y_ == y or ecdlp.fp.neg(y_) == y)
 
         # 8u7
-        ecdlp = gmalg.ellipticcurve.ECDLP(
+        ecdlp = Ec.ECDLP(
             0xBDB6F4FE_3E8B1D9E_0DA8C0D4_6F4C318C_EFE4AFE3_B6B8551F,
             0xBB8E5E8F_BC115E13_9FE6A814_FE48AAA6_F0ADA1AA_5DF91985,
             0x1854BEBD_C31B21B7_AEFC80AB_0ECD10D5_B1B3308E_6DBF11C1,
-            0x4AD5F704_8DE709AD_51236DE6_5E4D4B48_2C836DC6_E4106640,
-            0x02BB3A02_D4AAADAC_AE24817A_4CA3A1B0_14B52704_32DB27D2,
+            (0x4AD5F704_8DE709AD_51236DE6_5E4D4B48_2C836DC6_E4106640,
+             0x02BB3A02_D4AAADAC_AE24817A_4CA3A1B0_14B52704_32DB27D2),
             0xBDB6F4FE_3E8B1D9E_0DA8C0D4_0FC96219_5DFAE76F_56564677,
         )
         x = 0x79F0A954_7AC6D100_531508B3_0D30A565_36BCFC81_49F4AF4A
         y = 0xAE38F2D8_890838DF_9C19935A_65A8BCC8_994BC792_4672F912
 
-        y_ = ecdlp.get_y(x)
-        self.assertTrue(y_ == y or ecdlp.p - y_ == y)
+        y_ = ecdlp.ec.get_y(x)
+        self.assertTrue(y_ == y or ecdlp.fp.neg(y_) == y)
 
     def test_keyxchg1(self):
-        ecdlp = gmalg.ellipticcurve.ECDLP(
+        ecdlp = Ec.ECDLP(
             0x8542D69E_4C044F18_E8B92435_BF6FF7DE_45728391_5C45517D_722EDB8B_08F1DFC3,
             0x787968B4_FA32C3FD_2417842E_73BBFEFF_2F3C848B_6831D7E0_EC65228B_3937E498,
             0x63E4C6D3_B23B0C84_9CF84241_484BFE48_F61D59A5_B16BA06E_6E12D1DA_27C5249A,
-            0x421DEBD6_1B62EAB6_746434EB_C3CC315E_32220B3B_ADD50BDC_4C4E6C14_7FEDD43D,
-            0x0680512B_CBB42C07_D47349D2_153B70C4_E5D7FDFC_BFA36EA1_A85841B9_E46E09A2,
+            (0x421DEBD6_1B62EAB6_746434EB_C3CC315E_32220B3B_ADD50BDC_4C4E6C14_7FEDD43D,
+             0x0680512B_CBB42C07_D47349D2_153B70C4_E5D7FDFC_BFA36EA1_A85841B9_E46E09A2),
             0x8542D69E_4C044F18_E8B92435_BF6FF7DD_29772063_0485628D_5AE74EE7_C32E79B7,
         )
 
@@ -227,8 +227,8 @@ class TestSM2(unittest.TestCase):
             lambda _: 0x83A2C9C8_B96E5AF7_0BD480B4_72409A9A_327257F1_EBB73F5B_073354B2_48668563
         )
         d1 = 0x6FCBA2EF_9AE0AB90_2BC3BDE3_FF915D44_BA4CC78F_88E2F8E7_F8996D3B_8CCEEDEE
-        xP1 = 0x3099093B_F3C137D8_FCBBCDF4_A2AE50F3_B0F216C3_122D7942_5FE03A45_DBFE1655
-        yP1 = 0x3DF79E8D_AC1CF0EC_BAA2F2B4_9D51A4B3_87F2EFAF_48233908_6A27A8E0_5BAED98B
+        P1 = (0x3099093B_F3C137D8_FCBBCDF4_A2AE50F3_B0F216C3_122D7942_5FE03A45_DBFE1655,
+              0x3DF79E8D_AC1CF0EC_BAA2F2B4_9D51A4B3_87F2EFAF_48233908_6A27A8E0_5BAED98B)
         id1 = b"ALICE123@YAHOO.COM"
 
         ecc2 = gmalg.sm2.SM2Core(
@@ -236,20 +236,20 @@ class TestSM2(unittest.TestCase):
             lambda _: 0x33FE2194_0342161C_55619C4A_0C060293_D543C80A_F19748CE_176D8347_7DE71C80
         )
         d2 = 0x5E35D7D3_F3C54DBA_C72E6181_9E730B01_9A84208C_A3A35E4C_2E353DFC_CB2A3B53
-        xP2 = 0x245493D4_46C38D8C_C0F11837_4690E7DF_633A8A4B_FB3329B5_ECE604B2_B4F37F43
-        yP2 = 0x53C0869F_4B9E1777_3DE68FEC_45E14904_E0DEA45B_F6CECF99_18C85EA0_47C60A4C
+        P2 = (0x245493D4_46C38D8C_C0F11837_4690E7DF_633A8A4B_FB3329B5_ECE604B2_B4F37F43,
+              0x53C0869F_4B9E1777_3DE68FEC_45E14904_E0DEA45B_F6CECF99_18C85EA0_47C60A4C)
         id2 = b"BILL456@YAHOO.COM"
 
-        (x1, y1), t1 = ecc1.begin_key_exchange(d1)
-        (x2, y2), t2 = ecc2.begin_key_exchange(d2)
+        R1, t1 = ecc1.begin_key_exchange(d1)
+        R2, t2 = ecc2.begin_key_exchange(d2)
 
-        xv, yv = ecc2.get_secret_point(t2, x1, y1, xP1, yP1)
-        xu, yu = ecc1.get_secret_point(t1, x2, y2, xP2, yP2)
+        V = ecc2.get_secret_point(t2, R1, P1)
+        U = ecc1.get_secret_point(t1, R2, P2)
 
-        self.assertEqual((xv, yv), (xu, yu))
+        self.assertEqual(V, U)
 
-        K2 = ecc2.generate_skey(16, xv, yv, id1, xP1, yP1, id2, xP2, yP2)
-        K1 = ecc1.generate_skey(16, xu, yu, id1, xP1, yP1, id2, xP2, yP2)
+        K2 = ecc2.generate_skey(16, V, id1, P1, id2, P2)
+        K1 = ecc1.generate_skey(16, U, id1, P1, id2, P2)
 
         self.assertEqual(K2, K1)
 

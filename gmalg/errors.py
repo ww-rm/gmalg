@@ -70,14 +70,13 @@ class InvalidPCError(GMError):
 class PointNotOnCurveError(GMError):
     """Point not on elliptic curve."""
 
-    def __init__(self, x: int, y: int) -> None:
+    def __init__(self, P) -> None:
         """Point not on elliptic curve."""
 
-        self.x = x
-        self.y = y
+        self.P = P
 
     def __str__(self) -> str:
-        return f"Point(0x{self.x:x}, 0x{self.y:x}) not on curve."
+        return f"Point{self.P} not on curve."
 
 
 class RequireArgumentError(GMError):

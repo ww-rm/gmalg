@@ -3,174 +3,49 @@ from typing import Tuple
 from . import errors
 from . import primefield as Fp
 
-
-class EllipticCurveBase:
-    """Base class of Elliptic Curve (Fp)"""
-
-    @classmethod
-    def _get_fp(cls, p: int) -> Fp.PrimeFieldBase:
-        raise NotImplementedError
-
-    @classmethod
-    def infpoint(cls) -> Tuple[Fp.FpEle, Fp.FpEle]:
-        raise NotImplementedError
-
-    @classmethod
-    def isinf(cls, x: int, y: int) -> bool:
-        """Check if a point is a infinite point."""
-        raise NotImplementedError
-
-    def __init__(self, p: int, a: Fp.FpEle, b: Fp.FpEle) -> None:
-        """Elliptic Curve (Fp)
-
-        y^2 = x^3 + ax + b (mod p)
-
-        Raises:
-            InvalidArgumentError: p is not a prime number.
-        """
-
-        self.a = a
-        self.b = b
-        self._fp = self._get_fp(p)
-
-    @property
-    def p(self) -> int:
-        return self._fp.p
-
-    @property
-    def length(self) -> int:
-        return self._fp.length
-
-    def isvalid(self, x: Fp.FpEle, y: Fp.FpEle) -> bool:
-        """Verify if a point is on the curve."""
-        raise NotImplementedError
-
-    def get_y_sqr(self, x: Fp.FpEle) -> Fp.FpEle:
-        raise NotImplementedError
-
-    def get_y(self, x: Fp.FpEle) -> Fp.FpEle:
-        """Get one of valid y of given x, -1 means no solution."""
-        raise NotImplementedError
-
-    def add(self, x1: Fp.FpEle, y1: Fp.FpEle, x2: Fp.FpEle, y2: Fp.FpEle) -> Tuple[Fp.FpEle, Fp.FpEle]:
-        """Add two points. Negative numbers means infinite point."""
-        raise NotImplementedError
-
-    def sub(self, x1: Fp.FpEle, y1: Fp.FpEle, x2: Fp.FpEle, y2: Fp.FpEle) -> Tuple[Fp.FpEle, Fp.FpEle]:
-        """Sub two points."""
-        raise NotImplementedError
-
-    def mul(self, k: Fp.FpEle, x: Fp.FpEle, y: Fp.FpEle) -> Tuple[Fp.FpEle, Fp.FpEle]:
-        """Scalar multiplication by k."""
-        raise NotImplementedError
+EcPoint = Tuple[Fp.FpExEle, Fp.FpExEle]
 
 
-class EllipticCurve(EllipticCurveBase):
+class EllipticCurve:
     """Elliptic Curve (Fp)"""
 
-    @classmethod
-    def _get_fp(cls, p: int) -> Fp.PrimeField:
-        return Fp.PrimeField(p)
+    INF: EcPoint = (float("inf"), float("inf"))
 
-    @classmethod
-    def infpoint(cls) -> Tuple[int, int]:
-        return (-1, -1)
-
-    @classmethod
-    def isinf(cls, x: int, y: int) -> bool:
-        return x < 0 or y < 0
-
-    def isvalid(self, x: int, y: int) -> bool:
-        if x >= self._fp.p or y >= self._fp.p:
-            return False
-
-        if (y * y - x * x * x - self.a * x - self.b) % self._fp.p != 0:
-            return False
-
-        return True
-
-    def get_y_sqr(self, x: int) -> int:
-        return (x * x * x + self.a * x + self.b) % self._fp.p
-
-    def get_y(self, x: int) -> int:
-        """Get one of valid y of given x, -1 means no solution."""
-        return self._fp.sqrt(self.get_y_sqr(x))
-
-    def add(self, x1: int, y1: int, x2: int, y2: int) -> Tuple[int, int]:
-        fp = self._fp
-
-        if self.isinf(x1, y1):
-            return x2, y2
-        if self.isinf(x2, y2):
-            return x1, y1
-        if x1 == x2:
-            if y1 == 0 and y2 == 0 or y1 + y2 == fp.p:
-                return -1, -1
-            elif y1 == y2:
-                lam = (3 * x1 * x1 + self.a) * fp.inv(2 * y1)
-            else:
-                raise errors.UnknownError(f"0x{y1:x} and 0x{y2:x} is neither equal nor opposite.")
-        else:
-            if x2 > x1:
-                lam = (y2 - y1) * fp.inv(x2 - x1)
-            else:
-                lam = (y1 - y2) * fp.inv(x1 - x2)
-
-        x3 = (lam * lam - x1 - x2) % fp.p
-        y3 = (lam * (x1 - x3) - y1) % fp.p
-
-        return x3, y3
-
-    def sub(self, x1: int, y1: int, x2: int, y2: int) -> Tuple[int, int]:
-        return self.add(x1, y1, x2, self._fp.p - y2)
-
-    def mul(self, k: int, x: int, y: int) -> Tuple[int, int]:
-        xk = -1
-        yk = -1
-
-        for i in f"{k:b}":
-            xk, yk = self.add(xk, yk, xk, yk)
-            if i == "1":
-                xk, yk = self.add(xk, yk, x, y)
-
-        return xk, yk
-
-
-class EllipticCurve2(EllipticCurve):
-    """Elliptic Curve (Fp2)"""
-
-    @classmethod
-    def _get_fp(cls, p: int) -> Fp.PrimeField2:
-        return Fp.PrimeField2(p)
-
-    @classmethod
-    def infpoint(cls) -> Tuple[int, int]:
-        return ((-1, ) * 2, (-1, ) * 2)
-
-    @classmethod
-    def isinf(cls, x: Fp.FpExEle, y: Fp.FpExEle) -> bool:
-        return any(i < 0 for i in x) or any(i < 0 for i in y)
-
-    def isvalid(self, x: Fp.FpExEle, y: Fp.FpExEle) -> bool:
-        return self._fp.mul(y, y) == self.get_y_sqr(x)
+    def __init__(self, fp: Fp.PrimeFieldBase, a: Fp.FpExEle, b: Fp.FpExEle) -> None:
+        self.a = a
+        self.b = b
+        self._fp = fp
 
     def get_y_sqr(self, x: Fp.FpExEle) -> Fp.FpExEle:
         fp = self._fp
         return fp.add(fp.pow(x, 3), fp.add(fp.mul(self.a, x), self.b))
 
-    def get_y(self, x: Fp.Fp2Ele) -> Fp.Fp2Ele:
-        raise NotImplementedError
+    def get_y(self, x: int) -> int:
+        """Get one of valid y of given x, -1 means no solution."""
+        return self._fp.sqrt(self.get_y_sqr(x))
 
-    def add(self, x1: Fp.FpExEle, y1: Fp.FpExEle, x2: Fp.FpExEle, y2: Fp.FpExEle) -> Tuple[Fp.FpExEle, Fp.FpExEle]:
+    def isvalid(self, P: EcPoint) -> bool:
+        x, y = P
+        return self._fp.mul(y, y) == self.get_y_sqr(x)
+
+    def neg(self, P: EcPoint) -> EcPoint:
+        x, y = P
+        return (x, self._fp.neg(y))
+
+    def add(self, P1: EcPoint, P2: EcPoint) -> EcPoint:
         fp = self._fp
 
-        if self.isinf(x1, y1):
-            return x2, y2
-        if self.isinf(x2, y2):
-            return x1, y1
+        if P1 == self.INF:
+            return P2
+        if P2 == self.INF:
+            return P1
+
+        x1, y1 = P1
+        x2, y2 = P2
+
         if x1 == x2:
             if fp.isoppo(y1, y2):
-                return self.infpoint()
+                return self.INF
             elif y1 == y2:
                 _t1 = fp.add(self.a, fp.smul(3, fp.mul(x1, x1)))
                 _t2 = fp.inv(fp.smul(2, y1))
@@ -180,28 +55,32 @@ class EllipticCurve2(EllipticCurve):
         else:
             lam = fp.mul(fp.sub(y2, y1), fp.inv(fp.sub(x2, x1)))
 
-        x3 = tuple((i1 - i2 - i3) % fp.p for i1, i2, i3 in zip(fp.mul(lam, lam), x1, x2))
+        x3 = fp.sub(fp.mul(lam, lam), fp.add(x1, x2))
         y3 = fp.sub(fp.mul(lam, fp.sub(x1, x3)), y1)
         return x3, y3
 
-    def sub(self, x1: Fp.FpExEle, y1: Fp.FpExEle, x2: Fp.FpExEle, y2: Fp.FpExEle) -> Tuple[Fp.FpExEle, Fp.FpExEle]:
-        return self.add(x1, y1, x2, self._fp.neg(y2))
+    def sub(self, P1: EcPoint, P2: EcPoint) -> EcPoint:
+        return self.add(P1, self.neg(P2))
 
-    def mul(self, k: int, x: Fp.FpExEle, y: Fp.FpExEle) -> Tuple[Fp.FpExEle, Fp.FpExEle]:
-        xk, yk = x, y
+    def mul(self, k: int, P: EcPoint) -> EcPoint:
+        Q = P
         for i in f"{k:b}"[1:]:
-            xk, yk = self.add(xk, yk, xk, yk)
+            Q = self.add(Q, Q)
             if i == "1":
-                xk, yk = self.add(xk, yk, x, y)
-        return xk, yk
+                Q = self.add(Q, P)
+        return Q
 
-    def _g_fn(self, xU: Fp.FpExEle, yU: Fp.FpExEle, xV: Fp.FpExEle, yV: Fp.FpExEle, xQ: Fp.FpExEle, yQ: Fp.FpExEle) -> Fp.FpExEle:
+    def _g_fn(self, U: EcPoint, V: EcPoint, Q: EcPoint) -> Fp.FpExEle:
         """g(U, V)(Q)"""
 
         fp = self._fp
 
-        if self.isinf(xU, yU) or self.isinf(xV, yV) or self.isinf(xQ, yQ):
+        if U == self.INF or V == self.INF or Q == self.INF:
             return fp.one()
+
+        xU, yU = U
+        xV, yV = V
+        xQ, yQ = Q
 
         if xU == xV:
             if fp.isoppo(yU, yV):
@@ -216,14 +95,17 @@ class EllipticCurve2(EllipticCurve):
             lam = fp.mul(fp.sub(yU, yV), fp.inv(fp.sub(xU, xV)))
 
         _t = fp.mul(lam, fp.sub(xQ - xV))
-        g = tuple((i1 - i2 + i3) % fp.p for i1, i2, i3 in zip(_t, yQ, yV))
+        g = fp.add(fp.sub(_t, yQ), yV)
         return g
 
-    def miller(self, c: int, xP: Fp.FpExEle, yP: Fp.FpExEle, xQ: Fp.FpExEle, yQ: Fp.FpExEle) -> Fp.FpExEle:
+    def miller(self, c: int, P: EcPoint, Q: EcPoint) -> Fp.FpExEle:
         """Miller function."""
 
         fp = self._fp
         g = self._g_fn
+
+        xP, yP = P
+        xQ, yQ = Q
 
         f = fp.one()
         xV, yV = xP, yP
@@ -242,34 +124,10 @@ class EllipticCurve2(EllipticCurve):
         return f
 
 
-class EllipticCurve4(EllipticCurve2):
-    """Elliptic Curve (Fp4)"""
-
-    @classmethod
-    def _get_fp(cls, p: int) -> Fp.PrimeField4:
-        return Fp.PrimeField4(p)
-
-    @classmethod
-    def infpoint(cls) -> Tuple[int, int]:
-        return ((-1, ) * 4, (-1, ) * 4)
-
-
-class EllipticCurve12(EllipticCurve2):
-    """Elliptic Curve (Fp12)"""
-
-    @classmethod
-    def _get_fp(cls, p: int) -> Fp.PrimeField12:
-        return Fp.PrimeField12(p)
-
-    @classmethod
-    def infpoint(cls) -> Tuple[int, int]:
-        return ((-1, ) * 12, (-1, ) * 12)
-
-
-class ECDLP(EllipticCurve):
+class ECDLP:
     """Elliptic Curve Discrete Logarithm Problem"""
 
-    def __init__(self, p: int, a: int, b: int, xG: int, yG: int, n: int, h: int = 1) -> None:
+    def __init__(self, p: int, a: int, b: int, G: EcPoint, n: int, h: int = 1) -> None:
         """Elliptic Curve Discrete Logarithm Problem
 
         Elliptic Curve (Fp): y^2 = x^3 + ax + b (mod p)
@@ -279,24 +137,59 @@ class ECDLP(EllipticCurve):
         Cofactor: h
         """
 
-        super().__init__(p, a, b)
-
-        self.xG = xG
-        self.yG = yG
-        self.n = n
+        self.fp = Fp.PrimeField(p)
+        self.ec = EllipticCurve(self.fp, a, b)
+        self.G = G
+        self.fpn = Fp.PrimeField(n)
         self.h = h
 
-    def kG(self, k: int) -> Tuple[int, int]:
+    def kG(self, k: int) -> EcPoint:
         """Scalar multiplication of G by k."""
 
-        return self.mul(k, self.xG, self.yG)
+        return self.ec.mul(k, self.G)
 
     def etob(self, e: int) -> bytes:
-        return self._fp.etob(e)
+        return self.fp.etob(e)
 
     def btoe(self, b: bytes) -> int:
-        return self._fp.btoe(b)
+        return self.fp.btoe(b)
 
 
-class ECBIDH:
-    ...
+# class ECBIDH:
+#     def __init__(
+#         self, p: int, t: int, k: int, d1: int, d2: int, b: Fp.FpEle, beta: Fp.FpEle,
+#         xG1: Fp.FpEle, yG1: Fp.FpEle, xG2: Fp.FpEle, yG2: Fp.FpEle,
+#         n: int, cf: int = 1
+#     ) -> None:
+#         """BN Elliptic Curve Bilinear Inverse Diffie-Hellman."""
+
+#         if k == 12:
+#             self.fpk = Fp.PrimeField12(p)
+#             self.eck = EllipticCurve12(p, self.fpk.zero(), self.fpk.extend(b))
+#         else:
+#             raise NotImplementedError(f"k: {k}")
+
+#         if d1 > d2:
+#             raise errors.InvalidArgumentError(f"d1 should less or equal than d2, {d1} > {d2}")
+
+#         if d1 == 1:
+#             self.ec1 = EllipticCurve(p, 0, b)
+#         else:
+#             raise NotImplementedError(f"d1: {d1}")
+
+#         if d2 == 2:
+#             _fp = Fp.PrimeField2(p)
+#             self.ec2 = EllipticCurve2(p, _fp.zero(), _fp.mul(beta, _fp.extend(b)))
+#         else:
+#             raise NotImplementedError(f"d2: {d2}")
+
+#         self.t = t
+#         self.xG1 = xG1
+#         self.yG1 = yG1
+#         self.xG2 = xG2
+#         self.yG2 = yG2
+#         self.n = n
+#         self.cf = cf
+
+#     def e(self) -> Fp.FpExEle:
+#         ...
