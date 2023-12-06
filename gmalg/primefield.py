@@ -270,10 +270,8 @@ class PrimeField4(PrimeField2):
 
     @classmethod
     def extend(cls, x: FpEle) -> Fp4Ele:
-        if isinstance(x, int):
-            return (0, 0, 0, x)
-        elif len(x) == 2:
-            return (0, x[0], 0, x[1])
+        if isinstance(x, int) or len(x) < 4:
+            return (0, 0, *super().extend(x))
         return x
 
     @classmethod
@@ -318,12 +316,8 @@ class PrimeField12(PrimeField4):
 
     @classmethod
     def extend(cls, x: FpEle) -> Fp12Ele:
-        if isinstance(x, int):
-            return (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, x)
-        elif len(x) == 2:
-            return (0, 0, 0, 0, 0, x[0], 0, 0, 0, 0, 0, x[1])
-        elif len(x) == 4:
-            return (0, 0, x[0], 0, 0, x[1], 0, 0, x[2], 0, 0, x[3])
+        if isinstance(x, int) or len(x) < 12:
+            return (0, 0, 0, 0, 0, 0, 0, 0, *super().extend(x))
         return x
 
     @classmethod
