@@ -58,6 +58,7 @@ class SM2Core(SMCoreBase):
 
     def verify_pubkey(self, P: EcPoint) -> bool:
         """Verify if a public key is valid."""
+
         ec = self.ecdlp.ec
 
         if P == ec.INF:
@@ -105,8 +106,7 @@ class SM2Core(SMCoreBase):
             message (bytes): message to be signed.
             d (int): secret key.
             id_ (bytes): user id.
-            xP (int): x of public key
-            yP (int): y of public key
+            P (EcPoint): public key
 
         Returns:
             (int, int): (r, s)
@@ -141,8 +141,7 @@ class SM2Core(SMCoreBase):
             r (int): r
             s (int): s
             id_ (bytes): user id.
-            xP (int): x of public key.
-            yP (int): y of public key.
+            P (EcPoint): public key.
 
         Returns:
             bool: Whether OK.
@@ -174,11 +173,10 @@ class SM2Core(SMCoreBase):
 
         Args:
             data (bytes): plain text to be encrypted.
-            xP (int): x of public key.
-            yP (int): y of public key.
+            P (EcPoint): public key.
 
         Returns:
-            (int, int): C1, kG point
+            EcPoint: C1, kG point
             bytes: C2, cipher
             bytes: C3, hash value
 
@@ -214,11 +212,9 @@ class SM2Core(SMCoreBase):
         """Decrypt.
 
         Args:
-            x1 (int): x of C1 (kG point).
-            y1 (int): y of C1 (kG point).
-            C1 (bytes, bytes): kG point
-            C2 (bytes): cipher
-            C3 (bytes): hash value
+            C1 (EcPoint): kG point.
+            C2 (bytes): cipher.
+            C3 (bytes): hash value.
             d (int): secret key.
 
         Returns:
@@ -263,7 +259,7 @@ class SM2Core(SMCoreBase):
         """Generate data to begin key exchange.
 
         Returns:
-            (int, int): random point, [r]G, r in [1, n - 1]
+            EcPoint: random point, [r]G, r in [1, n - 1]
             int: t
         """
 
@@ -277,17 +273,15 @@ class SM2Core(SMCoreBase):
         return R, t
 
     def get_secret_point(self, t: int, R: EcPoint, P: EcPoint) -> EcPoint:
-        """Generate session key of klen bytes for initiator.
+        """Generate same secret point as another user.
 
         Args:
             t (int): generated from `begin_key_exchange`
-            xR (int): x of random point from another user.
-            yR (int): y of random point from another user.
-            xP (int): x of public key of another user.
-            yP (int): y of public key of another user.
+            R (EcPoint): random point from another user.
+            P (EcPoint): public key of another user.
 
         Returns:
-            (int, int): The same secret point as another user.
+            EcPoint: The same secret point as another user.
 
         Raises:
             PointNotOnCurveError
@@ -309,7 +303,7 @@ class SM2Core(SMCoreBase):
     def generate_skey(self, klen: int, S: EcPoint,
                       id_init: bytes, P_init: EcPoint,
                       id_resp: bytes, P_resp: EcPoint) -> bytes:
-        """Generate secret key of klen bytes.
+        """Generate secret key of klen bytes as same as another user.
 
         Args:
             klen (int): key length in bytes to generate.
@@ -317,12 +311,10 @@ class SM2Core(SMCoreBase):
             y (int): y of secret point.
 
             id_init (bytes): id bytes of initiator.
-            xP_init (int): x of public key of initiator.
-            yP_init (int): y of public key of initiator.
+            P_init (EcPoint): public key of initiator.
 
             id_resp (bytes): id bytes of responder.
-            xP_resp (int): x of public key of responder.
-            yP_resp (int): y of public key of responder.
+            P_resp (EcPoint): public key of responder.
 
         Returns:
             bytes: secret key of klen bytes.
@@ -602,7 +594,7 @@ class SM2:
         return self._core.generate_skey(klen, V, id_, P, self._id, self._P)
 
     def end_key_exchange(self, klen: int, t: int, R: bytes, id_: bytes, P: bytes, mode: KEYXCHG_MODE) -> bytes:
-        """End key exchange for initiator.
+        """End key exchange and get the secret key bytes.
 
         Args:
             klen (int): length of secret key in bytes to generate.
