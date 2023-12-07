@@ -2,7 +2,10 @@ from typing import Tuple, Union
 
 from . import errors
 
-# towering method
+# towering method: 1-2-4-12
+# [11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
+# [[[11, 5], [8, 2]], [[10, 4], [7, 1]], [[9, 3], [6, 0]]]
+
 Fp2Ele = Tuple[int, int]
 Fp4Ele = Tuple[Fp2Ele, Fp2Ele]
 Fp12Ele = Tuple[Fp4Ele, Fp4Ele, Fp4Ele]
@@ -23,25 +26,19 @@ class PrimeFieldBase:
         raise NotImplementedError
 
     @classmethod
+    def iszero(cls, x: FpExEle) -> bool:
+        raise NotImplementedError
+
+    @classmethod
+    def isone(cls, x: FpExEle) -> bool:
+        raise NotImplementedError
+
+    @classmethod
     def extend(cls, x: FpExEle) -> FpExEle:
         """Extend element."""
         raise NotImplementedError
 
     def __init__(self, p: int) -> None:
-        self.p = p
-        self.p_bitlength = self.p.bit_length()
-        self.p_length = (self.p_bitlength + 7) >> 3
-        self._u, self._r = divmod(self.p, 8)
-
-    @property
-    def e_length(self) -> int:
-        """Element byte length"""
-        raise NotImplementedError
-
-    def iszero(self, x: FpExEle) -> bool:
-        raise NotImplementedError
-
-    def isone(self, x: FpExEle) -> bool:
         raise NotImplementedError
 
     def isoppo(self, x: FpExEle, y: FpExEle) -> bool:
@@ -97,11 +94,24 @@ class PrimeField(PrimeFieldBase):
         return 1
 
     @classmethod
+    def iszero(cls, x: int) -> bool:
+        return x == 0
+
+    @classmethod
+    def isone(cls, x: int) -> bool:
+        return x == 1
+
+    @classmethod
     def extend(cls, x: int) -> int:
         return x
 
     def __init__(self, p: int) -> None:
-        super().__init__(p)
+        self.p = p
+        self.p_bitlength = self.p.bit_length()
+        self.p_length = (self.p_bitlength + 7) >> 3
+        self.e_length = self.p_length
+
+        self._u, self._r = divmod(self.p, 8)
 
         if self._r == 1:
             self.sqrt = self._sqrt_8u1
@@ -115,16 +125,6 @@ class PrimeField(PrimeFieldBase):
             self.sqrt = self._sqrt_4u3
         else:
             raise errors.InvalidArgumentError(f"0x{p:x} is not a prime number.")
-
-    @property
-    def e_length(self) -> int:
-        return self.p_length
-
-    def iszero(self, x: int) -> bool:
-        return x == 0
-
-    def isone(self, x: int) -> bool:
-        return x == 1
 
     def isoppo(self, x: int, y: int) -> bool:
         return x == 0 and y == 0 or x + y == self.p
@@ -149,6 +149,8 @@ class PrimeField(PrimeFieldBase):
 
     def inv(self, x: int):
         """Modular inverse."""
+
+        x %= self.p
 
         r1 = self.p
         r2 = x
@@ -240,62 +242,60 @@ class PrimeField(PrimeFieldBase):
         return int.from_bytes(b, "big")
 
 
-class PrimeField2(PrimeField):
+class PrimeField2(PrimeFieldBase):
     """Fp2 operations."""
 
     @classmethod
     def extend(cls, x: Union[int, Fp2Ele]) -> Fp2Ele:
         if isinstance(x, int):
-            return (super().zero(), super().extend(x))
+            return (PrimeField.zero(), PrimeField.extend(x))
         return x
 
     @classmethod
     def zero(cls) -> Fp2Ele:
-        return (super().zero(), super().zero())
+        return (PrimeField.zero(), PrimeField.zero())
 
     @classmethod
     def one(cls) -> Fp2Ele:
-        return (super().zero(), super().one())
+        return (PrimeField.zero(), PrimeField.one())
 
-    @property
-    def e_length(self) -> int:
-        return super().e_length * 2
-
+    @classmethod
     def iszero(self, X: Fp2Ele) -> bool:
-        f = super().iszero
-        return all(f(i) for i in X)
+        return all(PrimeField.iszero(i) for i in X)
 
+    @classmethod
     def isone(self, X: Fp2Ele) -> bool:
-        f = super().iszero
-        return all(f(i) for i in X[:-1]) and super().isone(X[-1])
+        return all(PrimeField.iszero(i) for i in X[:-1]) and PrimeField.isone(X[-1])
+
+    def __init__(self, p: int) -> None:
+        self._fp = PrimeField(p)
+        self.e_length = self._fp.e_length * 2
 
     def isoppo(self, X: Fp2Ele, Y: Fp2Ele) -> bool:
-        f = super().isoppo
-        return all(f(i1, i2) for i1, i2 in zip(X, Y))
+        return all(self._fp.isoppo(i1, i2) for i1, i2 in zip(X, Y))
 
     def neg(self, X: Fp2Ele) -> Fp2Ele:
-        f = super().neg
-        return tuple(f(i) for i in X)
+        return tuple(self._fp.neg(i) for i in X)
 
     def sadd(self, n: int, x: Fp2Ele) -> Fp2Ele:
         x = list(x)
-        x[-1] = super().sadd(n, x[-1])
+        x[-1] = self._fp.sadd(n, x[-1])
         return tuple(x)
 
     def smul(self, k: int, x: Fp2Ele) -> Fp2Ele:
-        f = super().smul
-        return tuple(f(k, i) for i in x)
+        return tuple(self._fp.smul(k, i) for i in x)
 
     def add(self, X: Fp2Ele, Y: Fp2Ele) -> Fp2Ele:
-        f = super().add
-        return tuple(f(i1, i2) for i1, i2 in zip(X, Y))
+        return tuple(self._fp.add(i1, i2) for i1, i2 in zip(X, Y))
 
     def sub(self, X: Fp2Ele, Y: Fp2Ele) -> Fp2Ele:
-        f = super().sub
-        return tuple(f(i1, i2) for i1, i2 in zip(X, Y))
+        return tuple(self._fp.sub(i1, i2) for i1, i2 in zip(X, Y))
 
     def mul(self, X: Fp2Ele, Y: Fp2Ele) -> Fp2Ele:
-        a, s, m = super().add, super().sub, super().mul
+        a = self._fp.add
+        s = self._fp.sub
+        m = self._fp.mul
+
         X1, X0 = X
         Y1, Y0 = Y
         U = -2
@@ -310,12 +310,15 @@ class PrimeField2(PrimeField):
         return Z1, Z0
 
     def inv(self, X: Fp2Ele) -> Fp2Ele:
-        n, s, m = super().neg, super().sub, super().mul
+        n = self._fp.neg
+        s = self._fp.sub
+        m = self._fp.mul
+
         X1, X0 = X
         U = -2
 
         UmX1mX1_s_X0mX0 = s(m(U, m(X1, X1)), m(X0, X0))
-        invdet = super().inv(UmX1mX1_s_X0mX0)
+        invdet = self._fp.inv(UmX1mX1_s_X0mX0)
 
         Y1 = m(X1, invdet)
         Y0 = m(n(X0), invdet)
@@ -336,71 +339,68 @@ class PrimeField2(PrimeField):
     def etob(self, e: Fp2Ele) -> bytes:
         b = bytearray()
         for i in e:
-            b.extend(super().etob(i))
+            b.extend(self._fp.etob(i))
         return bytes(b)
 
     def btoe(self, b: bytes) -> Fp2Ele:
-        len_ = self.e_length
-        f = super().btoe
-        return tuple(f(b[i:i+len_]) for i in range(0, len(b) - len_, len_))
+        len_ = self._fp.e_length
+        return tuple(self._fp.btoe(b[i:i+len_]) for i in range(0, len(b) - len_, len_))
 
 
-class PrimeField4(PrimeField2):
+class PrimeField4(PrimeFieldBase):
     """Fp4 operations."""
 
     @classmethod
     def extend(cls, x: Union[int, Fp2Ele, Fp4Ele]) -> Fp4Ele:
         if isinstance(x, int) or len(x) < 4:
-            return (super().zero(), super().extend(x))
+            return (PrimeField2.zero(), PrimeField2.extend(x))
         return x
 
     @classmethod
     def zero(cls) -> Fp4Ele:
-        return (super().zero(), super().zero())
+        return (PrimeField2.zero(), PrimeField2.zero())
 
     @classmethod
     def one(cls) -> Fp4Ele:
-        return (super().zero(), super().one())
+        return (PrimeField2.zero(), PrimeField2.one())
 
-    @property
-    def e_length(self) -> int:
-        return super().e_length * 2
+    @classmethod
+    def iszero(cls, X: Fp4Ele) -> bool:
+        return all(PrimeField2.iszero(i) for i in X)
 
-    def iszero(self, X: Fp4Ele) -> bool:
-        f = super().iszero
-        return all(f(i) for i in X)
+    @classmethod
+    def isone(cls, X: Fp4Ele) -> bool:
+        return all(PrimeField2.iszero(i) for i in X[:-1]) and PrimeField2.isone(X[-1])
 
-    def isone(self, X: Fp4Ele) -> bool:
-        f = super().iszero
-        return all(f(i) for i in X[:-1]) and super().isone(X[-1])
+    def __init__(self, p: int) -> None:
+        self._fp2 = PrimeField2(p)
+        self.e_length = self._fp2.e_length * 2
 
     def isoppo(self, X: Fp4Ele, Y: Fp4Ele) -> bool:
-        f = super().isoppo
-        return all(f(i1, i2) for i1, i2 in zip(X, Y))
+        return all(self._fp2.isoppo(i1, i2) for i1, i2 in zip(X, Y))
 
     def neg(self, X: Fp4Ele) -> Fp4Ele:
-        f = super().neg
-        return tuple(f(i) for i in X)
+        return tuple(self._fp2.neg(i) for i in X)
 
     def sadd(self, n: int, x: Fp4Ele) -> Fp4Ele:
         x = list(x)
-        x[-1] = super().sadd(n, x[-1])
+        x[-1] = self._fp2.sadd(n, x[-1])
         return tuple(x)
 
     def smul(self, k: int, x: Fp4Ele) -> Fp4Ele:
-        f = super().smul
-        return tuple(f(k, i) for i in x)
+        return tuple(self._fp2.smul(k, i) for i in x)
 
     def add(self, X: Fp4Ele, Y: Fp4Ele) -> Fp4Ele:
-        f = super().add
-        return tuple(f(i1, i2) for i1, i2 in zip(X, Y))
+        return tuple(self._fp2.add(i1, i2) for i1, i2 in zip(X, Y))
 
     def sub(self, X: Fp4Ele, Y: Fp4Ele) -> Fp4Ele:
-        f = super().sub
-        return tuple(f(i1, i2) for i1, i2 in zip(X, Y))
+        return tuple(self._fp2.sub(i1, i2) for i1, i2 in zip(X, Y))
 
     def mul(self, X: Fp4Ele, Y: Fp4Ele) -> Fp4Ele:
-        a, s, m = super().add, super().sub, super().mul
+        a = self._fp2.add
+        s = self._fp2.sub
+        m = self._fp2.mul
+
         X1, X0 = X
         Y1, Y0 = Y
         U = (1, 0)
@@ -415,12 +415,15 @@ class PrimeField4(PrimeField2):
         return Z1, Z0
 
     def inv(self, X: Fp4Ele) -> Fp4Ele:
-        n, s, m = super().neg, super().sub, super().mul
+        n = self._fp2.neg
+        s = self._fp2.sub
+        m = self._fp2.mul
+
         X1, X0 = X
         U = (1, 0)
 
         UmX1mX1_s_X0mX0 = s(m(U, m(X1, X1)), m(X0, X0))
-        invdet = super().inv(UmX1mX1_s_X0mX0)
+        invdet = self._fp2.inv(UmX1mX1_s_X0mX0)
 
         Y1 = m(X1, invdet)
         Y0 = m(n(X0), invdet)
@@ -441,13 +444,12 @@ class PrimeField4(PrimeField2):
     def etob(self, e: Fp4Ele) -> bytes:
         b = bytearray()
         for i in e:
-            b.extend(super().etob(i))
+            b.extend(self._fp2.etob(i))
         return bytes(b)
 
     def btoe(self, b: bytes) -> Fp4Ele:
-        len_ = self.e_length
-        f = super().btoe
-        return tuple(f(b[i:i+len_]) for i in range(0, len(b) - len_, len_))
+        len_ = self._fp2.e_length
+        return tuple(self._fp2.btoe(b[i:i+len_]) for i in range(0, len(b) - len_, len_))
 
 
 class PrimeField12(PrimeField4):
@@ -456,56 +458,54 @@ class PrimeField12(PrimeField4):
     @classmethod
     def extend(cls, x: Union[int, Fp2Ele, Fp4Ele, Fp12Ele]) -> Fp12Ele:
         if isinstance(x, int) or len(x) < 12:
-            return (super().zero(), super().zero(), super().extend(x))
+            return (PrimeField4.zero(), PrimeField4.zero(), PrimeField4.extend(x))
         return x
 
     @classmethod
     def zero(cls) -> Fp12Ele:
-        return (super().zero(), super().zero(), super().zero())
+        return (PrimeField4.zero(), PrimeField4.zero(), PrimeField4.zero())
 
     @classmethod
     def one(cls) -> Fp12Ele:
-        return (super().zero(), super().zero(), super().one())
+        return (PrimeField4.zero(), PrimeField4.zero(), PrimeField4.one())
 
-    @property
-    def e_length(self) -> int:
-        return super().e_length * 3
+    @classmethod
+    def iszero(cls, X: Fp12Ele) -> bool:
+        return all(PrimeField4.iszero(i) for i in X)
 
-    def iszero(self, X: Fp12Ele) -> bool:
-        f = super().iszero
-        return all(f(i) for i in X)
+    @classmethod
+    def isone(cls, X: Fp12Ele) -> bool:
+        return all(PrimeField4.iszero(i) for i in X[:-1]) and PrimeField4.isone(X[-1])
 
-    def isone(self, X: Fp12Ele) -> bool:
-        f = super().iszero
-        return all(f(i) for i in X[:-1]) and super().isone(X[-1])
+    def __init__(self, p: int) -> None:
+        self._fp4 = PrimeField4(p)
+        self.e_length = self._fp4.e_length * 3
 
     def isoppo(self, X: Fp12Ele, Y: Fp12Ele) -> bool:
-        f = super().isoppo
-        return all(f(i1, i2) for i1, i2 in zip(X, Y))
+        return all(self._fp4.isoppo(i1, i2) for i1, i2 in zip(X, Y))
 
     def neg(self, X: Fp12Ele) -> Fp12Ele:
-        f = super().neg
-        return tuple(f(i) for i in X)
+        return tuple(self._fp4.neg(i) for i in X)
 
     def sadd(self, n: int, x: Fp12Ele) -> Fp12Ele:
         x = list(x)
-        x[-1] = super().sadd(n, x[-1])
+        x[-1] = self._fp4.sadd(n, x[-1])
         return tuple(x)
 
     def smul(self, k: int, x: Fp12Ele) -> Fp12Ele:
-        f = super().smul
-        return tuple(f(k, i) for i in x)
+        return tuple(self._fp4.smul(k, i) for i in x)
 
     def add(self, X: Fp12Ele, Y: Fp12Ele) -> Fp12Ele:
-        f = super().add
-        return tuple(f(i1, i2) for i1, i2 in zip(X, Y))
+        return tuple(self._fp4.add(i1, i2) for i1, i2 in zip(X, Y))
 
     def sub(self, X: Fp12Ele, Y: Fp12Ele) -> Fp12Ele:
-        f = super().sub
-        return tuple(f(i1, i2) for i1, i2 in zip(X, Y))
+        return tuple(self._fp4.sub(i1, i2) for i1, i2 in zip(X, Y))
 
     def mul(self, X: Fp12Ele, Y: Fp12Ele) -> Fp12Ele:
-        a, s, m = super().add, super().sub, super().mul
+        a = self._fp4.add
+        s = self._fp4.sub
+        m = self._fp4.mul
+
         X2, X1, X0 = X
         Y2, Y1, Y0 = Y
         U = ((0, 1), (0, 0))
@@ -528,7 +528,10 @@ class PrimeField12(PrimeField4):
         return Z2, Z1, Z0
 
     def inv(self, X: Fp12Ele) -> Fp12Ele:
-        a, s, m = super().add, super().sub, super().mul
+        a = self._fp4.add
+        s = self._fp4.sub
+        m = self._fp4.mul
+
         X2, X1, X0 = X
         U = ((0, 1), (0, 0))
 
@@ -540,7 +543,7 @@ class PrimeField12(PrimeField4):
         X0mX0_s_UmX2mX1 = s(m(X0, X0), m(UmX2, X1))
 
         det = a(m(UmX2, UmX2mX2_s_X1X0), a(m(UmX1, X1mX1_s_X2mX0), m(X0, X0mX0_s_UmX2mX1)))
-        invdet = super().inv(det)
+        invdet = self._fp4.inv(det)
 
         Y2 = m(X1mX1_s_X2mX0, invdet)
         Y1 = m(UmX2mX2_s_X1X0, invdet)
@@ -562,10 +565,9 @@ class PrimeField12(PrimeField4):
     def etob(self, e: Fp12Ele) -> bytes:
         b = bytearray()
         for i in e:
-            b.extend(super().etob(i))
+            b.extend(self._fp4.etob(i))
         return bytes(b)
 
     def btoe(self, b: bytes) -> Fp12Ele:
-        len_ = self.e_length
-        f = super().btoe
-        return tuple(f(b[i:i+len_]) for i in range(0, len(b) - len_, len_))
+        len_ = self._fp4.e_length
+        return tuple(self._fp4.btoe(b[i:i+len_]) for i in range(0, len(b) - len_, len_))
