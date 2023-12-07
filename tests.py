@@ -11,6 +11,8 @@ class TestEllipticCurve(unittest.TestCase):
 
         ec = Ec.EllipticCurve(Fp.PrimeField(p), 0, 5)
         ec2 = Ec.EllipticCurve(Fp.PrimeField2(p), (0, 0), (5, 0))
+        ec12 = Ec.EllipticCurve(Fp.PrimeField12(p), Fp.PrimeField12.zero(), Fp.PrimeField12.extend(5))
+
         n = 0xB6400000_02A3A6F1_D603AB4F_F58EC744_49F2934B_18EA8BEE_E56EE19C_D69ECF25
 
         P1 = (0x93DE051D_62BF718F_F5ED0704_487D01D6_E1E40869_09DC3280_E8C4E481_7C66DDDD,
@@ -28,6 +30,22 @@ class TestEllipticCurve(unittest.TestCase):
         self.assertTrue(ec2.isvalid(P2), "Not on curve")
 
         self.assertTrue(ec2.mul(n, P2) == ec2.INF)
+
+        invU = ec._fp.inv(-2)
+
+        x_, y_ = P2
+        x: Fp.Fp12Ele = (((0, 0), (0, 0)), ((x_[1] * invU, x_[0]), (0, 0)), ((0, 0), (0, 0)))
+        y: Fp.Fp12Ele = (((0, 0), (0, 0)), ((0, 0), (0, 0)), ((y_[1] * invU, y_[0]), (0, 0)))
+
+        self.assertTrue(ec12.isvalid((x, y)))
+
+        ec12 = Ec.EllipticCurve(Fp.PrimeField12(p), Fp.PrimeField12.zero(), Fp.PrimeField12.extend((5, 0)))
+
+        x_, y_ = P1
+        x: Fp.Fp12Ele = (((0, 0), (0, x_)), ((0, 0), (0, 0)), ((0, 0), (0, 0)))
+        y: Fp.Fp12Ele = (((0, 0), (0, 0)), ((0, 0), (0, 0)), ((0, y_), (0, 0)))
+
+        self.assertTrue(ec12.isvalid((x, y)))
 
 
 class TestSM2(unittest.TestCase):
@@ -347,6 +365,34 @@ class TestSM4(unittest.TestCase):
         self.assertRaises(gmalg.errors.IncorrectLengthError, self.c.encrypt, b"12345678123456781")
         self.assertRaises(gmalg.errors.IncorrectLengthError, self.c.decrypt, b"123456781234567")
         self.assertRaises(gmalg.errors.IncorrectLengthError, self.c.decrypt, b"12345678123456781")
+
+
+class TestSM9(unittest.TestCase):
+    def setUp(self) -> None:
+        P1 = (0x93DE051D_62BF718F_F5ED0704_487D01D6_E1E40869_09DC3280_E8C4E481_7C66DDDD,
+              0x21FE8DDA_4F21E607_63106512_5C395BBC_1C1C00CB_FA602435_0C464CD7_0A3EA616)
+
+        P2 = ((0x85AEF3D0_78640C98_597B6027_B441A01F_F1DD2C19_0F5E93C4_54806C11_D8806141,
+               0x37227552_92130B08_D2AAB97F_D34EC120_EE265948_D19C17AB_F9B7213B_AF82D65B),
+              (0x17509B09_2E845C12_66BA0D26_2CBEE6ED_0736A96F_A347C8BD_856DC76B_84EBEB96,
+               0xA7CF28D5_19BE3DA6_5F317015_3D278FF2_47EFBA98_A71A0811_6215BBA5_C999A7C7))
+
+        self.bn = Ec.BNBIDH(0x600000000058F98A, 0x05, (1, 0), P1, P2)
+
+    def test_bnbidh(self):
+        bn = self.bn
+
+        P1 = bn.G1
+        Pk = ((0x9F64080B_3084F733_E48AFF4B_41B56501_1CE0711C_5E392CFB_0AB1B679_1B94C408,
+               0x29DBA116_152D1F78_6CE843ED_24A3B573_414D2177_386A92DD_8F14D656_96EA5E32),
+              (0x69850938_ABEA0112_B57329F4_47E3A0CB_AD3E2FDB_1A77F335_E89E1408_D0EF1C25,
+               0x41E00A53_DDA532DA_1A7CE027_B7A46F74_1006E85F_5CDFF073_0E75C05F_B4E3216D))
+
+        T = bn.e(P1, Pk)
+        t = bn.fpk.etob(T)
+
+        print("FP12:")
+        print(t.hex("\n", 32).upper())
 
 
 class TestZUC(unittest.TestCase):

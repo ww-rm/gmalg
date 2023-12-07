@@ -70,59 +70,6 @@ class EllipticCurve:
                 Q = self.add(Q, P)
         return Q
 
-    def _g_fn(self, U: EcPoint, V: EcPoint, Q: EcPoint) -> Fp.FpExEle:
-        """g(U, V)(Q)"""
-
-        fp = self._fp
-
-        if U == self.INF or V == self.INF or Q == self.INF:
-            return fp.one()
-
-        xU, yU = U
-        xV, yV = V
-        xQ, yQ = Q
-
-        if xU == xV:
-            if fp.isoppo(yU, yV):
-                return fp.sub(xQ - xV)
-            elif yU == yV:
-                _t1 = fp.add(self.a, fp.smul(3, fp.mul(xV, xV)))
-                _t2 = fp.inv(fp.smul(2, yV))
-                lam = fp.mul(_t1, _t2)
-            else:
-                raise errors.UnknownError(f"y1 and y2 is neither equal nor opposite.")
-        else:
-            lam = fp.mul(fp.sub(yU, yV), fp.inv(fp.sub(xU, xV)))
-
-        _t = fp.mul(lam, fp.sub(xQ - xV))
-        g = fp.add(fp.sub(_t, yQ), yV)
-        return g
-
-    def miller(self, c: int, P: EcPoint, Q: EcPoint) -> Fp.FpExEle:
-        """Miller function."""
-
-        fp = self._fp
-        g = self._g_fn
-
-        xP, yP = P
-        xQ, yQ = Q
-
-        f = fp.one()
-        xV, yV = xP, yP
-        for i in f"{c:b}"[1:]:
-            gVV = g(xV, yV, xV, yV, xQ, yQ)
-            xV, yV = self.add(xV, yV)
-            g2V = g(xV, yV, xV, fp.neg(yV), xQ, yQ)
-            f = fp.mul(fp.mul(f, f), fp.mul(gVV, fp.inv(g2V)))
-
-            if i == "1":
-                gVP = g(xV, yV, xP, yP, xQ, yQ)
-                xV, yV = self.add(xV, yV, xP, yP)
-                gVaP = g(xV, yV, xV, fp.neg(yV), xQ, yQ)
-                f = fp.mul(f, fp.mul(gVP, fp.inv(gVaP)))
-
-        return f
-
 
 class ECDLP:
     """Elliptic Curve Discrete Logarithm Problem"""
@@ -132,7 +79,7 @@ class ECDLP:
 
         Elliptic Curve (Fp): y^2 = x^3 + ax + b (mod p)
 
-        Base point: (xG, yG)
+        Base point: G
         Order of the base point: n
         Cofactor: h
         """
@@ -155,41 +102,219 @@ class ECDLP:
         return self.fp.btoe(b)
 
 
-# class ECBIDH:
-#     def __init__(
-#         self, p: int, t: int, k: int, d1: int, d2: int, b: Fp.FpEle, beta: Fp.FpEle,
-#         xG1: Fp.FpEle, yG1: Fp.FpEle, xG2: Fp.FpEle, yG2: Fp.FpEle,
-#         n: int, cf: int = 1
-#     ) -> None:
-#         """BN Elliptic Curve Bilinear Inverse Diffie-Hellman."""
+class BNBIDH:
+    def __init__(self, t: int, b: int, beta: Fp.Fp2Ele, G1: EcPoint, G2: EcPoint) -> None:
+        """BN Elliptic Curve Bilinear Inverse Diffie-Hellman.
 
-#         if k == 12:
-#             self.fpk = Fp.PrimeField12(p)
-#             self.eck = EllipticCurve12(p, self.fpk.zero(), self.fpk.extend(b))
-#         else:
-#             raise NotImplementedError(f"k: {k}")
+        Args:
+            t (int): t.
+            b (int): param b of elliptic curve.
+            beta (Fp2Ele): param beta of twin curve, must be (1, 0)
+            G1 (EcPoint): Base point of group 1.
+            G2 (EcPoint): Base point of group 2.
+        """
 
-#         if d1 > d2:
-#             raise errors.InvalidArgumentError(f"d1 should less or equal than d2, {d1} > {d2}")
+        if beta != (1, 0):
+            raise NotImplementedError(f"beta: {beta}")
 
-#         if d1 == 1:
-#             self.ec1 = EllipticCurve(p, 0, b)
-#         else:
-#             raise NotImplementedError(f"d1: {d1}")
+        self.t = t
+        self.p = 36 * t**4 + 36 * t**3 + 24 * t**2 + 6 * t + 1
+        self.n = 36 * t**4 + 36 * t**3 + 18 * t**2 + 6 * t + 1
 
-#         if d2 == 2:
-#             _fp = Fp.PrimeField2(p)
-#             self.ec2 = EllipticCurve2(p, _fp.zero(), _fp.mul(beta, _fp.extend(b)))
-#         else:
-#             raise NotImplementedError(f"d2: {d2}")
+        self.fpk = Fp.PrimeField12(self.p)
+        self.fp1 = Fp.PrimeField(self.p)
+        self.fp2 = Fp.PrimeField2(self.p)
 
-#         self.t = t
-#         self.xG1 = xG1
-#         self.yG1 = yG1
-#         self.xG2 = xG2
-#         self.yG2 = yG2
-#         self.n = n
-#         self.cf = cf
+        self.ec1 = EllipticCurve(self.fp1, 0, b)
+        self.ec2 = EllipticCurve(self.fp2, self.fp2.zero(), self.fp2.mul(beta, self.fp2.extend(b)))
 
-#     def e(self) -> Fp.FpExEle:
-#         ...
+        self.G1 = G1
+        self.G2 = G2
+
+        self._a = 6 * t + 2
+        self._invU = self.fp1.inv(-2)
+
+        self._pm1 = self.p - 1
+        self._pa1 = self.p + 1
+        self._p2 = self.p * self.p
+        self._p2a1 = self._p2 + 1
+
+    def _g_fn(self, U: EcPoint, V: EcPoint, Q: EcPoint) -> Fp.FpExEle:
+        """g(U, V)(Q). U, V, Q are Fp12 points."""
+
+        fpk = self.fpk
+
+        if U == EllipticCurve.INF or V == EllipticCurve.INF or Q == EllipticCurve.INF:
+            return fpk.one()
+
+        xU, yU = U
+        xV, yV = V
+        xQ, yQ = Q
+
+        if xU == xV:
+            if fpk.isoppo(yU, yV):
+                return fpk.sub(xQ, xV)
+            elif yU == yV:
+                _t1 = fpk.smul(3, fpk.mul(xV, xV))  # a = 0
+                _t2 = fpk.inv(fpk.smul(2, yV))
+                lam = fpk.mul(_t1, _t2)
+            else:
+                raise errors.UnknownError(f"y1 and y2 is neither equal nor opposite.")
+        else:
+            lam = fpk.mul(fpk.sub(yU, yV), fpk.inv(fpk.sub(xU, xV)))
+
+        g = fpk.sub(fpk.mul(lam, fpk.sub(xQ, xV)), fpk.sub(yQ, yV))
+        return g
+
+    def _phi(self, P: EcPoint) -> EcPoint:
+        """Get x, y in E (Fp12) from E' (Fp2), only implemented for beta=(1, 0)"""
+
+        invU = self._invU
+
+        x_, y_ = P
+
+        x: Fp.Fp12Ele = (((0, 0), (0, 0)), ((x_[1] * invU, x_[0]), (0, 0)), ((0, 0), (0, 0)))
+        y: Fp.Fp12Ele = (((0, 0), (0, 0)), ((0, 0), (0, 0)), ((y_[1] * invU, y_[0]), (0, 0)))
+
+        return x, y
+
+    def _psi(self, P: EcPoint) -> EcPoint:
+        """Get x, y in E' (Fp12) from E (Fp), only implemented for beta=(1, 0)"""
+
+        x_, y_ = P
+
+        x: Fp.Fp12Ele = (((0, 0), (0, x_)), ((0, 0), (0, 0)), ((0, 0), (0, 0)))
+        y: Fp.Fp12Ele = (((0, 0), (0, 0)), ((0, 0), (0, 0)), ((0, y_), (0, 0)))
+
+        return x, y
+
+    def _finalexp(self, f: Fp.Fp12Ele) -> Fp.Fp12Ele:
+        """f^((p^12 - 1) / n)"""
+
+        print(f"===FVALUE:")
+        print(self.fpk.etob(f).hex("\n", 32).upper())
+        print(f)
+        return self.fpk.pow(f, (self.p ** 12 - 1) // self.n)
+
+        # e = self.fpk.pow
+        # m = self.fpk.mul
+        # i = self.fpk.inv
+
+        # p = self.p
+        # t = self.t
+
+        # f = e(f, self._pm1)
+        # f = e(f, self._pa1)
+        # f = m(e(e(f, self._p2), self._p2a1), f)
+        # f = e(f, self._p2a1)
+
+        # f_t = e(f, t)
+        # f_t2 = e(f_t, t)
+        # f_t3 = e(f_t2, t)
+
+        # f_p = e(f, p)
+        # f_p2 = e(f_p, p)
+        # f_p3 = e(f_p2, p)
+
+        # f_t_p = e(f_t, p)
+        # f_t2_p = e(f_t2, p)
+        # f_t3_p = e(f_t3, p)
+        # f_t2_p2 = e(f_t2_p, p)
+
+        # f0 = m(f_p, m(f_p2, f_p3))      # +
+        # f1 = e(f, 2)                    # -
+        # f2 = e(f_t2_p2, 6)              # +
+        # f3 = e(f_t_p, 12)               # -
+        # f4 = e(m(f_t2_p, f_t), 18)      # -
+        # f5 = e(f_t2, 30)                # -
+        # f6 = e(m(f_t3_p, f_t3), 36)     # -
+
+        # part1 = m(f0, f2)
+        # part2 = m(f1, m(f3, m(f4, m(f5, f6))))
+
+        # f = m(part1, i(part2))
+
+        # return f
+
+    def __e(self, P: EcPoint, Q: EcPoint) -> Fp.FpExEle:
+        """R-ate, P in G1, Q in G2"""
+
+        fpk = self.fpk
+        ec2 = self.ec2
+        phi = self._phi
+        g_fn = self._g_fn
+
+        _P = (fpk.extend(P[0]), fpk.extend(P[1]))  # P on E(Fp12)
+        _Q = phi(Q)  # Q on E(Fp12)
+
+        T = Q
+        f = fpk.one()
+        for i in f"{self._a:b}"[1:]:
+            _T = phi(T)  # T on E(Fp12)
+            f = fpk.mul(fpk.mul(f, f), g_fn(_T, _T, _P))
+            T = ec2.add(T, T)
+            f = fpk.mul(f, fpk.inv(fpk.sub(_P[0], phi(T)[0])))
+
+            if i == "1":
+                f = fpk.mul(f, g_fn(phi(T), _Q, _P))
+                T = ec2.add(T, Q)
+                # f = fpk.mul(f, fpk.inv(fpk.sub(_P[0], phi(T)[0])))
+
+        p = self.p
+        p_sqr = p * p
+        Q1 = (self.fp2.pow(Q[0], p), self.fp2.pow(Q[1], p))
+        Q2 = (self.fp2.pow(Q[0], p_sqr), self.fp2.pow(Q[1], p_sqr))
+
+        f = fpk.mul(f, g_fn(phi(T), phi(Q1), _P))
+
+        T = ec2.add(T, Q1)
+        f = fpk.mul(f, g_fn(phi(T), phi(ec2.neg(Q2)), _P))
+
+        f = self._finalexp(f)
+
+        return f
+
+    def e(self, P: EcPoint, Q: EcPoint) -> Fp.FpExEle:
+        """R-ate, P in G1, Q in G2"""
+
+        fpk = self.fpk
+        ec2 = self.ec2
+        g_fn = self._g_fn
+
+        _P = self._psi(P)  # P on E'(Fp12)
+        _Q = (fpk.extend(Q[0]), fpk.extend(Q[1]))  # Q on E'(Fp12)
+
+        T = Q
+        f = fpk.one()
+        for i in f"{self._a:b}"[1:]:
+            _T = (fpk.extend(T[0]), fpk.extend(T[1]))  # T on E'(Fp12)
+            f = fpk.mul(fpk.mul(f, f), g_fn(_T, _T, _P))
+            T = ec2.add(T, T)
+            # _T = (fpk.extend(T[0]), fpk.extend(T[1]))
+            # f = fpk.mul(f, fpk.inv(fpk.sub(_P[0], _T[0])))
+
+            if i == "1":
+                _T = (fpk.extend(T[0]), fpk.extend(T[1]))
+                f = fpk.mul(f, g_fn(_T, _Q, _P))
+                T = ec2.add(T, Q)
+                # _T = (fpk.extend(T[0]), fpk.extend(T[1]))
+                # f = fpk.mul(f, fpk.inv(fpk.sub(_P[0], _T[0])))
+
+        p = self.p
+        p_sqr = p * p
+        Q1 = (self.fp2.pow(Q[0], p), self.fp2.pow(Q[1], p))
+        Q2 = (self.fp2.pow(Q[0], p_sqr), self.fp2.pow(Q[1], p_sqr))
+
+        _T = (fpk.extend(T[0]), fpk.extend(T[1]))
+        _Q1 = (fpk.extend(Q1[0]), fpk.extend(Q1[1]))
+        f = fpk.mul(f, g_fn(_T, _Q1, _P))
+
+        T = ec2.add(T, Q1)
+        _T = (fpk.extend(T[0]), fpk.extend(T[1]))
+        Q2 = ec2.neg(Q2)
+        _Q2 = (fpk.extend(Q2[0]), fpk.extend(Q2[1]))
+        f = fpk.mul(f, g_fn(_T, _Q2, _P))
+
+        f = self._finalexp(f)
+
+        return f
