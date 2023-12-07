@@ -344,7 +344,7 @@ class PrimeField2(PrimeFieldBase):
 
     def btoe(self, b: bytes) -> Fp2Ele:
         len_ = self._fp.e_length
-        return tuple(self._fp.btoe(b[i:i+len_]) for i in range(0, len(b) - len_, len_))
+        return tuple(self._fp.btoe(b[i:i+len_]) for i in range(0, len(b), len_))
 
 
 class PrimeField4(PrimeFieldBase):
@@ -449,7 +449,7 @@ class PrimeField4(PrimeFieldBase):
 
     def btoe(self, b: bytes) -> Fp4Ele:
         len_ = self._fp2.e_length
-        return tuple(self._fp2.btoe(b[i:i+len_]) for i in range(0, len(b) - len_, len_))
+        return tuple(self._fp2.btoe(b[i:i+len_]) for i in range(0, len(b), len_))
 
 
 class PrimeField12(PrimeField4):
@@ -570,4 +570,4 @@ class PrimeField12(PrimeField4):
 
     def btoe(self, b: bytes) -> Fp12Ele:
         len_ = self._fp4.e_length
-        return tuple(self._fp4.btoe(b[i:i+len_]) for i in range(0, len(b) - len_, len_))
+        return tuple(self._fp4.btoe(b[i:i+len_]) for i in range(0, len(b), len_))
