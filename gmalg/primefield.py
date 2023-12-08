@@ -150,8 +150,6 @@ class PrimeField(PrimeFieldBase):
     def inv(self, x: int):
         """Modular inverse."""
 
-        x %= self.p
-
         r1 = self.p
         r2 = x
         t1 = 0
