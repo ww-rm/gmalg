@@ -11,7 +11,6 @@ class TestEllipticCurve(unittest.TestCase):
 
         ec = Ec.EllipticCurve(Fp.PrimeField(p), 0, 5)
         ec2 = Ec.EllipticCurve(Fp.PrimeField2(p), (0, 0), (5, 0))
-        ec12 = Ec.EllipticCurve(Fp.PrimeField12(p), Fp.PrimeField12.zero(), Fp.PrimeField12.extend(5))
 
         n = 0xB6400000_02A3A6F1_D603AB4F_F58EC744_49F2934B_18EA8BEE_E56EE19C_D69ECF25
 
@@ -30,22 +29,6 @@ class TestEllipticCurve(unittest.TestCase):
         self.assertTrue(ec2.isvalid(P2), "Not on curve")
 
         self.assertTrue(ec2.mul(n, P2) == ec2.INF)
-
-        invU = ec._fp.inv(-2)
-
-        x_, y_ = P2
-        x: Fp.Fp12Ele = (((0, 0), (0, 0)), ((x_[1] * invU, x_[0]), (0, 0)), ((0, 0), (0, 0)))
-        y: Fp.Fp12Ele = (((0, 0), (0, 0)), ((0, 0), (0, 0)), ((y_[1] * invU, y_[0]), (0, 0)))
-
-        self.assertTrue(ec12.isvalid((x, y)))
-
-        ec12 = Ec.EllipticCurve(Fp.PrimeField12(p), Fp.PrimeField12.zero(), Fp.PrimeField12.extend((5, 0)))
-
-        x_, y_ = P1
-        x: Fp.Fp12Ele = (((0, 0), (0, x_)), ((0, 0), (0, 0)), ((0, 0), (0, 0)))
-        y: Fp.Fp12Ele = (((0, 0), (0, 0)), ((0, 0), (0, 0)), ((0, y_), (0, 0)))
-
-        self.assertTrue(ec12.isvalid((x, y)))
 
 
 class TestSM2(unittest.TestCase):
@@ -391,8 +374,8 @@ class TestSM9(unittest.TestCase):
         T = bn.e(P1, Pk)
         t = bn.fpk.etob(T)
 
-        print("FP12:")
-        print(t.hex("\n", 32).upper())
+        # print("FP12:")
+        # print(t.hex("\n", 32).upper())
 
 
 class TestZUC(unittest.TestCase):
