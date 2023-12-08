@@ -103,6 +103,8 @@ class ECDLP:
 
 
 class BNBIDH:
+    """BN Elliptic Curve Bilinear Inverse Diffie-Hellman."""
+
     def __init__(self, t: int, b: int, beta: Fp.Fp2Ele, G1: EcPoint, G2: EcPoint) -> None:
         """BN Elliptic Curve Bilinear Inverse Diffie-Hellman.
 
@@ -139,7 +141,7 @@ class BNBIDH:
         self._p2 = self.p * self.p
         self._p2a1 = self._p2 + 1
 
-    def _g_fn(self, U: EcPoint, V: EcPoint, Q: EcPoint) -> Fp.FpExEle:
+    def __g_fn(self, U: EcPoint, V: EcPoint, Q: EcPoint) -> Fp.FpExEle:
         """g(U, V)(Q). U, V, Q are Fp12 points."""
 
         fpk = self.fpk
@@ -163,8 +165,42 @@ class BNBIDH:
         else:
             lam = fpk.mul(fpk.sub(yU, yV), fpk.inv(fpk.sub(xU, xV)))
 
+        g1 = ...
+        g2 = fpk.smul(1, yV)
+        print("g2 0")
+        print(fpk.etob(yV).hex("\n", 32))
+        exit(0)
+
         g = fpk.sub(fpk.mul(lam, fpk.sub(xQ, xV)), fpk.sub(yQ, yV))
         return g
+
+    def _g_fn(self, U: EcPoint, V: EcPoint, Q: EcPoint) -> Tuple[Fp.Fp12Ele, Fp.Fp12Ele]:
+        """g(U, V)(Q). U, V, Q are Fp12 points."""
+
+        fpk = self.fpk
+
+        if U == EllipticCurve.INF or V == EllipticCurve.INF or Q == EllipticCurve.INF:
+            return fpk.one()
+
+        xU, yU = U
+        xV, yV = V
+        xQ, yQ = Q
+
+        if xU == xV:
+            if fpk.isoppo(yU, yV):
+                return fpk.sub(xQ, xV), fpk.one()
+            elif yU == yV:
+                lam1 = fpk.smul(3, fpk.mul(xV, xV))
+                lam2 = fpk.smul(2, yV)
+            else:
+                raise errors.UnknownError(f"y1 and y2 is neither equal nor opposite.")
+        else:
+            lam1 = fpk.sub(yU, yV)
+            lam2 = fpk.sub(xU, xV)
+
+        g1 = fpk.sub(fpk.mul(lam1, fpk.sub(xQ, xV)), fpk.mul(lam2, fpk.sub(yQ, yV)))
+        g2 = lam2
+        return g1, g2
 
     def _phi(self, P: EcPoint) -> EcPoint:
         """Get x, y in E (Fp12) from E' (Fp2), only implemented for beta=(1, 0)"""
@@ -187,54 +223,6 @@ class BNBIDH:
         y: Fp.Fp12Ele = (((0, 0), (0, 0)), ((0, 0), (0, 0)), ((0, y_), (0, 0)))
 
         return x, y
-
-    def _finalexp(self, f: Fp.Fp12Ele) -> Fp.Fp12Ele:
-        """f^((p^12 - 1) / n)"""
-
-        print(f"===FVALUE:")
-        print(self.fpk.etob(f).hex("\n", 32).upper())
-        print(f)
-        return self.fpk.pow(f, (self.p ** 12 - 1) // self.n)
-
-        # e = self.fpk.pow
-        # m = self.fpk.mul
-        # i = self.fpk.inv
-
-        # p = self.p
-        # t = self.t
-
-        # f = e(f, self._pm1)
-        # f = e(f, self._pa1)
-        # f = m(e(e(f, self._p2), self._p2a1), f)
-        # f = e(f, self._p2a1)
-
-        # f_t = e(f, t)
-        # f_t2 = e(f_t, t)
-        # f_t3 = e(f_t2, t)
-
-        # f_p = e(f, p)
-        # f_p2 = e(f_p, p)
-        # f_p3 = e(f_p2, p)
-
-        # f_t_p = e(f_t, p)
-        # f_t2_p = e(f_t2, p)
-        # f_t3_p = e(f_t3, p)
-        # f_t2_p2 = e(f_t2_p, p)
-
-        # f0 = m(f_p, m(f_p2, f_p3))      # +
-        # f1 = e(f, 2)                    # -
-        # f2 = e(f_t2_p2, 6)              # +
-        # f3 = e(f_t_p, 12)               # -
-        # f4 = e(m(f_t2_p, f_t), 18)      # -
-        # f5 = e(f_t2, 30)                # -
-        # f6 = e(m(f_t3_p, f_t3), 36)     # -
-
-        # part1 = m(f0, f2)
-        # part2 = m(f1, m(f3, m(f4, m(f5, f6))))
-
-        # f = m(part1, i(part2))
-
-        # return f
 
     def __e(self, P: EcPoint, Q: EcPoint) -> Fp.FpExEle:
         """R-ate, P in G1, Q in G2"""
@@ -274,12 +262,16 @@ class BNBIDH:
 
         return f
 
-    def e(self, P: EcPoint, Q: EcPoint) -> Fp.FpExEle:
+    def __e2(self, P: EcPoint, Q: EcPoint) -> Fp.FpExEle:
         """R-ate, P in G1, Q in G2"""
 
         fpk = self.fpk
         ec2 = self.ec2
         g_fn = self._g_fn
+
+        print("Q")
+        print(self.fp2.etob(Q[0]).hex("\n", 32))
+        print(self.fp2.etob(Q[1]).hex("\n", 32))
 
         _P = self._psi(P)  # P on E'(Fp12)
         _Q = (fpk.extend(Q[0]), fpk.extend(Q[1]))  # Q on E'(Fp12)
@@ -300,21 +292,203 @@ class BNBIDH:
                 # _T = (fpk.extend(T[0]), fpk.extend(T[1]))
                 # f = fpk.mul(f, fpk.inv(fpk.sub(_P[0], _T[0])))
 
+        print("T")
+        print(self.fp2.etob(T[0]).hex("\n", 32))
+        print(self.fp2.etob(T[1]).hex("\n", 32))
+
         p = self.p
         p_sqr = p * p
+
+        # Q1
+        # 8F15BC5BB81CE698B09869C432648C97817E3B73BDD7CE3729CF73CE683AB459
+        # 97D27388E4FB2C13BAA6E3C1D395DE5921ABC0CFC435F9695600846CB42B6120
+        # 7F3FB8552D495A7CD8FA6002FDB286C336AA3773AAE8A0E946BEDD37EAC2C27A
+        # 5F43E2149827B5BE435D595B89BDD6B2EC59AE835178943767A1FA1124D8C635
+
+        # Q2
+        # 3E063B991CA5701716E3ED9077039CF1A5867A0618E4E285965E0C0842D31299
+        # 6DF6D272CFCE0C9B4DBE9FD4AEF228E5E05E9F588BCB668BC6EBAE161D4102EE
+        # 69850938ABEA0112B57329F447E3A0CBAD3E2FDB1A77F335E89E1408D0EF1C25
+        # 41E00A53DDA532DA1A7CE027B7A46F741006E85F5CDFF073E75C05FB4E3216D
+
+        # Q1 = (self.fp2.pow((self.fp1.neg(Q[0][0]), Q[0][1]), p), self.fp2.pow((self.fp1.neg(Q[1][0]), Q[1][1]), p))
         Q1 = (self.fp2.pow(Q[0], p), self.fp2.pow(Q[1], p))
         Q2 = (self.fp2.pow(Q[0], p_sqr), self.fp2.pow(Q[1], p_sqr))
+        Q2 = ec2.neg(Q2)
 
-        _T = (fpk.extend(T[0]), fpk.extend(T[1]))
-        _Q1 = (fpk.extend(Q1[0]), fpk.extend(Q1[1]))
+        Q1 = (
+            (0x8F15BC5BB81CE698B09869C432648C97817E3B73BDD7CE3729CF73CE683AB459,
+             0x97D27388E4FB2C13BAA6E3C1D395DE5921ABC0CFC435F9695600846CB42B6120),
+            (0x7F3FB8552D495A7CD8FA6002FDB286C336AA3773AAE8A0E946BEDD37EAC2C27A,
+             0x5F43E2149827B5BE435D595B89BDD6B2EC59AE835178943767A1FA1124D8C635)
+        )
+        Q2 = (
+            (0x3E063B991CA5701716E3ED9077039CF1A5867A0618E4E285965E0C0842D31299,
+             0x6DF6D272CFCE0C9B4DBE9FD4AEF228E5E05E9F588BCB668BC6EBAE161D4102EE),
+            (0x69850938ABEA0112B57329F447E3A0CBAD3E2FDB1A77F335E89E1408D0EF1C25,
+             0x41E00A53DDA532DA1A7CE027B7A46F741006E85F5CDFF073E75C05FB4E3216D)
+        )
+
+        print("Q1")
+        print(self.fp2.etob(Q1[0]).hex("\n", 32))
+        print(self.fp2.etob(Q1[1]).hex("\n", 32))
+
+        print("Q2 neg")
+        print(self.fp2.etob(Q2[0]).hex("\n", 32))
+        print(self.fp2.etob(Q2[1]).hex("\n", 32))
+
+        # _T = (fpk.extend(T[0]), fpk.extend(T[1]))
+        # _Q1 = (fpk.extend(Q1[0]), fpk.extend(Q1[1]))
+        _P = (fpk.extend(P[0]), fpk.extend(P[1]))
+        _T = self._phi(T)
+        _Q1 = self._phi(Q1)
         f = fpk.mul(f, g_fn(_T, _Q1, _P))
 
         T = ec2.add(T, Q1)
-        _T = (fpk.extend(T[0]), fpk.extend(T[1]))
-        Q2 = ec2.neg(Q2)
-        _Q2 = (fpk.extend(Q2[0]), fpk.extend(Q2[1]))
+
+        print("T+Q1")
+        print(self.fp2.etob(T[0]).hex("\n", 32))
+        print(self.fp2.etob(T[1]).hex("\n", 32))
+
+        # _T = (fpk.extend(T[0]), fpk.extend(T[1]))
+        # _Q2 = (fpk.extend(Q2[0]), fpk.extend(Q2[1]))
+        _T = self._phi(T)
+        _Q2 = self._phi(Q2)
+
         f = fpk.mul(f, g_fn(_T, _Q2, _P))
 
-        f = self._finalexp(f)
+        print("FBefore")
+        print(fpk.etob(f).hex("\n", 32))
 
+        # f = fpk.btoe(
+        #     bytes.fromhex("2B2C8A0C2A46C563A8C005422DAEFC8BC8BFFB24A8BCB8C4201EAC57F1A34D34 \
+        #                    1081873EAD980945BC11B1EB91A5F4368B8B742EC6FD040BD6D34F74D44AEC9E \
+        #                    B48D062BAA6D0AF2DB237575696C16F4F1EC9A521DA21C6E06BB66B721F60538 \
+        #                    426613720865BA113E9A0B11223C46FE51D7C72B299CB4C8DBD06F93E1CBF730 \
+        #                    5F86A6C09D9FE24CD5E1AFFD962133C2966BAB2191CC1959AF08E4D56BA5CE45 \
+        #                    80FBC475B9A86FE85B8ABBF93BE6F9A4650948679AAD6745AE7B1F8112862615 \
+        #                    7F0542C461ED19D44D920A479B623CEAAEAA62363E540018BF6C28192C424E4C \
+        #                    26597F29BD0F4355DB4276A3283605B56CAF3D7C668A26D2AE656ACD5348E5A8 \
+        #                    8BC3A7EE71ABEE3620357178BA03B963340EEDE6B29D7B68F2314337F4738DB6 \
+        #                    0D9074973C488BF9CC27FB44D9D67B3A4CD18CC137A59E4A850DC59727577E4F \
+        #                    9553BFBF3DB33ECE3C17368CF24CF633EC37176D60626A8F1226A4B589F34C4C \
+        #                    A12263A2D4399C5A7F73680C0F8DAE18BA6D1201F52C86C9CEA880A359845B28")
+        # )
+
+        f = fpk.pow(f, (self.p ** 12 - 1) // self.n)
+        return f
+
+    def e(self, P: EcPoint, Q: EcPoint) -> Fp.FpExEle:
+        """R-ate, P in G1, Q in G2"""
+
+        fpk = self.fpk
+        ec2 = self.ec2
+        phi = self._phi
+        g_fn = self._g_fn
+        ext = lambda point: (fpk.extend(point[0]), fpk.extend(point[1]))
+
+        print("Q")
+        print(self.fp2.etob(Q[0]).hex("\n", 32))
+        print(self.fp2.etob(Q[1]).hex("\n", 32))
+
+        _P = (fpk.extend(P[0]), fpk.extend(P[1]))  # P on E(Fp12)
+        _Q = phi(Q)  # Q on E(Fp12)
+
+        T = Q
+        f1 = fpk.one()
+        f2 = fpk.one()
+        for i in f"{self._a:b}"[1:]:
+            _T = phi(T)  # T on E(Fp12)
+            # _T = ext(T)
+            g1, g2 = g_fn(_T, _T, _P)
+            print("g1 0")
+            print(fpk.etob(g1).hex("\n", 32))
+            print("g2 0")
+            print(fpk.etob(g2).hex("\n", 32))
+
+            g = fpk.mul(g1, fpk.inv(g2))
+            print("g 0")
+            print(fpk.etob(g).hex("\n", 32))
+            exit(0)
+            f1 = fpk.mul(fpk.mul(f1, f1), g1)
+            f2 = fpk.mul(f2, g2)
+            T = ec2.add(T, T)
+
+            if i == "1":
+                g1, g2 = g_fn(phi(T), _Q, _P)
+                f1 = fpk.mul(f1, g1)
+                f2 = fpk.mul(f2, g2)
+                T = ec2.add(T, Q)
+
+        print("T")
+        print(self.fp2.etob(T[0]).hex("\n", 32))
+        print(self.fp2.etob(T[1]).hex("\n", 32))
+
+        p = self.p
+        p_sqr = p * p
+
+        # Q1 = (self.fp2.pow((self.fp1.neg(Q[0][0]), Q[0][1]), p), self.fp2.pow((self.fp1.neg(Q[1][0]), Q[1][1]), p))
+        # Q1 = (self.fp2.pow(Q[0], p), self.fp2.pow(Q[1], p))
+        # Q2 = (self.fp2.pow(Q[0], p_sqr), self.fp2.pow(Q[1], p_sqr))
+        # Q2 = ec2.neg(Q2)
+
+        Q1 = (
+            (0x8F15BC5BB81CE698B09869C432648C97817E3B73BDD7CE3729CF73CE683AB459,
+             0x97D27388E4FB2C13BAA6E3C1D395DE5921ABC0CFC435F9695600846CB42B6120),
+            (0x7F3FB8552D495A7CD8FA6002FDB286C336AA3773AAE8A0E946BEDD37EAC2C27A,
+             0x5F43E2149827B5BE435D595B89BDD6B2EC59AE835178943767A1FA1124D8C635)
+        )
+        Q2 = (
+            (0x3E063B991CA5701716E3ED9077039CF1A5867A0618E4E285965E0C0842D31299,
+             0x6DF6D272CFCE0C9B4DBE9FD4AEF228E5E05E9F588BCB668BC6EBAE161D4102EE),
+            (0x69850938ABEA0112B57329F447E3A0CBAD3E2FDB1A77F335E89E1408D0EF1C25,
+             0x41E00A53DDA532DA1A7CE027B7A46F741006E85F5CDFF073E75C05FB4E3216D)
+        )
+
+        print("Q1")
+        print(self.fp2.etob(Q1[0]).hex("\n", 32))
+        print(self.fp2.etob(Q1[1]).hex("\n", 32))
+
+        print("Q2 neg")
+        print(self.fp2.etob(Q2[0]).hex("\n", 32))
+        print(self.fp2.etob(Q2[1]).hex("\n", 32))
+
+        # _T = (fpk.extend(T[0]), fpk.extend(T[1]))
+        # _Q1 = (fpk.extend(Q1[0]), fpk.extend(Q1[1]))
+        g1, g2 = g_fn(phi(T), phi(Q1), _P)
+        f1 = fpk.mul(f1, g1)
+        f2 = fpk.mul(f2, g2)
+
+        T = ec2.add(T, Q1)
+
+        print("T+Q1")
+        print(self.fp2.etob(T[0]).hex("\n", 32))
+        print(self.fp2.etob(T[1]).hex("\n", 32))
+
+        g1, g2 = g_fn(phi(T), phi(Q2), _P)
+
+        f1 = fpk.mul(f1, g1)
+        f2 = fpk.mul(f2, g2)
+
+        f = fpk.mul(f1, fpk.inv(f2))
+
+        print("FBefore")
+        print(fpk.etob(f).hex("\n", 32))
+
+        # f = fpk.btoe(
+        #     bytes.fromhex("2B2C8A0C2A46C563A8C005422DAEFC8BC8BFFB24A8BCB8C4201EAC57F1A34D34 \
+        #                    1081873EAD980945BC11B1EB91A5F4368B8B742EC6FD040BD6D34F74D44AEC9E \
+        #                    B48D062BAA6D0AF2DB237575696C16F4F1EC9A521DA21C6E06BB66B721F60538 \
+        #                    426613720865BA113E9A0B11223C46FE51D7C72B299CB4C8DBD06F93E1CBF730 \
+        #                    5F86A6C09D9FE24CD5E1AFFD962133C2966BAB2191CC1959AF08E4D56BA5CE45 \
+        #                    80FBC475B9A86FE85B8ABBF93BE6F9A4650948679AAD6745AE7B1F8112862615 \
+        #                    7F0542C461ED19D44D920A479B623CEAAEAA62363E540018BF6C28192C424E4C \
+        #                    26597F29BD0F4355DB4276A3283605B56CAF3D7C668A26D2AE656ACD5348E5A8 \
+        #                    8BC3A7EE71ABEE3620357178BA03B963340EEDE6B29D7B68F2314337F4738DB6 \
+        #                    0D9074973C488BF9CC27FB44D9D67B3A4CD18CC137A59E4A850DC59727577E4F \
+        #                    9553BFBF3DB33ECE3C17368CF24CF633EC37176D60626A8F1226A4B589F34C4C \
+        #                    A12263A2D4399C5A7F73680C0F8DAE18BA6D1201F52C86C9CEA880A359845B28")
+        # )
+
+        # f = fpk.pow(f, (self.p ** 12 - 1) // self.n)
         return f
