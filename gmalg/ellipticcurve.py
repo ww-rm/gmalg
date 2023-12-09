@@ -124,8 +124,8 @@ class BNBIDH:
         self.n = 36 * t**4 + 36 * t**3 + 18 * t**2 + 6 * t + 1
 
         self.fpk = Fp.PrimeField12(self.p)
-        self.fp1 = Fp.PrimeField(self.p)
-        self.fp2 = Fp.PrimeField2(self.p)
+        self.fp2 = self.fpk.fp4.fp2
+        self.fp1 = self.fp2.fp
 
         self.ec2 = EllipticCurve(self.fp2, self.fp2.zero(), self.fp2.mul(beta, self.fp2.extend(b)))
 
