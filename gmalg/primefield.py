@@ -450,7 +450,7 @@ class PrimeField4(PrimeFieldBase):
         return tuple(self._fp2.btoe(b[i:i+len_]) for i in range(0, len(b), len_))
 
 
-class PrimeField12(PrimeField4):
+class PrimeField12(PrimeFieldBase):
     """Fp12 operations."""
 
     @classmethod
