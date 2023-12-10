@@ -568,6 +568,11 @@ class PrimeField12(PrimeFieldBase):
     def sqrt(self, X: Fp12Ele) -> Fp12Ele:
         raise NotImplementedError
 
+    def frob6(self, X: Fp12Ele) -> Fp12Ele:
+        fp4 = self.fp4
+        X2, X1, X0 = X
+        return (fp4.conj(X2), fp4.neg(fp4.conj(X1)), fp4.conj(X0))
+
     def etob(self, e: Fp12Ele) -> bytes:
         b = bytearray()
         for i in e:
