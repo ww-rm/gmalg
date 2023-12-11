@@ -137,9 +137,6 @@ class BNBIDH:
         self._neg2 = self.fp1.neg(2)
         self._inv_neg2 = self.fp1.inv(self._neg2)
 
-        self._p2 = self.p * self.p
-        self._fexp = (self.p ** 12 - 1) // self.n
-
     def _g_fn(self, U: EcPoint, V: EcPoint, Q: EcPoint) -> Tuple[Fp.Fp12Ele, Fp.Fp12Ele]:
         """g(U, V)(Q). U, V, Q are Fp12 points."""
 
@@ -194,13 +191,52 @@ class BNBIDH:
 
         return x, y
 
+    def _finalexp(self, f: Fp.Fp12Ele) -> Fp.Fp12Ele:
+        M = self.fpk.mul
+        I = self.fpk.inv
+        P = self.fpk.pow
+        F = self.fpk.frob
+
+        # easy part
+        f = M(F(F(F(F(F(F(f)))))), I(f))
+        f = M(F(F(f)), f)
+
+        # hard part
+        f_t = P(f, self.t)
+        f_t2 = P(f_t, self.t)
+        f_t3 = P(f_t2, self.t)
+
+        f_p = F(f)
+        f_p2 = F(f_p)
+        f_p3 = F(f_p2)
+
+        f_t_p = F(f_t)
+        f_t2_p = F(f_t2)
+        f_t3_p = F(f_t3)
+        f_t2_p2 = F(f_t2_p)
+
+        # y6, y5, y4, y3, y2, y1, y0
+        #  -,  -,  -,  -,  +,  -,  +
+        y6 = P(M(f_t3, f_t3_p), 36)
+        y5 = P(f_t2, 30)
+        y4 = P(M(f_t2_p, f_t), 18)
+        y3 = P(f_t_p, 12)
+        y2 = P(f_t2_p2, 6)
+        y1 = M(f, f)
+        y0 = M(f_p, M(f_p2, f_p3))
+
+        f_num = M(y2, y0)
+        f_den = M(y6, M(y5, M(y4, M(y3, y1))))
+
+        f = M(f_num, I(f_den))
+        return f
+
     def e(self, P: EcPoint, Q: EcPoint) -> Fp.FpExEle:
         """R-ate, P in G1, Q in G2"""
 
         fpk = self.fpk
         ec2 = self.ec2
         phi = self._phi
-        phii = self._phi_inv
         g_fn = self._g_fn
 
         _P = (fpk.extend(P[0]), fpk.extend(P[1]))  # P on E(Fp12)
@@ -222,21 +258,20 @@ class BNBIDH:
                 f2 = fpk.mul(f2, g2)
                 T = ec2.add(T, Q)
 
-        Q1 = phii((fpk.pow(_Q[0], self.p), fpk.pow(_Q[1], self.p)))
-        Q2 = phii((fpk.pow(_Q[0], self._p2), fpk.pow(_Q[1], self._p2)))
-        Q2 = self.ec2.neg(Q2)
+        _Q1 = (fpk.frob(_Q[0]), fpk.frob(_Q[1]))
+        _Q2 = (fpk.frob(_Q1[0]), fpk.neg(fpk.frob(_Q1[1])))
 
-        g1, g2 = g_fn(phi(T), phi(Q1), _P)
+        g1, g2 = g_fn(phi(T), _Q1, _P)
         f1 = fpk.mul(f1, g1)
         f2 = fpk.mul(f2, g2)
 
-        T = ec2.add(T, Q1)
+        T = ec2.add(T, self._phi_inv(_Q1))
 
-        g1, g2 = g_fn(phi(T), phi(Q2), _P)
+        g1, g2 = g_fn(phi(T), _Q2, _P)
         f1 = fpk.mul(f1, g1)
         f2 = fpk.mul(f2, g2)
 
         f = fpk.mul(f1, fpk.inv(f2))
+        f = self._finalexp(f)
 
-        f = fpk.pow(f, self._fexp)
         return f
