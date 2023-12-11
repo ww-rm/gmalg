@@ -137,7 +137,7 @@ class BNBIDH:
         self._neg2 = self.fp1.neg(2)
         self._inv_neg2 = self.fp1.inv(self._neg2)
 
-    def _g_fn(self, U: EcPoint, V: EcPoint, Q: EcPoint) -> Tuple[Fp.Fp12Ele, Fp.Fp12Ele]:
+    def _g_fn(self, U: EcPoint, V: EcPoint, Q: EcPoint) -> Fp.Fp12Ele:
         """g(U, V)(Q). U, V, Q are Fp12 points."""
 
         fpk = self.fpk
@@ -153,17 +153,17 @@ class BNBIDH:
             if fpk.isoppo(yU, yV):
                 return fpk.sub(xQ, xV), fpk.one()
             elif yU == yV:
-                lam1 = fpk.smul(3, fpk.mul(xV, xV))
-                lam2 = fpk.smul(2, yV)
+                lam = fpk.mul(
+                    fpk.smul(3, fpk.mul(xV, xV)),
+                    fpk.inv(fpk.smul(2, yV))
+                )
             else:
                 raise errors.UnknownError(f"y1 and y2 is neither equal nor opposite.")
         else:
-            lam1 = fpk.sub(yU, yV)
-            lam2 = fpk.sub(xU, xV)
+            lam = fpk.mul(fpk.sub(yU, yV), fpk.inv(fpk.sub(xU, xV)))
 
-        g1 = fpk.sub(fpk.mul(lam1, fpk.sub(xQ, xV)), fpk.mul(lam2, fpk.sub(yQ, yV)))
-        g2 = lam2
-        return g1, g2
+        g = fpk.sub(fpk.mul(lam, fpk.sub(xQ, xV)), fpk.sub(yQ, yV))
+        return g
 
     def _phi(self, P: EcPoint) -> EcPoint:
         """Get x, y in E (Fp12) from E' (Fp2), only implemented for beta=(1, 0)"""
@@ -243,35 +243,28 @@ class BNBIDH:
         _Q = phi(Q)  # Q on E(Fp12)
 
         T = Q
-        f1 = fpk.one()
-        f2 = fpk.one()
+        f = fpk.one()
         for i in f"{self._a:b}"[1:]:
             _T = phi(T)  # T on E(Fp12)
-            g1, g2 = g_fn(_T, _T, _P)
-            f1 = fpk.mul(fpk.mul(f1, f1), g1)
-            f2 = fpk.mul(fpk.mul(f2, f2), g2)
+            g = g_fn(_T, _T, _P)
+            f = fpk.mul(fpk.mul(f, f), g)
             T = ec2.add(T, T)
 
             if i == "1":
-                g1, g2 = g_fn(phi(T), _Q, _P)
-                f1 = fpk.mul(f1, g1)
-                f2 = fpk.mul(f2, g2)
+                g = g_fn(phi(T), _Q, _P)
+                f = fpk.mul(f, g)
                 T = ec2.add(T, Q)
 
         _Q1 = (fpk.frob(_Q[0]), fpk.frob(_Q[1]))
         _Q2 = (fpk.frob(_Q1[0]), fpk.neg(fpk.frob(_Q1[1])))
 
-        g1, g2 = g_fn(phi(T), _Q1, _P)
-        f1 = fpk.mul(f1, g1)
-        f2 = fpk.mul(f2, g2)
+        g = g_fn(phi(T), _Q1, _P)
+        f = fpk.mul(f, g)
 
         T = ec2.add(T, self._phi_inv(_Q1))
 
-        g1, g2 = g_fn(phi(T), _Q2, _P)
-        f1 = fpk.mul(f1, g1)
-        f2 = fpk.mul(f2, g2)
+        g = g_fn(phi(T), _Q2, _P)
+        f = fpk.mul(f, g)
 
-        f = fpk.mul(f1, fpk.inv(f2))
         f = self._finalexp(f)
-
         return f

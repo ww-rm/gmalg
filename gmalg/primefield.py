@@ -525,7 +525,7 @@ class PrimeField12(PrimeFieldBase):
         self.e_length = self.fp4.e_length * 3
 
         self._f1 = self.pow((self.fp4.zero(), self.fp4.one(), self.fp4.zero()), p)
-        self._f2 = self.pow(self._f1, 2)
+        self._f2 = self.mul(self._f1, self._f1)
 
     def isoppo(self, X: Fp12Ele, Y: Fp12Ele) -> bool:
         return all(self.fp4.isoppo(i1, i2) for i1, i2 in zip(X, Y))
