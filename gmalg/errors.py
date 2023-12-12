@@ -57,6 +57,17 @@ class InvalidArgumentError(GMError):
     """Invalid arguments."""
 
 
+class InvalidHidError(GMError):
+    """Encounter zero under the hid."""
+
+    def __init__(self, name: str, hid: bytes) -> None:
+        self.name = name
+        self.hid = hid
+
+    def __str__(self) -> str:
+        return f"{self.name} encounter zero. hid: 0x{self.hid.hex()}, please use another hid and regenerate master key pair and user keys."
+
+
 class InvalidPCError(GMError):
     """Invalid PC byte."""
 
