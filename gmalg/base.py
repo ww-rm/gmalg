@@ -1,5 +1,6 @@
 """Base abstract classes."""
 
+import enum
 import secrets
 from typing import Callable, Type
 
@@ -8,6 +9,8 @@ from . import errors
 __all__ = [
     "Hash",
     "BlockCipher",
+    "PC_MODE",
+    "KEYXCHG_MODE",
 ]
 
 
@@ -135,3 +138,14 @@ class SMCoreBase:
             K.extend(hash_fn(Z + (count + 1).to_bytes(4, "big"))[:tail])
 
         return bytes(K)
+
+
+class PC_MODE(enum.Enum):
+    RAW = enum.auto()
+    COMPRESS = enum.auto()
+    MIXED = enum.auto()
+
+
+class KEYXCHG_MODE(enum.Enum):
+    INITIATOR = enum.auto()
+    RESPONDER = enum.auto()
