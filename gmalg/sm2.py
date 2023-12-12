@@ -31,8 +31,8 @@ class SM2Core(SMCoreBase):
         """Elliptic Curve Cipher
 
         Args:
-            ecdlp (ECDLP): ECDLP used in cipher.
-            hash_fn (Hash): hash function used in cipher.
+            ecdlp (ECDLP): ECDLP used in SM2.
+            hash_cls (Hash): hash class used in SM2.
             rnd_fn ((int) -> int): random function used to generate k-bit random number.
         """
 
