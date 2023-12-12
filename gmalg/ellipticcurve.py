@@ -3,13 +3,17 @@ from typing import Tuple
 from . import errors
 from . import primefield as Fp
 
-EcPoint = Tuple[Fp.FpExEle, Fp.FpExEle]
+EcPoint = Tuple[int, int]
+EcPoint2 = Tuple[Fp.Fp2Ele, Fp.Fp2Ele]
+EcPoint4 = Tuple[Fp.Fp4Ele, Fp.Fp4Ele]
+EcPoint12 = Tuple[Fp.Fp12Ele, Fp.Fp12Ele]
+EcPointEx = Tuple[Fp.FpExEle, Fp.FpExEle]
 
 
 class EllipticCurve:
     """Elliptic Curve (Fp)"""
 
-    INF: EcPoint = (float("inf"), float("inf"))
+    INF: EcPointEx = (float("inf"), float("inf"))
 
     def __init__(self, fp: Fp.PrimeFieldBase, a: Fp.FpExEle, b: Fp.FpExEle) -> None:
         self.a = a
@@ -24,15 +28,15 @@ class EllipticCurve:
         """Get one of valid y of given x, -1 means no solution."""
         return self._fp.sqrt(self.get_y_sqr(x))
 
-    def isvalid(self, P: EcPoint) -> bool:
+    def isvalid(self, P: EcPointEx) -> bool:
         x, y = P
         return self._fp.mul(y, y) == self.get_y_sqr(x)
 
-    def neg(self, P: EcPoint) -> EcPoint:
+    def neg(self, P: EcPointEx) -> EcPointEx:
         x, y = P
         return (x, self._fp.neg(y))
 
-    def add(self, P1: EcPoint, P2: EcPoint) -> EcPoint:
+    def add(self, P1: EcPointEx, P2: EcPointEx) -> EcPointEx:
         fp = self._fp
 
         if P1 == self.INF:
@@ -59,10 +63,10 @@ class EllipticCurve:
         y3 = fp.sub(fp.mul(lam, fp.sub(x1, x3)), y1)
         return x3, y3
 
-    def sub(self, P1: EcPoint, P2: EcPoint) -> EcPoint:
+    def sub(self, P1: EcPointEx, P2: EcPointEx) -> EcPointEx:
         return self.add(P1, self.neg(P2))
 
-    def mul(self, k: int, P: EcPoint) -> EcPoint:
+    def mul(self, k: int, P: EcPointEx) -> EcPointEx:
         Q = P
         for i in f"{k:b}"[1:]:
             Q = self.add(Q, Q)
@@ -105,7 +109,7 @@ class ECDLP:
 class BNBP:
     """Bilinear Pairing on Barreto-Naehrig (BN) Elliptic Curve."""
 
-    def __init__(self, t: int, b: int, beta: Fp.Fp2Ele, G1: EcPoint, G2: EcPoint) -> None:
+    def __init__(self, t: int, b: int, beta: Fp.Fp2Ele, G1: EcPointEx, G2: EcPointEx) -> None:
         """BN Elliptic Curve Bilinear Inverse Diffie-Hellman.
 
         Args:
@@ -138,13 +142,13 @@ class BNBP:
         self._neg2 = self.fp1.neg(2)
         self._inv_neg2 = self.fp1.inv(self._neg2)
 
-    def kG1(self, k: int) -> EcPoint:
+    def kG1(self, k: int) -> EcPointEx:
         return self.ec1.mul(k, self.G1)
 
-    def kG2(self, k: int) -> EcPoint:
+    def kG2(self, k: int) -> EcPointEx:
         return self.ec2.mul(k, self.G2)
 
-    def _g_fn(self, U: EcPoint, V: EcPoint, Q: EcPoint) -> Fp.Fp12Ele:
+    def _g_fn(self, U: EcPointEx, V: EcPointEx, Q: EcPointEx) -> Fp.Fp12Ele:
         """g(U, V)(Q). U, V, Q are Fp12 points."""
 
         fpk = self.fpk
@@ -172,7 +176,7 @@ class BNBP:
         g = fpk.sub(fpk.mul(lam, fpk.sub(xQ, xV)), fpk.sub(yQ, yV))
         return g
 
-    def _phi(self, P: EcPoint) -> EcPoint:
+    def _phi(self, P: EcPointEx) -> EcPointEx:
         """Get x, y in E (Fp12) from E' (Fp2), only implemented for beta=(1, 0)"""
 
         fp1 = self.fp1
@@ -185,7 +189,7 @@ class BNBP:
 
         return x, y
 
-    def _phi_inv(self, P: EcPoint) -> EcPoint:
+    def _phi_inv(self, P: EcPointEx) -> EcPointEx:
         """Inversion of phi."""
 
         fp1 = self.fp1
@@ -242,7 +246,7 @@ class BNBP:
         f = M(f_num, I(f_den))
         return f
 
-    def e(self, P: EcPoint, Q: EcPoint) -> Fp.FpExEle:
+    def e(self, P: EcPointEx, Q: EcPointEx) -> Fp.FpExEle:
         """R-ate, P in G1, Q in G2"""
 
         fpk = self.fpk

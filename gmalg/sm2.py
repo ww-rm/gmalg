@@ -2,9 +2,9 @@ import enum
 import math
 from typing import Callable, Tuple, Type
 
+from . import ellipticcurve as Ec
 from . import errors
 from .base import Hash, SMCoreBase
-from .ellipticcurve import ECDLP, EcPoint
 from .sm3 import SM3
 from .utils import bytes_to_int, int_to_bytes
 
@@ -14,7 +14,7 @@ __all__ = [
     "KEYXCHG_MODE",
 ]
 
-_ecdlp = ECDLP(
+_ecdlp = Ec.ECDLP(
     0xFFFFFFFE_FFFFFFFF_FFFFFFFF_FFFFFFFF_FFFFFFFF_00000000_FFFFFFFF_FFFFFFFF,
     0xFFFFFFFE_FFFFFFFF_FFFFFFFF_FFFFFFFF_FFFFFFFF_00000000_FFFFFFFF_FFFFFFFC,
     0x28E9FA9E_9D9F5E34_4D5A9E4B_CF6509A7_F39789F5_15AB8F92_DDBCBD41_4D940E93,
@@ -27,7 +27,7 @@ _ecdlp = ECDLP(
 class SM2Core(SMCoreBase):
     """SM2 Core Algorithms."""
 
-    def __init__(self, ecdlp: ECDLP, hash_cls: Type[Hash], rnd_fn: Callable[[int], int] = None) -> None:
+    def __init__(self, ecdlp: Ec.ECDLP, hash_cls: Type[Hash], rnd_fn: Callable[[int], int] = None) -> None:
         """Elliptic Curve Cipher
 
         Args:
@@ -45,18 +45,18 @@ class SM2Core(SMCoreBase):
         self._2w = 1 << w
         self._2w_1 = self._2w - 1
 
-    def generate_keypair(self) -> Tuple[int, EcPoint]:
+    def generate_keypair(self) -> Tuple[int, Ec.EcPoint]:
         """Generate key pair."""
 
         d = self._randint(1, self.ecdlp.fpn.p - 2)
         return d, self.ecdlp.kG(d)
 
-    def get_pubkey(self, d: int) -> EcPoint:
+    def get_pubkey(self, d: int) -> Ec.EcPoint:
         """Generate public key by secret key d."""
 
         return self.ecdlp.kG(d)
 
-    def verify_pubkey(self, P: EcPoint) -> bool:
+    def verify_pubkey(self, P: Ec.EcPoint) -> bool:
         """Verify if a public key is valid."""
 
         ec = self.ecdlp.ec
@@ -72,7 +72,7 @@ class SM2Core(SMCoreBase):
 
         return True
 
-    def entity_info(self, id_: bytes, P: EcPoint) -> bytes:
+    def entity_info(self, id_: bytes, P: Ec.EcPoint) -> bytes:
         """Generate other entity information bytes.
 
         Raises:
@@ -99,7 +99,7 @@ class SM2Core(SMCoreBase):
 
         return self._hash_fn(Z)
 
-    def sign(self, message: bytes, d: int, id_: bytes, P: EcPoint = None) -> Tuple[int, int]:
+    def sign(self, message: bytes, d: int, id_: bytes, P: Ec.EcPoint = None) -> Tuple[int, int]:
         """Generate signature on the message.
 
         Args:
@@ -133,7 +133,7 @@ class SM2Core(SMCoreBase):
 
             return r, s
 
-    def verify(self, message: bytes, r: int, s: int, id_: bytes, P: EcPoint) -> bool:
+    def verify(self, message: bytes, r: int, s: int, id_: bytes, P: Ec.EcPoint) -> bool:
         """Verify the signature on the message.
 
         Args:
@@ -168,7 +168,7 @@ class SM2Core(SMCoreBase):
 
         return True
 
-    def encrypt(self, plain: bytes, P: EcPoint) -> Tuple[EcPoint, bytes, bytes]:
+    def encrypt(self, plain: bytes, P: Ec.EcPoint) -> Tuple[Ec.EcPoint, bytes, bytes]:
         """Encrypt.
 
         Args:
@@ -208,7 +208,7 @@ class SM2Core(SMCoreBase):
 
             return (x1, y1), C2, C3
 
-    def decrypt(self, C1: EcPoint, C2: bytes, C3: bytes, d: int) -> bytes:
+    def decrypt(self, C1: Ec.EcPoint, C2: bytes, C3: bytes, d: int) -> bytes:
         """Decrypt.
 
         Args:
@@ -255,7 +255,7 @@ class SM2Core(SMCoreBase):
 
         return self._2w + (x & self._2w_1)
 
-    def begin_key_exchange(self, d: int) -> Tuple[EcPoint, int]:
+    def begin_key_exchange(self, d: int) -> Tuple[Ec.EcPoint, int]:
         """Generate data to begin key exchange.
 
         Returns:
@@ -272,7 +272,7 @@ class SM2Core(SMCoreBase):
 
         return R, t
 
-    def get_secret_point(self, t: int, R: EcPoint, P: EcPoint) -> EcPoint:
+    def get_secret_point(self, t: int, R: Ec.EcPoint, P: Ec.EcPoint) -> Ec.EcPoint:
         """Generate same secret point as another user.
 
         Args:
@@ -300,9 +300,9 @@ class SM2Core(SMCoreBase):
 
         return S
 
-    def generate_skey(self, klen: int, S: EcPoint,
-                      id_init: bytes, P_init: EcPoint,
-                      id_resp: bytes, P_resp: EcPoint) -> bytes:
+    def generate_skey(self, klen: int, S: Ec.EcPoint,
+                      id_init: bytes, P_init: Ec.EcPoint,
+                      id_resp: bytes, P_resp: Ec.EcPoint) -> bytes:
         """Generate secret key of klen bytes as same as another user.
 
         Args:
@@ -343,7 +343,7 @@ class KEYXCHG_MODE(enum.Enum):
     RESPONDER = enum.auto()
 
 
-def point_to_bytes(P: EcPoint, mode: PC_MODE) -> bytes:
+def point_to_bytes(P: Ec.EcPoint, mode: PC_MODE) -> bytes:
     """Convert point to bytes."""
 
     if P == _ecdlp.ec.INF:
@@ -367,7 +367,7 @@ def point_to_bytes(P: EcPoint, mode: PC_MODE) -> bytes:
         raise TypeError(f"Invalid mode {mode}")
 
 
-def bytes_to_point(p: bytes) -> EcPoint:
+def bytes_to_point(p: bytes) -> Ec.EcPoint:
     """Convert bytes to point."""
 
     mode = p[0]
