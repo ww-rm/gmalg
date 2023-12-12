@@ -465,7 +465,7 @@ class SM2:
         """
 
         if not self.can_sign:
-            raise errors.RequireArgumentError("sign", "d", "id")
+            raise errors.RequireArgumentError("sign", "sk", "id")
 
         r, s = self._core.sign(message, self._sk, self._id, self._pk)
         return int_to_bytes(r), int_to_bytes(s)
@@ -474,7 +474,7 @@ class SM2:
         """Verify a message and it's signature."""
 
         if not self.can_verify:
-            raise errors.RequireArgumentError("verify", "P", "id")
+            raise errors.RequireArgumentError("verify", "pk", "id")
 
         return self._core.verify(message, bytes_to_int(r), bytes_to_int(s), self._id, self._pk)
 
@@ -486,7 +486,7 @@ class SM2:
         """
 
         if not self.can_encrypt:
-            raise errors.RequireArgumentError("encrypt", "P")
+            raise errors.RequireArgumentError("encrypt", "pk")
 
         C1, C2, C3 = self._core.encrypt(plain, self._pk)
 
@@ -505,7 +505,7 @@ class SM2:
         """
 
         if not self.can_decrypt:
-            raise errors.RequireArgumentError("decrypt", "d")
+            raise errors.RequireArgumentError("decrypt", "sk")
 
         length = self._core.ecdlp.fp.e_length
         mode = cipher[0]
@@ -533,7 +533,7 @@ class SM2:
         """
 
         if not self.can_exchange_key:
-            raise errors.RequireArgumentError("key exchange", "d", "id")
+            raise errors.RequireArgumentError("key exchange", "sk", "id")
 
         R, t = self._core.begin_key_exchange(self._sk)
         return point_to_bytes(R, self._pc_mode), t
