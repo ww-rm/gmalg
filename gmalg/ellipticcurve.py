@@ -109,7 +109,7 @@ class ECDLP:
 class BNBP:
     """Bilinear Pairing on Barreto-Naehrig (BN) Elliptic Curve."""
 
-    def __init__(self, t: int, b: int, beta: Fp.Fp2Ele, G1: EcPointEx, G2: EcPointEx) -> None:
+    def __init__(self, t: int, b: int, beta: Fp.Fp2Ele, G1: EcPoint, G2: EcPoint2) -> None:
         """BN Elliptic Curve Bilinear Inverse Diffie-Hellman.
 
         Args:
@@ -117,19 +117,20 @@ class BNBP:
             b (int): param b of elliptic curve.
             beta (Fp2Ele): param beta of twin curve, must be (1, 0)
             G1 (EcPoint): Base point of group 1.
-            G2 (EcPoint): Base point of group 2.
+            G2 (EcPoint2): Base point of group 2.
         """
 
         if beta != (1, 0):
             raise NotImplementedError(f"beta: {beta}")
 
         self.t = t
-        self.p = 36 * t**4 + 36 * t**3 + 24 * t**2 + 6 * t + 1
-        self.n = 36 * t**4 + 36 * t**3 + 18 * t**2 + 6 * t + 1
+        p = 36 * t**4 + 36 * t**3 + 24 * t**2 + 6 * t + 1
+        n = 36 * t**4 + 36 * t**3 + 18 * t**2 + 6 * t + 1
 
-        self.fpk = Fp.PrimeField12(self.p)
+        self.fpk = Fp.PrimeField12(p)
         self.fp2 = self.fpk.fp4.fp2
         self.fp1 = self.fp2.fp
+        self.fpn = Fp.PrimeField(n)
 
         self.ec1 = EllipticCurve(self.fp1, 0, b)
         self.ec2 = EllipticCurve(self.fp2, self.fp2.zero(), self.fp2.mul(beta, self.fp2.extend(b)))
@@ -142,13 +143,13 @@ class BNBP:
         self._neg2 = self.fp1.neg(2)
         self._inv_neg2 = self.fp1.inv(self._neg2)
 
-    def kG1(self, k: int) -> EcPointEx:
+    def kG1(self, k: int) -> EcPoint:
         return self.ec1.mul(k, self.G1)
 
-    def kG2(self, k: int) -> EcPointEx:
+    def kG2(self, k: int) -> EcPoint2:
         return self.ec2.mul(k, self.G2)
 
-    def _g_fn(self, U: EcPointEx, V: EcPointEx, Q: EcPointEx) -> Fp.Fp12Ele:
+    def _g_fn(self, U: EcPoint12, V: EcPoint12, Q: EcPoint12) -> Fp.Fp12Ele:
         """g(U, V)(Q). U, V, Q are Fp12 points."""
 
         fpk = self.fpk
@@ -176,7 +177,7 @@ class BNBP:
         g = fpk.sub(fpk.mul(lam, fpk.sub(xQ, xV)), fpk.sub(yQ, yV))
         return g
 
-    def _phi(self, P: EcPointEx) -> EcPointEx:
+    def _phi(self, P: EcPoint2) -> EcPoint12:
         """Get x, y in E (Fp12) from E' (Fp2), only implemented for beta=(1, 0)"""
 
         fp1 = self.fp1
@@ -189,7 +190,7 @@ class BNBP:
 
         return x, y
 
-    def _phi_inv(self, P: EcPointEx) -> EcPointEx:
+    def _phi_inv(self, P: EcPoint12) -> EcPoint2:
         """Inversion of phi."""
 
         fp1 = self.fp1
@@ -246,7 +247,7 @@ class BNBP:
         f = M(f_num, I(f_den))
         return f
 
-    def e(self, P: EcPointEx, Q: EcPointEx) -> Fp.FpExEle:
+    def e(self, P: EcPoint, Q: EcPoint2) -> Fp.Fp12Ele:
         """R-ate, P in G1, Q in G2"""
 
         fpk = self.fpk
@@ -284,14 +285,20 @@ class BNBP:
         f = self._finalexp(f)
         return f
 
+    def eG1(self, Q: EcPoint2) -> Fp.Fp12Ele:
+        return self.e(self.G1, Q)
+
+    def eG2(self, P: EcPoint) -> Fp.Fp12Ele:
+        return self.e(P, self.G2)
+
     def etob1(self, e: int) -> bytes:
-        ...
+        return self.fp1.etob(e)
 
     def btoe1(self, b: bytes) -> int:
-        ...
+        return self.fp1.btoe(b)
 
     def etob2(self, e: Fp.Fp2Ele) -> bytes:
-        ...
+        return self.fp2.etob(e)
 
     def btoe2(self, b: bytes) -> Fp.Fp2Ele:
-        ...
+        return self.fp2.btoe(b)
