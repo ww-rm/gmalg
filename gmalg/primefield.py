@@ -55,6 +55,10 @@ class PrimeFieldBase:
         """Scalar mul."""
         raise NotImplementedError
 
+    def pmul(self, x: FpExEle, y: FpExEle) -> FpExEle:
+        """Multiply by position."""
+        raise NotImplementedError
+
     def add(self, x: FpExEle, y: FpExEle) -> FpExEle:
         raise NotImplementedError
 
@@ -141,6 +145,9 @@ class PrimeField(PrimeFieldBase):
 
     def smul(self, k: int, x: int) -> int:
         return (k * x) % self.p
+
+    def pmul(self, x: int, y: int) -> int:
+        return (x * y) % self.p
 
     def add(self, x: int, y: int) -> int:
         return (x + y) % self.p
@@ -294,6 +301,11 @@ class PrimeField2(PrimeFieldBase):
     def smul(self, k: int, x: Fp2Ele) -> Fp2Ele:
         return tuple(self.fp.smul(k, i) for i in x)
 
+    def pmul(self, X: Fp2Ele, Y: Fp2Ele) -> Fp2Ele:
+        X1, X0 = X
+        Y1, Y0 = Y
+        return (self.fp.pmul(X1, Y1), self.fp.pmul(X0, Y0))
+
     def add(self, X: Fp2Ele, Y: Fp2Ele) -> Fp2Ele:
         return tuple(self.fp.add(i1, i2) for i1, i2 in zip(X, Y))
 
@@ -416,6 +428,11 @@ class PrimeField4(PrimeFieldBase):
     def smul(self, k: int, x: Fp4Ele) -> Fp4Ele:
         return tuple(self.fp2.smul(k, i) for i in x)
 
+    def pmul(self, X: Fp4Ele, Y: Fp4Ele) -> Fp4Ele:
+        X1, X0 = X
+        Y1, Y0 = Y
+        return (self.fp2.pmul(X1, Y1), self.fp2.pmul(X0, Y0))
+
     def add(self, X: Fp4Ele, Y: Fp4Ele) -> Fp4Ele:
         return tuple(self.fp2.add(i1, i2) for i1, i2 in zip(X, Y))
 
@@ -527,6 +544,11 @@ class PrimeField12(PrimeFieldBase):
         self._f1 = self.pow((self.fp4.zero(), self.fp4.one(), self.fp4.zero()), p)
         self._f2 = self.mul(self._f1, self._f1)
 
+        self._frob1_factor = self.frob((((1, 1), (1, 1)), ((1, 1), (1, 1)), ((1, 1), (1, 1))))
+        self._frob2_factor = self.frob1(self._frob1_factor)
+        self._frob3_factor = self.frob1(self._frob2_factor)
+        self._frob6_factor = self.frob3(self._frob3_factor)
+
     def isoppo(self, X: Fp12Ele, Y: Fp12Ele) -> bool:
         return all(self.fp4.isoppo(i1, i2) for i1, i2 in zip(X, Y))
 
@@ -540,6 +562,11 @@ class PrimeField12(PrimeFieldBase):
 
     def smul(self, k: int, x: Fp12Ele) -> Fp12Ele:
         return tuple(self.fp4.smul(k, i) for i in x)
+
+    def pmul(self, X: Fp12Ele, Y: Fp12Ele) -> Fp12Ele:
+        X2, X1, X0 = X
+        Y2, Y1, Y0 = Y
+        return (self.fp4.pmul(X2, Y2), self.fp4.pmul(X1, Y1), self.fp4.pmul(X0, Y0))
 
     def add(self, X: Fp12Ele, Y: Fp12Ele) -> Fp12Ele:
         return tuple(self.fp4.add(i1, i2) for i1, i2 in zip(X, Y))
@@ -615,6 +642,18 @@ class PrimeField12(PrimeFieldBase):
         X1 = self.mul(self.extend(f(X1)), self._f1)
         X0 = self.extend(f(X0))
         return self.add(self.add(X2, X1), X0)
+
+    def frob1(self, X: Fp12Ele) -> Fp12Ele:
+        return self.pmul(X, self._frob1_factor)
+
+    def frob2(self, X: Fp12Ele) -> Fp12Ele:
+        return self.pmul(X, self._frob2_factor)
+
+    def frob3(self, X: Fp12Ele) -> Fp12Ele:
+        return self.pmul(X, self._frob3_factor)
+
+    def frob6(self, X: Fp12Ele) -> Fp12Ele:
+        return self.pmul(X, self._frob6_factor)
 
     def etob(self, e: Fp12Ele) -> bytes:
         b = bytearray()

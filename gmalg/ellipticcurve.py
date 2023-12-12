@@ -102,8 +102,8 @@ class ECDLP:
         return self.fp.btoe(b)
 
 
-class BNBIDH:
-    """BN Elliptic Curve Bilinear Inverse Diffie-Hellman."""
+class BNBP:
+    """Bilinear Pairing on Barreto-Naehrig (BN) Elliptic Curve."""
 
     def __init__(self, t: int, b: int, beta: Fp.Fp2Ele, G1: EcPoint, G2: EcPoint) -> None:
         """BN Elliptic Curve Bilinear Inverse Diffie-Hellman.
@@ -127,6 +127,7 @@ class BNBIDH:
         self.fp2 = self.fpk.fp4.fp2
         self.fp1 = self.fp2.fp
 
+        self.ec1 = EllipticCurve(self.fp1, 0, b)
         self.ec2 = EllipticCurve(self.fp2, self.fp2.zero(), self.fp2.mul(beta, self.fp2.extend(b)))
 
         self.G1 = G1
@@ -136,6 +137,12 @@ class BNBIDH:
 
         self._neg2 = self.fp1.neg(2)
         self._inv_neg2 = self.fp1.inv(self._neg2)
+
+    def kG1(self, k: int) -> EcPoint:
+        return self.ec1.mul(k, self.G1)
+
+    def kG2(self, k: int) -> EcPoint:
+        return self.ec2.mul(k, self.G2)
 
     def _g_fn(self, U: EcPoint, V: EcPoint, Q: EcPoint) -> Fp.Fp12Ele:
         """g(U, V)(Q). U, V, Q are Fp12 points."""
@@ -192,28 +199,32 @@ class BNBIDH:
         return x, y
 
     def _finalexp(self, f: Fp.Fp12Ele) -> Fp.Fp12Ele:
-        M = self.fpk.mul
-        I = self.fpk.inv
-        P = self.fpk.pow
-        F = self.fpk.frob
+        fpk = self.fpk
+        M = fpk.mul
+        I = fpk.inv
+        P = fpk.pow
+        F1 = fpk.frob1
+        F2 = fpk.frob2
+        F3 = fpk.frob3
+        F6 = fpk.frob6
 
         # easy part
-        f = M(F(F(F(F(F(F(f)))))), I(f))
-        f = M(F(F(f)), f)
+        f = M(F6(f), I(f))
+        f = M(F2(f), f)
 
         # hard part
         f_t = P(f, self.t)
         f_t2 = P(f_t, self.t)
         f_t3 = P(f_t2, self.t)
 
-        f_p = F(f)
-        f_p2 = F(f_p)
-        f_p3 = F(f_p2)
+        f_p = F1(f)
+        f_p2 = F2(f)
+        f_p3 = F3(f)
 
-        f_t_p = F(f_t)
-        f_t2_p = F(f_t2)
-        f_t3_p = F(f_t3)
-        f_t2_p2 = F(f_t2_p)
+        f_t_p = F1(f_t)
+        f_t2_p = F1(f_t2)
+        f_t3_p = F1(f_t3)
+        f_t2_p2 = F2(f_t2)
 
         # y6, y5, y4, y3, y2, y1, y0
         #  -,  -,  -,  -,  +,  -,  +
@@ -255,8 +266,8 @@ class BNBIDH:
                 f = fpk.mul(f, g)
                 T = ec2.add(T, Q)
 
-        _Q1 = (fpk.frob(_Q[0]), fpk.frob(_Q[1]))
-        _Q2 = (fpk.frob(_Q1[0]), fpk.neg(fpk.frob(_Q1[1])))
+        _Q1 = (fpk.frob1(_Q[0]), fpk.frob1(_Q[1]))
+        _Q2 = (fpk.frob2(_Q[0]), fpk.neg(fpk.frob2(_Q[1])))
 
         g = g_fn(phi(T), _Q1, _P)
         f = fpk.mul(f, g)
@@ -268,3 +279,15 @@ class BNBIDH:
 
         f = self._finalexp(f)
         return f
+
+    def etob1(self, e: int) -> bytes:
+        ...
+
+    def btoe1(self, b: bytes) -> int:
+        ...
+
+    def etob2(self, e: Fp.Fp2Ele) -> bytes:
+        ...
+
+    def btoe2(self, b: bytes) -> Fp.Fp2Ele:
+        ...
