@@ -396,17 +396,19 @@ class SM2:
 
         self._core = SM2Core(_ecdlp, SM3, rnd_fn)
         self._sk = bytes_to_int(sk) if sk else None
-
-        if pk:
-            self._pk = bytes_to_point(pk)
-        else:
-            if self._sk:
-                self._pk = self._core.generate_pk(self._sk)  # try generate public key
-            else:
-                self._pk = None
+        self._pk = self._get_pk(pk)
 
         self._id = id_
         self._pc_mode = pc_mode
+
+    def _get_pk(self, pk: bytes) -> Ec.EcPoint:
+        if pk:
+            return bytes_to_point(pk)
+        else:
+            if self._sk:
+                return self._core.generate_pk(self._sk)  # try generate public key
+            else:
+                return None
 
     @property
     def can_sign(self) -> bool:
