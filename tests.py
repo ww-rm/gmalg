@@ -133,9 +133,9 @@ class TestSM2(unittest.TestCase):
     def test_encrypt3(self):
         sm2 = gmalg.SM2(
             bytes.fromhex("3945208F 7B2144B1 3F36E38A C6D39F95 88939369 2860B51A 42FB81EF 4DF7C5B8"),
-            P=bytes.fromhex("04"
-                            "09F9DF31 1E5421A1 50DD7D16 1E4BC5C6 72179FAD 1833FC07 6BB08FF3 56F35020"
-                            "CCEA490C E26775A5 2DC6EA71 8CC1AA60 0AED05FB F35E084A 6632F607 2DA9AD13"),
+            pk=bytes.fromhex("04"
+                             "09F9DF31 1E5421A1 50DD7D16 1E4BC5C6 72179FAD 1833FC07 6BB08FF3 56F35020"
+                             "CCEA490C E26775A5 2DC6EA71 8CC1AA60 0AED05FB F35E084A 6632F607 2DA9AD13"),
             rnd_fn=lambda _: 0x59276E27_D506861A_16680F3A_D9C02DCC_EF3CC1FA_3CDBE4CE_6D54B80D_EAC1BC21,
         )
 
@@ -152,15 +152,15 @@ class TestSM2(unittest.TestCase):
         d, pk = gmalg.SM2().generate_keypair()
         plain = b"random SM2 encrypt test random SM2 encrypt test random SM2 encrypt test random SM2 encrypt test random SM2 encrypt test random SM2 encrypt test random SM2 encrypt test"
 
-        sm2 = gmalg.SM2(d, P=pk)
+        sm2 = gmalg.SM2(d, pk=pk)
         cipher = sm2.encrypt(plain)
         self.assertEqual(sm2.decrypt(cipher), plain)
 
-        sm2 = gmalg.SM2(d, P=pk, pc_mode=gmalg.sm2.PC_MODE.COMPRESS)
+        sm2 = gmalg.SM2(d, pk=pk, pc_mode=gmalg.sm2.PC_MODE.COMPRESS)
         cipher = sm2.encrypt(plain)
         self.assertEqual(sm2.decrypt(cipher), plain)
 
-        sm2 = gmalg.SM2(d, P=pk, pc_mode=gmalg.sm2.PC_MODE.MIXED)
+        sm2 = gmalg.SM2(d, pk=pk, pc_mode=gmalg.sm2.PC_MODE.MIXED)
         cipher = sm2.encrypt(plain)
         self.assertEqual(sm2.decrypt(cipher), plain)
 
@@ -352,44 +352,37 @@ class TestSM4(unittest.TestCase):
 
 
 class TestSM9(unittest.TestCase):
-    def setUp(self) -> None:
-        P1 = (0x93DE051D_62BF718F_F5ED0704_487D01D6_E1E40869_09DC3280_E8C4E481_7C66DDDD,
-              0x21FE8DDA_4F21E607_63106512_5C395BBC_1C1C00CB_FA602435_0C464CD7_0A3EA616)
+    def test_sign(self):
+        hid_s = b"\x01"
+        msk_s = bytes.fromhex("0130E7 8459D785 45CB54C5 87E02CF4 80CE0B66 340F319F 348A1D5B 1F2DC5F4")
+        mpk_s = bytes.fromhex("04"
+                              "9F64080B 3084F733 E48AFF4B 41B56501 1CE0711C 5E392CFB 0AB1B679 1B94C408"
+                              "29DBA116 152D1F78 6CE843ED 24A3B573 414D2177 386A92DD 8F14D656 96EA5E32"
+                              "69850938 ABEA0112 B57329F4 47E3A0CB AD3E2FDB 1A77F335 E89E1408 D0EF1C25"
+                              "41E00A53 DDA532DA 1A7CE027 B7A46F74 1006E85F 5CDFF073 0E75C05F B4E3216D")
+        kgc = gmalg.SM9KGC(hid_s=hid_s, msk_s=msk_s, mpk_s=mpk_s)
 
-        P2 = ((0x85AEF3D0_78640C98_597B6027_B441A01F_F1DD2C19_0F5E93C4_54806C11_D8806141,
-               0x37227552_92130B08_D2AAB97F_D34EC120_EE265948_D19C17AB_F9B7213B_AF82D65B),
-              (0x17509B09_2E845C12_66BA0D26_2CBEE6ED_0736A96F_A347C8BD_856DC76B_84EBEB96,
-               0xA7CF28D5_19BE3DA6_5F317015_3D278FF2_47EFBA98_A71A0811_6215BBA5_C999A7C7))
+        id_ = b"Alice"
+        sk_s = kgc.generate_sk_sign(id_)
 
-        self.bn = Ec.BNBP(0x600000000058F98A, 0x05, (1, 0), P1, P2)
+        sm9 = gmalg.SM9(
+            hid_s=hid_s, mpk_s=mpk_s, sk_s=sk_s, id_=id_,
+            rnd_fn=lambda _: 0x033C86_16B06704_813203DF_D0096502_2ED15975_C662337A_ED648835_DC4B1CBE
+        )
 
-    def test_bnbidh(self):
-        bn = self.bn
+        self.assertEqual(sk_s, bytes.fromhex("04"
+                                             "A5702F05CF1315305E2D6EB64B0DEB923DB1A0BCF0CAFF90523AC8754AA69820"
+                                             "78559A844411F9825C109F5EE3F52D720DD01785392A727BB1556952B2B013D3"))
 
-        P1 = bn.G1
-        Pk = ((0x9F64080B_3084F733_E48AFF4B_41B56501_1CE0711C_5E392CFB_0AB1B679_1B94C408,
-               0x29DBA116_152D1F78_6CE843ED_24A3B573_414D2177_386A92DD_8F14D656_96EA5E32),
-              (0x69850938_ABEA0112_B57329F4_47E3A0CB_AD3E2FDB_1A77F335_E89E1408_D0EF1C25,
-               0x41E00A53_DDA532DA_1A7CE027_B7A46F74_1006E85F_5CDFF073_0E75C05F_B4E3216D))
+        message = b"Chinese IBS standard"
+        h, S = sm9.sign(message)
 
-        T = bn.e(P1, Pk)
-        t = bn.fpk.etob(T)
+        self.assertEqual(h, bytes.fromhex("823C4B21E4BD2DFE1ED92C606653E996668563152FC33F55D7BFBB9BD9705ADB"))
+        self.assertEqual(S, bytes.fromhex("04"
+                                          "73BF96923CE58B6AD0E13E9643A406D8EB98417C50EF1B29CEF9ADB48B6D598C"
+                                          "856712F1C2E0968AB7769F42A99586AED139D5B8B3E15891827CC2ACED9BAA05"))
 
-        # 4E378FB5561CD0668F906B731AC58FEE25738EDF09CADC7A29C0ABC0177AEA6D
-        # 28B3404A61908F5D6198815C99AF1990C8AF38655930058C28C21BB539CE0000
-        # 38BFFE40A22D529A0C66124B2C308DAC9229912656F62B4FACFCED408E02380F
-        # A01F2C8BEE81769609462C69C96AA923FD863E209D3CE26DD889B55E2E3873DB
-        # 67E0E0C2EED7A6993DCE28FE9AA2EF56834307860839677F96685F2B44D0911F
-        # 5A1AE172102EFD95DF7338DBC577C66D8D6C15E0A0158C7507228EFB078F42A6
-        # 1604A3FCFA9783E667CE9FCB1062C2A5C6685C316DDA62DE0548BAA6BA30038B
-        # 93634F44FA13AF76169F3CC8FBEA880ADAFF8475D5FD28A75DEB83C44362B439
-        # B3129A75D31D17194675A1BC56947920898FBF390A5BF5D931CE6CBB3340F66D
-        # 4C744E69C4A2E1C8ED72F796D151A17CE2325B943260FC460B9F73CB57C9014B
-        # 84B87422330D7936EABA1109FA5A7A7181EE16F2438B0AEB2F38FD5F7554E57A
-        # AAB9F06A4EEBA4323A7833DB202E4E35639D93FA3305AF73F0F071D7D284FCFB
-
-        # print("FP12:")
-        # print(t.hex("\n", 32).upper())
+        self.assertTrue(sm9.verify(message, h, S))
 
 
 class TestZUC(unittest.TestCase):
