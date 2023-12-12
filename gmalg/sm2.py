@@ -91,8 +91,8 @@ class SM2Core(SMCoreBase):
         self._2w = 1 << w
         self._2w_1 = self._2w - 1
 
-    def get_pk(self, d: int) -> Ec.EcPoint:
-        """Get public key by secret key d."""
+    def generate_pk(self, d: int) -> Ec.EcPoint:
+        """Generate public key by secret key d."""
 
         return self.ecdlp.kG(d)
 
@@ -100,7 +100,7 @@ class SM2Core(SMCoreBase):
         """Generate key pair."""
 
         sk = self._randint(1, self.ecdlp.fpn.p - 2)
-        return sk, self.get_pk(sk)
+        return sk, self.generate_pk(sk)
 
     def verify_pk(self, pk: Ec.EcPoint) -> bool:
         """Verify if a public key is valid."""
@@ -159,7 +159,7 @@ class SM2Core(SMCoreBase):
         """
 
         if pk is None:
-            pk = self.get_pk(sk)
+            pk = self.generate_pk(sk)
 
         e = bytes_to_int(self._hash_fn(self.entity_info(id_, pk) + message))
 
@@ -401,7 +401,7 @@ class SM2:
             self._pk = bytes_to_point(pk)
         else:
             if self._sk:
-                self._pk = self._core.get_pk(self._sk)  # try generate public key
+                self._pk = self._core.generate_pk(self._sk)  # try generate public key
             else:
                 self._pk = None
 
@@ -428,10 +428,10 @@ class SM2:
     def can_exchange_key(self) -> bool:
         return bool(self._sk and self._id)
 
-    def get_pk(self, sk: bytes) -> bytes:
-        """Get public key from secret key."""
+    def generate_pk(self, sk: bytes) -> bytes:
+        """Generate public key from secret key."""
 
-        return point_to_bytes(self._core.get_pk(bytes_to_int(sk)), self._pc_mode)
+        return point_to_bytes(self._core.generate_pk(bytes_to_int(sk)), self._pc_mode)
 
     def generate_keypair(self) -> Tuple[bytes, bytes]:
         """Generate key pair.
