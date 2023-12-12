@@ -343,6 +343,53 @@ class KEYXCHG_MODE(enum.Enum):
     RESPONDER = enum.auto()
 
 
+def point_to_bytes(P: EcPoint, mode: PC_MODE) -> bytes:
+    """Convert point to bytes."""
+
+    if P == _ecdlp.ec.INF:
+        return b"\x00"
+
+    x, y = P
+
+    if mode is PC_MODE.RAW:
+        return b"\x04" + _ecdlp.etob(x) + _ecdlp.etob(y)
+    elif mode is PC_MODE.COMPRESS:
+        if y & 0x1:
+            return b"\x03" + _ecdlp.etob(x)
+        else:
+            return b"\x02" + _ecdlp.etob(x)
+    elif mode is PC_MODE.MIXED:
+        if y & 0x1:
+            return b"\x07" + _ecdlp.etob(x) + _ecdlp.etob(y)
+        else:
+            return b"\x06" + _ecdlp.etob(x) + _ecdlp.etob(y)
+    else:
+        raise TypeError(f"Invalid mode {mode}")
+
+
+def bytes_to_point(p: bytes) -> EcPoint:
+    """Convert bytes to point."""
+
+    mode = p[0]
+    if mode == 0x00:
+        return _ecdlp.ec.INF
+
+    point = p[1:]
+    x = _ecdlp.btoe(point[:_ecdlp.fp.e_length])
+    if mode == 0x04 or mode == 0x06 or mode == 0x07:
+        return x, _ecdlp.btoe(point[_ecdlp.fp.e_length:])
+    elif mode == 0x02 or mode == 0x03:
+        y = _ecdlp.ec.get_y(x)
+        if y < 0:
+            raise errors.PointNotOnCurveError(x, -1)
+        ylsb = y & 0x1
+        if mode == 0x02 and ylsb or mode == 0x03 and not ylsb:
+            return x, _ecdlp.fp.neg(y)
+        return x, y
+    else:
+        raise errors.InvalidPCError(mode)
+
+
 class SM2:
     """SM2"""
 
@@ -363,7 +410,7 @@ class SM2:
         self._d = bytes_to_int(d) if d else None
 
         if P:
-            self._P = self.bytes_to_point(P)
+            self._P = bytes_to_point(P)
         else:
             if self._d:
                 self._P = self._core.get_pubkey(self._d)  # try generate public key
@@ -372,55 +419,6 @@ class SM2:
 
         self._id = id_
         self._pc_mode = pc_mode
-
-    def point_to_bytes(self, P: EcPoint, mode: PC_MODE) -> bytes:
-        """Convert point to bytes."""
-
-        ecdlp = self._core.ecdlp
-
-        if P == ecdlp.ec.INF:
-            return b"\x00"
-
-        x, y = P
-
-        if mode is PC_MODE.RAW:
-            return b"\x04" + ecdlp.etob(x) + ecdlp.etob(y)
-        elif mode is PC_MODE.COMPRESS:
-            if y & 0x1:
-                return b"\x03" + ecdlp.etob(x)
-            else:
-                return b"\x02" + ecdlp.etob(x)
-        elif mode is PC_MODE.MIXED:
-            if y & 0x1:
-                return b"\x07" + ecdlp.etob(x) + ecdlp.etob(y)
-            else:
-                return b"\x06" + ecdlp.etob(x) + ecdlp.etob(y)
-        else:
-            raise TypeError(f"Invalid mode {mode}")
-
-    def bytes_to_point(self, p: bytes) -> EcPoint:
-        """Convert bytes to point."""
-
-        ecdlp = self._core.ecdlp
-
-        mode = p[0]
-        if mode == 0x00:
-            return ecdlp.ec.INF
-
-        point = p[1:]
-        x = ecdlp.btoe(point[:ecdlp.fp.e_length])
-        if mode == 0x04 or mode == 0x06 or mode == 0x07:
-            return x, ecdlp.btoe(point[ecdlp.fp.e_length:])
-        elif mode == 0x02 or mode == 0x03:
-            y = ecdlp.ec.get_y(x)
-            if y < 0:
-                raise errors.PointNotOnCurveError(x, -1)
-            ylsb = y & 0x1
-            if mode == 0x02 and ylsb or mode == 0x03 and not ylsb:
-                return x, ecdlp.fp.neg(y)
-            return x, y
-        else:
-            raise errors.InvalidPCError(mode)
 
     @property
     def can_sign(self) -> bool:
@@ -451,13 +449,13 @@ class SM2:
         """
 
         d, P = self._core.generate_keypair()
-        P = self.point_to_bytes(P, self._pc_mode)
+        P = point_to_bytes(P, self._pc_mode)
         return int_to_bytes(d), P
 
     def get_pubkey(self, d: bytes) -> bytes:
         """Get public key from secret key."""
 
-        return self.point_to_bytes(self._core.get_pubkey(bytes_to_int(d)), self._pc_mode)
+        return point_to_bytes(self._core.get_pubkey(bytes_to_int(d)), self._pc_mode)
 
     def verify_pubkey(self, P: bytes) -> bool:
         """Verify if a public key is valid.
@@ -469,7 +467,7 @@ class SM2:
             (bool): Whether valid.
         """
 
-        return self._core.verify_pubkey(self.bytes_to_point(P))
+        return self._core.verify_pubkey(bytes_to_point(P))
 
     def sign(self, message: bytes) -> Tuple[bytes, bytes]:
         """Generate signature on message.
@@ -506,7 +504,7 @@ class SM2:
         C1, C2, C3 = self._core.encrypt(plain, self._P)
 
         cipher = bytearray()
-        cipher.extend(self.point_to_bytes(C1, self._pc_mode))
+        cipher.extend(point_to_bytes(C1, self._pc_mode))
         cipher.extend(C3)
         cipher.extend(C2)
 
@@ -537,7 +535,7 @@ class SM2:
         C3 = cipher[c1_length:c1_length + hash_length]
         C2 = cipher[c1_length + hash_length:]
 
-        return self._core.decrypt(self.bytes_to_point(C1), C2, C3, self._d)
+        return self._core.decrypt(bytes_to_point(C1), C2, C3, self._d)
 
     def begin_key_exchange(self) -> Tuple[bytes, int]:
         """Begin key exchange.
@@ -551,7 +549,7 @@ class SM2:
             raise errors.RequireArgumentError("key exchange", "d", "id")
 
         R, t = self._core.begin_key_exchange(self._d)
-        return self.point_to_bytes(R, self._pc_mode), t
+        return point_to_bytes(R, self._pc_mode), t
 
     def _end_key_exchange_initiator(self, klen: int, t: int, R: bytes, id_: bytes, P: bytes) -> bytes:
         """End key exchange for initiator.
@@ -567,8 +565,8 @@ class SM2:
             bytes: secret key of klen bytes.
         """
 
-        R = self.bytes_to_point(R)
-        P = self.bytes_to_point(P)
+        R = bytes_to_point(R)
+        P = bytes_to_point(P)
 
         U = self._core.get_secret_point(t, R, P)
         return self._core.generate_skey(klen, U, self._id, self._P, id_, P)
@@ -587,8 +585,8 @@ class SM2:
             bytes: secret key of klen bytes.
         """
 
-        R = self.bytes_to_point(R)
-        P = self.bytes_to_point(P)
+        R = bytes_to_point(R)
+        P = bytes_to_point(P)
 
         V = self._core.get_secret_point(t, R, P)
         return self._core.generate_skey(klen, V, id_, P, self._id, self._P)
