@@ -20,6 +20,7 @@ pip install gmalg
 - [ ] SM9 Identification Cryptographic Algorithm
   - Sign/Verify
   - Key exchange
+  - Key encapsulation
 
 ## Usage
 
@@ -182,6 +183,33 @@ KA = sm9_A.end_key_exchange(16, rA, RA, uid_B, RB, gmalg.KEYXCHG_MODE.INITIATOR)
 
 print(KA == KB)
 print(KA.hex())
+```
+
+### SM9 Key encapsulation
+
+```python
+import gmalg
+
+hid_e = b"\x03"
+msk_e = bytes.fromhex("01EDEE 3778F441 F8DEA3D9 FA0ACC4E 07EE36C9 3F9A0861 8AF4AD85 CEDE1C22")
+mpk_e = bytes.fromhex("04"
+                      "787ED7B8 A51F3AB8 4E0A6600 3F32DA5C 720B17EC A7137D39 ABC66E3C 80A892FF"
+                      "769DE617 91E5ADC4 B9FF85A3 1354900B 20287127 9A8C49DC 3F220F64 4C57A7B1")
+kgc = gmalg.SM9KGC(hid_e=hid_e, msk_e=msk_e, mpk_e=mpk_e)
+
+uid = b"Bob"
+
+sk_e = kgc.generate_sk_encrypt(uid)
+print(sk_e.hex())
+
+sm9 = gmalg.SM9(hid_e=hid_e, mpk_e=mpk_e, sk_e=sk_e, uid=uid)
+
+K, C = sm9.encapsulate(32, uid)  # encapsulate key to self
+
+print(K.hex())
+print(C.hex())
+
+print(sm9.decapsulate(C, 32) == K)
 ```
 
 Go to [docs:TODO] see more detailed usages.
