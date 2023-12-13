@@ -147,7 +147,7 @@ class PC_MODE(enum.Enum):
 
 
 class KEYXCHG_MODE(enum.Enum):
-    """Key exchange mode used in `SM2`"""
+    """Key exchange mode used in `SM2`."""
 
     INITIATOR = enum.auto()
     RESPONDER = enum.auto()
