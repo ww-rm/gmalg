@@ -4,9 +4,8 @@ from typing import Callable, Tuple, Type
 from . import ellipticcurve as Ec
 from . import errors
 from . import primefield as Fp
-from .base import KEYXCHG_MODE, PC_MODE, BlockCipher, Hash, SMCoreBase
+from .base import KEYXCHG_MODE, PC_MODE, Hash, SMCoreBase
 from .sm3 import SM3
-from .sm4 import SM4
 from .utils import bytes_to_int, int_to_bytes
 
 __all__ = [
@@ -131,18 +130,16 @@ def bytes_to_point_2(p: bytes) -> Ec.EcPoint2:
 class SM9Core(SMCoreBase):
     """SM9 Core Algorithms."""
 
-    def __init__(self, bnbp: Ec.BNBP, hash_cls: Type[Hash], bc_cls: Type[BlockCipher], rnd_fn: Callable[[int], int] = None) -> None:
+    def __init__(self, bnbp: Ec.BNBP, hash_cls: Type[Hash], rnd_fn: Callable[[int], int] = None) -> None:
         """ID Based Encryption.
 
         Args:
             bnbp (BNBP): BNBP used in SM9.
             hash_cls (Type[Hash]): Hash class used in SM9.
-            bc_cls (Type[BlockCipher]): Block cipher used in SM9.
             rnd_fn ((int) -> int): Random function used to generate k-bit random number.
         """
 
         super().__init__(hash_cls, rnd_fn)
-        self._bc_cls = bc_cls
 
         self.bnbp = bnbp
         self._hlen = math.ceil((5 * math.log2(bnbp.fpn.p)) / 32)  # used for H1 and H2
@@ -487,17 +484,61 @@ class SM9Core(SMCoreBase):
 
         return K
 
-    def encrypt(self):
-        ...
+    def encrypt(self, hid_e: bytes, mpk_e: Ec.EcPoint, plain: bytes, uid: bytes, mac_klen: int) -> Tuple[Ec.EcPoint, bytes, bytes]:
+        """Encrypt.
 
-    def decrypt(self):
-        ...
+        Args:
+            hid_e (bytes): Encryption identity byte.
+            mpk_e (EcPoint): Master public key for encryption.
+            plain (bytes): Plain data.
+            uid (bytes): ID of another user.
+            mac_klen (int): MAC key length in bytes.
 
-    def encrypt_block(self):
-        ...
+        Returns:
+            EcPoint: C1, encapsulated cipher key.
+            bytes: C2, cipher data.
+            bytes: C3, MAC of plain data.
+        """
 
-    def decrypt_block(self):
-        ...
+        mlen = len(plain)
+        K, C1 = self.encapsulate(hid_e, mpk_e, mlen + mac_klen, uid)
+        K1, K2 = K[:mlen], K[mlen:]
+
+        C2 = bytes(map(lambda b1, b2: b1 ^ b2, plain, K1))
+        C3 = self._mac(K2, C2)
+
+        return C1, C2, C3
+
+    def decrypt(self, C1: Ec.EcPoint, C2: bytes, C3: bytes, sk_e: Ec.EcPoint2, uid: bytes, mac_klen: int) -> bytes:
+        """Decrypt.
+
+        Args:
+            C1 (EcPoint): Encapsulated cipher key.
+            C2 (bytes): Cipher data.
+            C3 (bytes): MAC of plain data.
+            sk_e (EcPoint2): Secret key for encrypt.
+            uid (bytes): User ID.
+            mac_klen (int): MAC key length in bytes.
+
+        Returns:
+            bytes: Plain data.
+
+        Raises:
+            CheckFailedError: Invalid MAC value.
+        """
+
+        mlen = len(C2)
+
+        K = self.decapsulate(C1, mlen + mac_klen, sk_e, uid)
+        K1, K2 = K[:mlen], K[mlen:]
+
+        plain = bytes(map(lambda b1, b2: b1 ^ b2, C2, K1))
+
+        u = self._mac(K2, C2)
+        if u != C3:
+            raise errors.CheckFailedError("Invalid MAC value.")
+
+        return plain
 
 
 class SM9KGC:
@@ -520,7 +561,7 @@ class SM9KGC:
             rnd_fn ((int) -> int): random function used to generate k-bit random number, default to `secrets.randbits`.
         """
 
-        self._core = SM9Core(_bnbp, SM3, SM4, rnd_fn)
+        self._core = SM9Core(_bnbp, SM3, rnd_fn)
 
         self._hid_s = hid_s
         self._msk_s = bytes_to_int(msk_s) if msk_s else None
@@ -631,7 +672,7 @@ class SM9:
     def __init__(self, hid_s: bytes = None, mpk_s: bytes = None, sk_s: bytes = None,
                  hid_e: bytes = None, mpk_e: bytes = None, sk_e: bytes = None,
                  uid: bytes = None, *,
-                 rnd_fn: Callable[[int], int] = None, pc_mode: PC_MODE = PC_MODE.RAW) -> None:
+                 rnd_fn: Callable[[int], int] = None, pc_mode: PC_MODE = PC_MODE.RAW, mac_klen: int = 32) -> None:
         """SM9.
 
         Args:
@@ -646,9 +687,11 @@ class SM9:
             uid (bytes): User ID.
 
             rnd_fn ((int) -> int): Random function used to generate k-bit random number, default to `secrets.randbits`.
+            pc_mode (PC_MODE): Point compress mode used for generated data, no effects on the data to be parsed.
+            mac_klen (int): MAC value key length in bytes, default to `32`.
         """
 
-        self._core = SM9Core(_bnbp, SM3, SM4, rnd_fn)
+        self._core = SM9Core(_bnbp, SM3, rnd_fn)
 
         self._hid_s = hid_s
         self._mpk_s = bytes_to_point_2(mpk_s) if mpk_s else None
@@ -660,6 +703,7 @@ class SM9:
 
         self._uid = uid
         self._pc_mode = pc_mode
+        self._mac_klen = mac_klen
 
     @property
     def can_sign(self) -> bool:
@@ -680,6 +724,14 @@ class SM9:
     @property
     def can_decapsulate(self) -> bool:
         return bool(self._sk_e and self._uid)
+
+    @property
+    def can_encrypt(self) -> bool:
+        return bool(self.can_encapsulate and self._mac_klen)
+
+    @property
+    def can_decrypt(self) -> bool:
+        return bool(self.can_decapsulate and self._mac_klen)
 
     def sign(self, message: bytes) -> Tuple[bytes, bytes]:
         """Sign.
@@ -792,3 +844,59 @@ class SM9:
             raise errors.RequireArgumentError("decapsulate", "sk_e", "uid")
 
         return self._core.decapsulate(bytes_to_point_1(C), klen, self._sk_e, self._uid)
+
+    def encrypt(self, plain: bytes, uid: bytes):
+        """Encrypt.
+
+        Args:
+            plain (bytes): Plain data.
+            uid (bytes): ID of another user.
+
+        Returns:
+            bytes: Cipher data.
+        """
+
+        if not self.can_encrypt:
+            raise errors.RequireArgumentError("encrypt", "hid_e", "mpk_e", "mac_klen")
+
+        C1, C2, C3 = self._core.encrypt(self._hid_e, self._mpk_e, plain, uid, self._mac_klen)
+
+        cipher = bytearray()
+        cipher.extend(point_to_bytes_1(C1, self._pc_mode))
+        cipher.extend(C3)
+        cipher.extend(C2)
+
+        return bytes(cipher)
+
+    def decrypt(self, cipher: bytes) -> bytes:
+        """Decrypt.
+
+        Args:
+            cipher (bytes): Cipher data.
+
+        Returns:
+            bytes: Plain data.
+
+        Raises:
+            ValueError: Invalid PC byte.
+        """
+
+        if not self.can_decrypt:
+            raise errors.RequireArgumentError("decrypt", "sk_e", "uid", "mac_klen")
+
+        length = self._core.bnbp.fp1.e_length
+        mode = cipher[0]
+        if mode == 0x04 or mode == 0x06 or mode == 0x07:
+            C1 = cipher[:1 + length * 2]
+            c1_length = 1 + length * 2
+        elif mode == 0x02 or mode == 0x03:
+            C1 = cipher[:1 + length]
+            c1_length = 1 + length
+        else:
+            raise errors.InvalidPCError(mode)
+
+        mac_length = self._core._hash_cls.hash_length()
+        C3 = cipher[c1_length:c1_length + mac_length]
+        C2 = cipher[c1_length + mac_length:]
+
+        return self._core.decrypt(bytes_to_point_1(C1), C2, C3, self._sk_e, self._uid, self._mac_klen)
