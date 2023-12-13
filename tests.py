@@ -172,13 +172,13 @@ class TestSM2(unittest.TestCase):
         p_b = bytes.fromhex("04 09F9DF31 1E5421A1 50DD7D16 1E4BC5C6 72179FAD 1833FC07 6BB08FF3 56F35020"
                             "CCEA490C E26775A5 2DC6EA71 8CC1AA60 0AED05FB F35E084A 6632F607 2DA9AD13")
         p_p = sm2.bytes_to_point(p_b)
-        p_pp = sm2.bytes_to_point(sm2.point_to_bytes(p_p, gmalg.sm2.PC_MODE.COMPRESS))
+        p_pp = sm2.bytes_to_point(sm2.point_to_bytes(p_p, gmalg.PC_MODE.COMPRESS))
 
         self.assertEqual(p_p, p_pp)
 
         _, p_b = sm2_ctx.generate_keypair()
         p_p = sm2.bytes_to_point(p_b)
-        p_pp = sm2.bytes_to_point(sm2.point_to_bytes(p_p, gmalg.sm2.PC_MODE.COMPRESS))
+        p_pp = sm2.bytes_to_point(sm2.point_to_bytes(p_p, gmalg.PC_MODE.COMPRESS))
 
         self.assertEqual(p_p, p_pp)
 
@@ -279,8 +279,8 @@ class TestSM2(unittest.TestCase):
         RA, tA = sm2A.begin_key_exchange()
         RB, tB = sm2B.begin_key_exchange()
 
-        KB = sm2B.end_key_exchange(16, tB, RA, b"1234567812345678", PA, gmalg.sm2.KEYXCHG_MODE.RESPONDER)
-        KA = sm2A.end_key_exchange(16, tA, RB, b"1234567812345678", PB, gmalg.sm2.KEYXCHG_MODE.INITIATOR)
+        KB = sm2B.end_key_exchange(16, tB, RA, b"1234567812345678", PA, gmalg.KEYXCHG_MODE.RESPONDER)
+        KA = sm2A.end_key_exchange(16, tA, RB, b"1234567812345678", PB, gmalg.KEYXCHG_MODE.INITIATOR)
 
         self.assertEqual(KA, KB)
         self.assertEqual(KA, bytes.fromhex("6C893473 54DE2484 C60B4AB1 FDE4C6E5"))
