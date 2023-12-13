@@ -65,7 +65,7 @@ def bytes_to_point(b: bytes) -> Ec.EcPoint:
     elif mode == 0x02 or mode == 0x03:
         y = ec.get_y(x)
         if y is None:
-            raise errors.PointNotOnCurveError(x, -1)
+            raise errors.PointNotOnCurveError((x, y))
         ylsb = y & 0x1
         if mode == 0x02 and ylsb or mode == 0x03 and not ylsb:
             return x, fp.neg(y)
