@@ -18,6 +18,8 @@ pip install gmalg
 - [x] SM3 Cryptogrpahic Hash Algorithm
 - [x] SM4 Block Cipher Algorithm
 - [ ] SM9 Identification Cryptographic Algorithm
+  - Sign/Verify
+  - Key exchange
 
 ## Usage
 
