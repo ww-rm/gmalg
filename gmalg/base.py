@@ -88,7 +88,7 @@ class SMCoreBase:
 
         Args:
             hash_cls (Type[Hash]): Hash class used in cipher.
-            rnd_fn ((int) -> int): Random function used to generate k-bit random number.
+            rnd_fn ((int) -> int): Random function used to generate k-bit random number, default to `secrets.randbits`.
         """
 
         self._hash_cls = hash_cls

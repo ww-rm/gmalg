@@ -83,7 +83,7 @@ class SM2Core(SMCoreBase):
         Args:
             ecdlp (ECDLP): ECDLP used in SM2.
             hash_cls (Type[Hash]): Hash class used in SM2.
-            rnd_fn ((int) -> int): Random function used to generate k-bit random number.
+            rnd_fn ((int) -> int): Random function used to generate k-bit random number, default to `secrets.randbits`.
         """
 
         super().__init__(hash_cls, rnd_fn)
@@ -395,7 +395,7 @@ class SM2:
             pk (bytes): Public key.
             id_ (bytes): User id.
 
-            rnd_fn ((int) -> int): Random function used to generate k-bit random number, default to `secrets.randbits`
+            rnd_fn ((int) -> int): Random function used to generate k-bit random number, default to `secrets.randbits`.
             pc_mode (PC_MODE): Point compress mode used for generated data, no effects on the data to be parsed.
         """
 
