@@ -280,7 +280,6 @@ class TestSM2(unittest.TestCase):
         RB, tB = sm2B.begin_key_exchange()
 
         KB = sm2B.end_key_exchange(16, tB, RA, b"1234567812345678", PA, gmalg.sm2.KEYXCHG_MODE.RESPONDER)
-
         KA = sm2A.end_key_exchange(16, tA, RB, b"1234567812345678", PB, gmalg.sm2.KEYXCHG_MODE.INITIATOR)
 
         self.assertEqual(KA, KB)
@@ -365,14 +364,14 @@ class TestSM9(unittest.TestCase):
         id_ = b"Alice"
         sk_s = kgc.generate_sk_sign(id_)
 
+        self.assertEqual(sk_s, bytes.fromhex("04"
+                                             "A5702F05CF1315305E2D6EB64B0DEB923DB1A0BCF0CAFF90523AC8754AA69820"
+                                             "78559A844411F9825C109F5EE3F52D720DD01785392A727BB1556952B2B013D3"))
+
         sm9 = gmalg.SM9(
             hid_s=hid_s, mpk_s=mpk_s, sk_s=sk_s, id_=id_,
             rnd_fn=lambda _: 0x033C86_16B06704_813203DF_D0096502_2ED15975_C662337A_ED648835_DC4B1CBE
         )
-
-        self.assertEqual(sk_s, bytes.fromhex("04"
-                                             "A5702F05CF1315305E2D6EB64B0DEB923DB1A0BCF0CAFF90523AC8754AA69820"
-                                             "78559A844411F9825C109F5EE3F52D720DD01785392A727BB1556952B2B013D3"))
 
         message = b"Chinese IBS standard"
         h, S = sm9.sign(message)
@@ -383,6 +382,49 @@ class TestSM9(unittest.TestCase):
                                           "856712F1C2E0968AB7769F42A99586AED139D5B8B3E15891827CC2ACED9BAA05"))
 
         self.assertTrue(sm9.verify(message, h, S))
+
+    def test_keyxchg(self):
+        hid_e = b"\x02"
+        msk_e = bytes.fromhex("02E65B 0762D042 F51F0D23 542B13ED 8CFA2E9A 0E720636 1E013A28 3905E31F")
+        mpk_e = bytes.fromhex("04"
+                              "91745426 68E8F14A B273C094 5C3690C6 6E5DD096 78B86F73 4C435056 7ED06283"
+                              "54E598C6 BF749A3D ACC9FFFE DD9DB686 6C50457C FC7AA2A4 AD65C316 8FF74210")
+        kgc = gmalg.SM9KGC(hid_e=hid_e, msk_e=msk_e, mpk_e=mpk_e)
+
+        id_A = b"Alice"
+        sk_e_A = kgc.generate_sk_encrypt(id_A)
+        self.assertEqual(sk_e_A, bytes.fromhex("04"
+                                               "0FE8EAB3 95199B56 BF1D75BD 2CD610B6 424F08D1 092922C5 882B52DC D6CA832A"
+                                               "7DA57BC5 0241F9E5 BFDDC075 DD9D32C7 777100D7 36916CFC 165D8D36 E0634CD7"
+                                               "83A457DA F52CAD46 4C903B26 062CAF93 7BB40E37 DADED9ED A401050E 49C8AD0C"
+                                               "6970876B 9AAD1B7A 50BB4863 A11E574A F1FE3C59 75161D73 DE4C3AF6 21FB1EFB"))
+
+        id_B = b"Bob"
+        sk_e_B = kgc.generate_sk_encrypt(id_B)
+        self.assertEqual(sk_e_B, bytes.fromhex("04"
+                                               "74CCC3AC 9C383C60 AF083972 B96D05C7 5F12C890 7D128A17 ADAFBAB8 C5A4ACF7"
+                                               "01092FF4 DE893626 70C21711 B6DBE52D CD5F8E40 C6654B3D ECE573C2 AB3D29B2"
+                                               "44B0294A A04290E1 524FF3E3 DA8CFD43 2BB64DE3 A8040B5B 88D1B5FC 86A4EBC1"
+                                               "8CFC48FB 4FF37F1E 27727464 F3C34E21 53861AD0 8E972D16 25FC1A7B D18D5539"))
+
+        sm9_A = gmalg.SM9(
+            hid_e=hid_e, mpk_e=mpk_e, sk_e=sk_e_A, id_=id_A,
+            rnd_fn=lambda _: 0x5879_DD1D51E1_75946F23_B1B41E93_BA31C584_AE59A426_EC1046A4_D03B06C8
+        )
+
+        sm9_B = gmalg.SM9(
+            hid_e=hid_e, mpk_e=mpk_e, sk_e=sk_e_B, id_=id_B,
+            rnd_fn=lambda _: 0x018B98_C44BEF9F_8537FB7D_071B2C92_8B3BC65B_D3D69E1E_EE213564_905634FE
+        )
+
+        rA, RA = sm9_A.begin_key_exchange(id_B)
+        rB, RB = sm9_B.begin_key_exchange(id_A)
+
+        KB = sm9_B.end_key_exchange(16, rB, RB, id_A, RA, gmalg.KEYXCHG_MODE.RESPONDER)
+        KA = sm9_A.end_key_exchange(16, rA, RA, id_B, RB, gmalg.KEYXCHG_MODE.INITIATOR)
+
+        self.assertEqual(KA.hex(), KB.hex())
+        self.assertEqual(KA, bytes.fromhex("C5C13A8F 59A97CDE AE64F16A 2272A9E7"))
 
 
 class TestZUC(unittest.TestCase):
