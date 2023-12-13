@@ -8,6 +8,7 @@ __all__ = [
     "InfinitePointError",
     "InvalidArgumentError",
     "InvalidPCError",
+    "InvalidUserKeyError",
     "PointNotOnCurveError",
     "RequireArgumentError",
     "UnknownError",
@@ -61,6 +62,7 @@ class InvalidPCError(GMError):
     """Invalid PC byte."""
 
     def __init__(self, pc: int) -> None:
+        """Invalid PC byte."""
         self.pc = pc
 
     def __str__(self) -> str:
@@ -71,6 +73,7 @@ class InvalidUserKeyError(GMError):
     """Invalid user secret key in SM9 key generation."""
 
     def __init__(self, name: str, uid: bytes) -> None:
+        """Invalid user secret key in SM9 key generation."""
         self.name = name
         self.uid = uid
 
