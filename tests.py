@@ -457,6 +457,39 @@ class TestSM9(unittest.TestCase):
 
         self.assertEqual(sm9.decapsulate(C, 32), K)
 
+    def test_encrypt(self):
+        hid_e = b"\x03"
+        msk_e = bytes.fromhex("01EDEE 3778F441 F8DEA3D9 FA0ACC4E 07EE36C9 3F9A0861 8AF4AD85 CEDE1C22")
+        mpk_e = bytes.fromhex("04"
+                              "787ED7B8 A51F3AB8 4E0A6600 3F32DA5C 720B17EC A7137D39 ABC66E3C 80A892FF"
+                              "769DE617 91E5ADC4 B9FF85A3 1354900B 20287127 9A8C49DC 3F220F64 4C57A7B1")
+        kgc = gmalg.SM9KGC(hid_e=hid_e, msk_e=msk_e, mpk_e=mpk_e)
+
+        uid = b"Bob"
+
+        sk_e = kgc.generate_sk_encrypt(uid)
+        self.assertEqual(sk_e, bytes.fromhex("04"
+                                             "94736ACD 2C8C8796 CC4785E9 38301A13 9A059D35 37B64141 40B2D31E ECF41683"
+                                             "115BAE85 F5D8BC6C 3DBD9E53 42979ACC CF3C2F4F 28420B1C B4F8C0B5 9A19B158"
+                                             "7AA5E475 70DA7600 CD760A0C F7BEAF71 C447F384 4753FE74 FA7BA92C A7D3B55F"
+                                             "27538A62 E7F7BFB5 1DCE0870 4796D94C 9D56734F 119EA447 32B50E31 CDEB75C1"))
+
+        sm9 = gmalg.SM9(
+            hid_e=hid_e, mpk_e=mpk_e, sk_e=sk_e, uid=uid,
+            rnd_fn=lambda _: 0xAAC0_541779C8_FC45E3E2_CB25C12B_5D2576B2_129AE8BB_5EE2CBE5_EC9E785C
+        )
+
+        plain = b"Chinese IBE standard"
+        cipher = sm9.encrypt(plain, uid)  # encrypt data to self
+
+        self.assertEqual(cipher, bytes.fromhex("04"
+                                               "24454711 64490618 E1EE2052 8FF1D545 B0F14C8B CAA44544 F03DAB5D AC07D8FF"
+                                               "42FFCA97 D57CDDC0 5EA405F2 E586FEB3 A6930715 532B8000 759F1305 9ED59AC0"
+                                               "BA672387 BCD6DE50 16A158A5 2BB2E7FC 429197BC AB70B25A FEE37A2B 9DB9F367"
+                                               "1B5F5B0E 95148968 2F3E64E1 378CDD5D A9513B1C"))
+
+        self.assertEqual(sm9.decrypt(cipher), plain)
+
 
 class TestZUC(unittest.TestCase):
     def test_case1(self):
