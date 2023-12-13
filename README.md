@@ -18,6 +18,8 @@ pip install gmalg
 - [x] SM3 密码杂凑算法
 - [x] SM4 分组密码算法
 - [ ] SM9 标识密码算法
+  - 签名验签
+  - 密钥交换
 
 ## 用法
 
@@ -112,8 +114,71 @@ sm2B = gmalg.SM2(
 RA, tA = sm2A.begin_key_exchange()
 RB, tB = sm2B.begin_key_exchange()
 
-KB = sm2B.end_key_exchange(16, tB, RA, b"abcdefghijklmnopqrstuvwxyz", PA, gmalg.sm2.KEYXCHG_MODE.RESPONDER)
-KA = sm2A.end_key_exchange(16, tA, RB, b"1234567812345678", PB, gmalg.sm2.KEYXCHG_MODE.INITIATOR)
+KB = sm2B.end_key_exchange(16, tB, RA, b"abcdefghijklmnopqrstuvwxyz", PA, gmalg.KEYXCHG_MODE.RESPONDER)
+KA = sm2A.end_key_exchange(16, tA, RB, b"1234567812345678", PB, gmalg.KEYXCHG_MODE.INITIATOR)
+
+print(KA == KB)
+print(KA.hex())
+```
+
+### SM9 签名/验签
+
+```python
+import gmalg
+
+hid_s = b"\x01"
+msk_s = bytes.fromhex("0130E7 8459D785 45CB54C5 87E02CF4 80CE0B66 340F319F 348A1D5B 1F2DC5F4")
+mpk_s = bytes.fromhex("04"
+                      "9F64080B 3084F733 E48AFF4B 41B56501 1CE0711C 5E392CFB 0AB1B679 1B94C408"
+                      "29DBA116 152D1F78 6CE843ED 24A3B573 414D2177 386A92DD 8F14D656 96EA5E32"
+                      "69850938 ABEA0112 B57329F4 47E3A0CB AD3E2FDB 1A77F335 E89E1408 D0EF1C25"
+                      "41E00A53 DDA532DA 1A7CE027 B7A46F74 1006E85F 5CDFF073 0E75C05F B4E3216D")
+kgc = gmalg.SM9KGC(hid_s=hid_s, msk_s=msk_s, mpk_s=mpk_s)
+
+id_ = b"Alice"
+sk_s = kgc.generate_sk_sign(id_)
+
+print(sk_s.hex())
+
+sm9 = gmalg.SM9(hid_s=hid_s, mpk_s=mpk_s, sk_s=sk_s, id_=id_)
+
+message = b"Chinese IBS standard"
+h, S = sm9.sign(message)
+
+print(h.hex())
+print(S.hex())
+
+print(sm9.verify(message, h, S))
+```
+
+### SM9 密钥交换
+
+```python
+import gmalg
+
+hid_e = b"\x02"
+msk_e = bytes.fromhex("02E65B 0762D042 F51F0D23 542B13ED 8CFA2E9A 0E720636 1E013A28 3905E31F")
+mpk_e = bytes.fromhex("04"
+                      "91745426 68E8F14A B273C094 5C3690C6 6E5DD096 78B86F73 4C435056 7ED06283"
+                      "54E598C6 BF749A3D ACC9FFFE DD9DB686 6C50457C FC7AA2A4 AD65C316 8FF74210")
+kgc = gmalg.SM9KGC(hid_e=hid_e, msk_e=msk_e, mpk_e=mpk_e)
+
+id_A = b"Alice"
+sk_e_A = kgc.generate_sk_encrypt(id_A)
+print(sk_e_A.hex())
+
+id_B = b"Bob"
+sk_e_B = kgc.generate_sk_encrypt(id_B)
+print(sk_e_B.hex())
+
+sm9_A = gmalg.SM9(hid_e=hid_e, mpk_e=mpk_e, sk_e=sk_e_A, id_=id_A)
+sm9_B = gmalg.SM9(hid_e=hid_e, mpk_e=mpk_e, sk_e=sk_e_B, id_=id_B)
+
+rA, RA = sm9_A.begin_key_exchange(id_B)
+rB, RB = sm9_B.begin_key_exchange(id_A)
+
+KB = sm9_B.end_key_exchange(16, rB, RB, id_A, RA, gmalg.KEYXCHG_MODE.RESPONDER)
+KA = sm9_A.end_key_exchange(16, rA, RA, id_B, RB, gmalg.KEYXCHG_MODE.INITIATOR)
 
 print(KA == KB)
 print(KA.hex())
