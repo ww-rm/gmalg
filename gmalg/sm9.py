@@ -4,6 +4,7 @@ from typing import Callable, Tuple, Type
 
 from . import ellipticcurve as Ec
 from . import errors
+from . import primefield as Fp
 from .base import KEYXCHG_MODE, PC_MODE, BlockCipher, Hash, SMCoreBase
 from .sm3 import SM3
 from .sm4 import SM4
@@ -35,20 +36,21 @@ def point_to_bytes_1(P: Ec.EcPoint, mode: PC_MODE) -> bytes:
     if P == _bnbp.ec1.INF:
         return b"\x00"
 
+    etob = _bnbp.fp1.etob
     x, y = P
 
     if mode is PC_MODE.RAW:
-        return b"\x04" + _bnbp.etob1(x) + _bnbp.etob1(y)
+        return b"\x04" + etob(x) + etob(y)
     elif mode is PC_MODE.COMPRESS:
         if y & 0x1:
-            return b"\x03" + _bnbp.etob1(x)
+            return b"\x03" + etob(x)
         else:
-            return b"\x02" + _bnbp.etob1(x)
+            return b"\x02" + etob(x)
     elif mode is PC_MODE.MIXED:
         if y & 0x1:
-            return b"\x07" + _bnbp.etob1(x) + _bnbp.etob1(y)
+            return b"\x07" + etob(x) + etob(y)
         else:
-            return b"\x06" + _bnbp.etob1(x) + _bnbp.etob1(y)
+            return b"\x06" + etob(x) + etob(y)
     else:
         raise TypeError(f"Invalid mode {mode}")
 
@@ -56,21 +58,24 @@ def point_to_bytes_1(P: Ec.EcPoint, mode: PC_MODE) -> bytes:
 def bytes_to_point_1(p: bytes) -> Ec.EcPoint:
     """Convert bytes to point (Fp)."""
 
+    ec1 = _bnbp.ec1
+    fp1 = _bnbp.fp1
+
     mode = p[0]
     if mode == 0x00:
-        return _bnbp.ec1.INF
+        return ec1.INF
 
     point = p[1:]
-    x = _bnbp.btoe1(point[:_bnbp.fp1.e_length])
+    x = fp1.btoe(point[:fp1.e_length])
     if mode == 0x04 or mode == 0x06 or mode == 0x07:
-        return x, _bnbp.btoe1(point[_bnbp.fp1.e_length:])
+        return x, fp1.btoe(point[fp1.e_length:])
     elif mode == 0x02 or mode == 0x03:
-        y = _bnbp.ec1.get_y(x)
+        y = ec1.get_y(x)
         if y < 0:
             raise errors.PointNotOnCurveError(x, -1)
         ylsb = y & 0x1
         if mode == 0x02 and ylsb or mode == 0x03 and not ylsb:
-            return x, _bnbp.fp1.neg(y)
+            return x, fp1.neg(y)
         return x, y
     else:
         raise errors.InvalidPCError(mode)
@@ -82,20 +87,21 @@ def point_to_bytes_2(P: Ec.EcPoint2, mode: PC_MODE) -> bytes:
     if P == _bnbp.ec2.INF:
         return b"\x00"
 
+    etob = _bnbp.fp2.etob
     x, y = P
 
     if mode is PC_MODE.RAW:
-        return b"\x04" + _bnbp.etob2(x) + _bnbp.etob2(y)
+        return b"\x04" + etob(x) + etob(y)
     elif mode is PC_MODE.COMPRESS:
         if y[1] & 0x1:
-            return b"\x03" + _bnbp.etob2(x)
+            return b"\x03" + etob(x)
         else:
-            return b"\x02" + _bnbp.etob2(x)
+            return b"\x02" + etob(x)
     elif mode is PC_MODE.MIXED:
         if y[1] & 0x1:
-            return b"\x07" + _bnbp.etob2(x) + _bnbp.etob2(y)
+            return b"\x07" + etob(x) + etob(y)
         else:
-            return b"\x06" + _bnbp.etob2(x) + _bnbp.etob2(y)
+            return b"\x06" + etob(x) + etob(y)
     else:
         raise TypeError(f"Invalid mode {mode}")
 
@@ -108,9 +114,9 @@ def bytes_to_point_2(p: bytes) -> Ec.EcPoint2:
         return _bnbp.ec2.INF
 
     point = p[1:]
-    x = _bnbp.btoe2(point[:_bnbp.fp2.e_length])
+    x = _bnbp.fp2.btoe(point[:_bnbp.fp2.e_length])
     if mode == 0x04 or mode == 0x06 or mode == 0x07:
-        return x, _bnbp.btoe2(point[_bnbp.fp2.e_length:])
+        return x, _bnbp.fp2.btoe(point[_bnbp.fp2.e_length:])
     elif mode == 0x02 or mode == 0x03:
         y = _bnbp.ec2.get_y(x)
         if y < 0:
@@ -266,15 +272,15 @@ class SM9Core(SMCoreBase):
             EcPoint: S
         """
 
-        fpk = self.bnbp.fpk
+        fp12 = self.bnbp.fp12
         fpn = self.bnbp.fpn
 
         g = self.bnbp.eG1(mpk_s)
 
         while True:
             r = self._randint(1, fpn.p - 1)
-            w = fpk.pow(g, r)
-            h = self._H2(message + fpk.etob(w))
+            w = fp12.pow(g, r)
+            h = self._H2(message + fp12.etob(w))
             l = fpn.sub(r, h)
 
             if fpn.iszero(l):
@@ -301,23 +307,105 @@ class SM9Core(SMCoreBase):
         if h < 1 or h > self.bnbp.fpn.p:
             return False
 
-        fpk = self.bnbp.fpk
+        fp12 = self.bnbp.fp12
         ec1 = self.bnbp.ec1
         ec2 = self.bnbp.ec2
         if not ec1.isvalid(S):
             return False
 
         g = self.bnbp.eG1(mpk_s)
-        t = fpk.pow(g, h)
+        t = fp12.pow(g, h)
         h1 = self._H1(id_ + hid_s)
         P = ec2.add(self.bnbp.kG2(h1), mpk_s)
         u = self.bnbp.e(S, P)
-        w = fpk.mul(u, t)
-        h2 = self._H2(message + fpk.etob(w))
+        w = fp12.mul(u, t)
+        h2 = self._H2(message + fp12.etob(w))
         if h2 != h:
             return False
 
         return True
+
+    def begin_key_exchange(self, hid_e: bytes, mpk_e: Ec.EcPoint, id_: bytes) -> Tuple[int, Ec.EcPoint]:
+        """Generate data to begin key exchange.
+
+        Args:
+            hid_e (bytes): Encryption identity byte.
+            mpk_e (EcPoint): Master public key for encryption.
+            id_ (bytes): ID of another user.
+
+        Returns:
+            int: r.
+            EcPoint: random point, [r]Q
+        """
+
+        Q = self.bnbp.ec1.add(self.bnbp.kG1(self._H1(id_ + hid_e)), mpk_e)
+        r = self._randint(1, self.bnbp.fpn.p)
+        R = self.bnbp.ec1.mul(r, Q)
+        return r, R
+
+    def get_secret_data(self, mpk_e: Ec.EcPoint, r: int, R: Ec.EcPoint, sk_e: Ec.EcPoint2) -> Tuple[Fp.Fp12Ele, Fp.Fp12Ele, Fp.Fp12Ele]:
+        """Generate same secret point as another user.
+
+        Args:
+            mpk_e (EcPoint): Master public key for encryption.
+            r (int): random number generated by `begin_key_exchange`.
+            R (EcPoint): random point from another user.
+            sk_e (EcPoint2): secret key for encryption.
+
+        Returns:
+            Fp12Ele: g1.
+            Fp12Ele: g2.
+            Fp12Ele: g3.
+        """
+
+        bnbp = self.bnbp
+
+        if not bnbp.ec1.isvalid(R):
+            raise errors.PointNotOnCurveError(R)
+
+        g1 = bnbp.fp12.pow(bnbp.eG2(mpk_e), r)
+        g2 = bnbp.e(R, sk_e)
+        g3 = bnbp.fp12.pow(g2, r)
+
+        return g1, g2, g3
+
+    def generate_skey(self, klen: int, g1: Fp.Fp12Ele, g2: Fp.Fp12Ele, g3: Fp.Fp12Ele,
+                      id_init: bytes, R_init: Ec.EcPoint,
+                      id_resp: bytes, R_resp: Ec.EcPoint) -> bytes:
+        """Generate secret key of klen bytes as same as another user.
+
+        Args:
+            klen (int): key length in bytes to generate.
+            g1 (Fp12Ele): g1.
+            g2 (Fp12Ele): g2.
+            g3 (Fp12Ele): g3.
+
+            id_init (bytes): id bytes of initiator.
+            R_init (EcPoint): Random point of initiator.
+
+            id_resp (bytes): id bytes of responder.
+            R_resp (EcPoint): Random point of responder.
+
+        Returns:
+            bytes: secret key of klen bytes.
+        """
+
+        fp1 = self.bnbp.fp1
+        fp12 = self.bnbp.fp12
+
+        Z = bytearray()
+
+        Z.extend(id_init)
+        Z.extend(id_resp)
+        Z.extend(fp1.etob(R_init[0]))
+        Z.extend(fp1.etob(R_init[1]))
+        Z.extend(fp1.etob(R_resp[0]))
+        Z.extend(fp1.etob(R_resp[1]))
+        Z.extend(fp12.etob(g1))
+        Z.extend(fp12.etob(g2))
+        Z.extend(fp12.etob(g3))
+
+        return self._key_derivation_fn(Z, klen)
 
 
 class SM9KGC:
@@ -489,6 +577,10 @@ class SM9:
     def can_verify(self) -> bool:
         return bool(self._hid_s and self._mpk_s and self._id)
 
+    @property
+    def can_exchange_key(self) -> bool:
+        return bool(self._hid_e and self._mpk_e and self._sk_e and self._id)
+
     def sign(self, message: bytes) -> Tuple[bytes, bytes]:
         """Sign.
 
@@ -523,3 +615,46 @@ class SM9:
             raise errors.RequireArgumentError("verify", "hid_s", "mpk_s", "id")
 
         return self._core.verify(message, bytes_to_int(h), bytes_to_point_1(S), self._hid_s, self._mpk_s, self._id)
+
+    def begin_key_exchange(self, id_: bytes) -> Tuple[int, bytes]:
+        """Begin key exchange.
+
+        Args:
+            id_ (bytes): ID of another user.
+
+        Returns:
+            int: r, random number.
+            bytes: random point, will be sent to another user.
+        """
+
+        if not self.can_exchange_key:
+            raise errors.RequireArgumentError("key exchange", "hid_e", "mpk_e", "sk_e", "id")
+
+        r, R = self._core.begin_key_exchange(self._hid_e, self._mpk_e, id_)
+        return r, point_to_bytes_1(R, self._pc_mode)
+
+    def end_key_exchange(self, klen: int, r: int, R: bytes, id_: bytes, R2: bytes, mode: KEYXCHG_MODE) -> bytes:
+        """End key exchange and get the secret key bytes.
+
+        Args:
+            klen (int): length of secret key in bytes to generate.
+            r (int): random number of self.
+            R (bytes): random point of self.
+            id_ (bytes): id of another user.
+            R2 (bytes): random point of another user.
+            mode (KEYXCHG_MODE): key exchange mode, initiator or responder.
+
+        Returns:
+            bytes: secret key of klen bytes.
+        """
+
+        R = bytes_to_point_1(R)
+        R2 = bytes_to_point_1(R2)
+        g1, g2, g3 = self._core.get_secret_data(self._mpk_e, r, R2, self._sk_e)
+
+        if mode is KEYXCHG_MODE.INITIATOR:
+            return self._core.generate_skey(klen, g1, g2, g3, self._id, R, id_, R2)
+        elif mode is KEYXCHG_MODE.RESPONDER:
+            return self._core.generate_skey(klen, g2, g1, g3, id_, R2, self._id, R)
+        else:
+            raise TypeError(f"Invalid key exchange mode: {mode}")
