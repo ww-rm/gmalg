@@ -1,4 +1,4 @@
-from typing import Tuple
+"""Utils."""
 
 __all__ = []
 

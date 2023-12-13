@@ -5,6 +5,17 @@ from typing import Tuple, Union
 from . import errors
 from . import primefield as Fp
 
+__all__ = [
+    "EcPoint",
+    "EcPoint2",
+    "EcPoint4",
+    "EcPoint12",
+    "EcPointEx",
+    "EllipticCurve",
+    "ECDLP",
+    "BNBP",
+]
+
 EcPoint = Tuple[int, int]
 EcPoint2 = Tuple[Fp.Fp2Ele, Fp.Fp2Ele]
 EcPoint4 = Tuple[Fp.Fp4Ele, Fp.Fp4Ele]
