@@ -8,19 +8,20 @@
 pip install gmalg
 ```
 
-## 已实现的核心算法
+## 实现的核心算法
 
-- [x] 祖冲之序列密码算法
-- [x] SM2 椭圆曲线公钥密码算法
+- 祖冲之序列密码算法
+- SM2 椭圆曲线公钥密码算法
   - 签名验签
   - 密钥交换
   - 加密解密
-- [x] SM3 密码杂凑算法
-- [x] SM4 分组密码算法
-- [ ] SM9 标识密码算法
+- SM3 密码杂凑算法
+- SM4 分组密码算法
+- SM9 标识密码算法
   - 签名验签
   - 密钥交换
   - 密钥封装
+  - 加密解密
 
 ## 用法
 
@@ -210,6 +211,33 @@ print(K.hex())
 print(C.hex())
 
 print(sm9.decapsulate(C, 32) == K)
+```
+
+### SM9 加密/解密
+
+```python
+import gmalg
+
+hid_e = b"\x03"
+msk_e = bytes.fromhex("01EDEE 3778F441 F8DEA3D9 FA0ACC4E 07EE36C9 3F9A0861 8AF4AD85 CEDE1C22")
+mpk_e = bytes.fromhex("04"
+                      "787ED7B8 A51F3AB8 4E0A6600 3F32DA5C 720B17EC A7137D39 ABC66E3C 80A892FF"
+                      "769DE617 91E5ADC4 B9FF85A3 1354900B 20287127 9A8C49DC 3F220F64 4C57A7B1")
+kgc = gmalg.SM9KGC(hid_e=hid_e, msk_e=msk_e, mpk_e=mpk_e)
+
+uid = b"Bob"
+
+sk_e = kgc.generate_sk_encrypt(uid)
+print(sk_e.hex())
+
+sm9 = gmalg.SM9(hid_e=hid_e, mpk_e=mpk_e, sk_e=sk_e, uid=uid)
+
+plain = b"Chinese IBE standard"
+cipher = sm9.encrypt(plain, uid)  # encrypt data to self
+
+print(cipher.hex())
+
+print(sm9.decrypt(cipher))
 ```
 
 更多详细用法可以查看[文档:TODO]
