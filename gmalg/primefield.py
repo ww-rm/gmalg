@@ -93,21 +93,24 @@ class PrimeFieldBase:
 class PrimeField(PrimeFieldBase):
     """Fp operations."""
 
+    _ZERO = 0
+    _ONE = 1
+
     @classmethod
     def zero(cls) -> int:
-        return 0
+        return cls._ZERO
 
     @classmethod
     def one(cls) -> int:
-        return 1
+        return cls._ONE
 
     @classmethod
     def iszero(cls, x: int) -> bool:
-        return x == 0
+        return x == cls._ZERO
 
     @classmethod
     def isone(cls, x: int) -> bool:
-        return x == 1
+        return x == cls._ONE
 
     @classmethod
     def extend(cls, x: int) -> int:
@@ -259,6 +262,9 @@ class PrimeField2(PrimeFieldBase):
 
     _ALPHA: int = -2
 
+    _ZERO = (PrimeField.zero(), PrimeField.zero())
+    _ONE = (PrimeField.zero(), PrimeField.one())
+
     @classmethod
     def extend(cls, x: Union[int, Fp2Ele]) -> Fp2Ele:
         if isinstance(x, int):
@@ -267,19 +273,19 @@ class PrimeField2(PrimeFieldBase):
 
     @classmethod
     def zero(cls) -> Fp2Ele:
-        return (PrimeField.zero(), PrimeField.zero())
+        return cls._ZERO
 
     @classmethod
     def one(cls) -> Fp2Ele:
-        return (PrimeField.zero(), PrimeField.one())
+        return cls._ONE
 
     @classmethod
-    def iszero(self, X: Fp2Ele) -> bool:
-        return all(PrimeField.iszero(i) for i in X)
+    def iszero(cls, X: Fp2Ele) -> bool:
+        return X == cls._ZERO
 
     @classmethod
-    def isone(self, X: Fp2Ele) -> bool:
-        return all(PrimeField.iszero(i) for i in X[:-1]) and PrimeField.isone(X[-1])
+    def isone(cls, X: Fp2Ele) -> bool:
+        return X == cls._ONE
 
     def __init__(self, p: int) -> None:
         self.fp = PrimeField(p)
@@ -383,6 +389,8 @@ class PrimeField4(PrimeFieldBase):
     """Fp4 operations."""
 
     _ALPHA: Fp2Ele = (1, 0)
+    _ZERO = (PrimeField2.zero(), PrimeField2.zero())
+    _ONE = (PrimeField2.zero(), PrimeField2.one())
 
     @classmethod
     def extend(cls, x: Union[int, Fp2Ele, Fp4Ele]) -> Fp4Ele:
@@ -394,19 +402,19 @@ class PrimeField4(PrimeFieldBase):
 
     @classmethod
     def zero(cls) -> Fp4Ele:
-        return (PrimeField2.zero(), PrimeField2.zero())
+        return cls._ZERO
 
     @classmethod
     def one(cls) -> Fp4Ele:
-        return (PrimeField2.zero(), PrimeField2.one())
+        return cls._ONE
 
     @classmethod
     def iszero(cls, X: Fp4Ele) -> bool:
-        return all(PrimeField2.iszero(i) for i in X)
+        return X == cls._ZERO
 
     @classmethod
     def isone(cls, X: Fp4Ele) -> bool:
-        return all(PrimeField2.iszero(i) for i in X[:-1]) and PrimeField2.isone(X[-1])
+        return X == cls._ONE
 
     def __init__(self, p: int) -> None:
         self.fp2 = PrimeField2(p)
@@ -510,6 +518,8 @@ class PrimeField12(PrimeFieldBase):
     """Fp12 operations."""
 
     _ALPHA: Fp4Ele = ((0, 1), (0, 0))
+    _ZERO = (PrimeField4.zero(), PrimeField4.zero(), PrimeField4.zero())
+    _ONE = (PrimeField4.zero(), PrimeField4.zero(), PrimeField4.one())
 
     @classmethod
     def extend(cls, x: Union[int, Fp2Ele, Fp4Ele, Fp12Ele]) -> Fp12Ele:
@@ -523,19 +533,19 @@ class PrimeField12(PrimeFieldBase):
 
     @classmethod
     def zero(cls) -> Fp12Ele:
-        return (PrimeField4.zero(), PrimeField4.zero(), PrimeField4.zero())
+        return cls._ZERO
 
     @classmethod
     def one(cls) -> Fp12Ele:
-        return (PrimeField4.zero(), PrimeField4.zero(), PrimeField4.one())
+        return cls._ONE
 
     @classmethod
     def iszero(cls, X: Fp12Ele) -> bool:
-        return all(PrimeField4.iszero(i) for i in X)
+        return X == cls._ZERO
 
     @classmethod
     def isone(cls, X: Fp12Ele) -> bool:
-        return all(PrimeField4.iszero(i) for i in X[:-1]) and PrimeField4.isone(X[-1])
+        return X == cls._ONE
 
     def __init__(self, p: int) -> None:
         self.fp4 = PrimeField4(p)
