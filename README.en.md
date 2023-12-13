@@ -135,12 +135,12 @@ mpk_s = bytes.fromhex("04"
                       "41E00A53 DDA532DA 1A7CE027 B7A46F74 1006E85F 5CDFF073 0E75C05F B4E3216D")
 kgc = gmalg.SM9KGC(hid_s=hid_s, msk_s=msk_s, mpk_s=mpk_s)
 
-id_ = b"Alice"
-sk_s = kgc.generate_sk_sign(id_)
+uid = b"Alice"
+sk_s = kgc.generate_sk_sign(uid)
 
 print(sk_s.hex())
 
-sm9 = gmalg.SM9(hid_s=hid_s, mpk_s=mpk_s, sk_s=sk_s, id_=id_)
+sm9 = gmalg.SM9(hid_s=hid_s, mpk_s=mpk_s, sk_s=sk_s, uid=uid)
 
 message = b"Chinese IBS standard"
 h, S = sm9.sign(message)
@@ -163,22 +163,22 @@ mpk_e = bytes.fromhex("04"
                       "54E598C6 BF749A3D ACC9FFFE DD9DB686 6C50457C FC7AA2A4 AD65C316 8FF74210")
 kgc = gmalg.SM9KGC(hid_e=hid_e, msk_e=msk_e, mpk_e=mpk_e)
 
-id_A = b"Alice"
-sk_e_A = kgc.generate_sk_encrypt(id_A)
+uid_A = b"Alice"
+sk_e_A = kgc.generate_sk_encrypt(uid_A)
 print(sk_e_A.hex())
 
-id_B = b"Bob"
-sk_e_B = kgc.generate_sk_encrypt(id_B)
+uid_B = b"Bob"
+sk_e_B = kgc.generate_sk_encrypt(uid_B)
 print(sk_e_B.hex())
 
-sm9_A = gmalg.SM9(hid_e=hid_e, mpk_e=mpk_e, sk_e=sk_e_A, id_=id_A)
-sm9_B = gmalg.SM9(hid_e=hid_e, mpk_e=mpk_e, sk_e=sk_e_B, id_=id_B)
+sm9_A = gmalg.SM9(hid_e=hid_e, mpk_e=mpk_e, sk_e=sk_e_A, uid=uid_A)
+sm9_B = gmalg.SM9(hid_e=hid_e, mpk_e=mpk_e, sk_e=sk_e_B, uid=uid_B)
 
-rA, RA = sm9_A.begin_key_exchange(id_B)
-rB, RB = sm9_B.begin_key_exchange(id_A)
+rA, RA = sm9_A.begin_key_exchange(uid_B)
+rB, RB = sm9_B.begin_key_exchange(uid_A)
 
-KB = sm9_B.end_key_exchange(16, rB, RB, id_A, RA, gmalg.KEYXCHG_MODE.RESPONDER)
-KA = sm9_A.end_key_exchange(16, rA, RA, id_B, RB, gmalg.KEYXCHG_MODE.INITIATOR)
+KB = sm9_B.end_key_exchange(16, rB, RB, uid_A, RA, gmalg.KEYXCHG_MODE.RESPONDER)
+KA = sm9_A.end_key_exchange(16, rA, RA, uid_B, RB, gmalg.KEYXCHG_MODE.INITIATOR)
 
 print(KA == KB)
 print(KA.hex())
