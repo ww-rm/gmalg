@@ -544,46 +544,6 @@ class SM2:
         R, t = self._core.begin_key_exchange(self._sk)
         return point_to_bytes(R, self._pc_mode), t
 
-    def _end_key_exchange_initiator(self, klen: int, t: int, R: bytes, id_: bytes, pk: bytes) -> bytes:
-        """End key exchange for initiator.
-
-        Args:
-            klen (int): length of secret key in bytes to generate.
-            t (int): t value of initiator.
-            R (bytes): random point from responder.
-            id_ (bytes): id from responder.
-            pk (bytes): public key from responder.
-
-        Returns:
-            bytes: secret key of klen bytes.
-        """
-
-        R = bytes_to_point(R)
-        pk = bytes_to_point(pk)
-
-        U = self._core.get_secret_point(t, R, pk)
-        return self._core.generate_skey(klen, U, self._id, self._pk, id_, pk)
-
-    def _end_key_exchange_responder(self, klen: int, t: int, R: bytes, id_: bytes, pk: bytes) -> bytes:
-        """End key exchange for responder.
-
-        Args:
-            klen (int): length of secret key in bytes to generate.
-            t (int): t value of responder.
-            R (bytes): random point from initiator.
-            id_ (bytes): id from initiator.
-            pk (bytes): public key from initiator.
-
-        Returns:
-            bytes: secret key of klen bytes.
-        """
-
-        R = bytes_to_point(R)
-        pk = bytes_to_point(pk)
-
-        V = self._core.get_secret_point(t, R, pk)
-        return self._core.generate_skey(klen, V, id_, pk, self._id, self._pk)
-
     def end_key_exchange(self, klen: int, t: int, R: bytes, id_: bytes, pk: bytes, mode: KEYXCHG_MODE) -> bytes:
         """End key exchange and get the secret key bytes.
 
@@ -599,9 +559,13 @@ class SM2:
             bytes: secret key of klen bytes.
         """
 
+        R = bytes_to_point(R)
+        pk = bytes_to_point(pk)
+        S = self._core.get_secret_point(t, R, pk)
+
         if mode is KEYXCHG_MODE.INITIATOR:
-            return self._end_key_exchange_initiator(klen, t, R, id_, pk)
+            return self._core.generate_skey(klen, S, self._id, self._pk, id_, pk)
         elif mode is KEYXCHG_MODE.RESPONDER:
-            return self._end_key_exchange_responder(klen, t, R, id_, pk)
+            return self._core.generate_skey(klen, S, id_, pk, self._id, self._pk)
         else:
             raise TypeError(f"Invalid key exchange mode: {mode}")
