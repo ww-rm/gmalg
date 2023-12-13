@@ -57,17 +57,6 @@ class InvalidArgumentError(GMError):
     """Invalid arguments."""
 
 
-class InvalidHidError(GMError):
-    """Encounter zero under the hid."""
-
-    def __init__(self, name: str, hid: bytes) -> None:
-        self.name = name
-        self.hid = hid
-
-    def __str__(self) -> str:
-        return f"{self.name} encounter zero. hid: 0x{self.hid.hex()}, please use another hid and regenerate master key pair and user keys."
-
-
 class InvalidPCError(GMError):
     """Invalid PC byte."""
 
@@ -76,6 +65,17 @@ class InvalidPCError(GMError):
 
     def __str__(self) -> str:
         return f"Invalid PC byte 0x{self.pc:x}."
+
+
+class InvalidUserKeyError(GMError):
+    """Invalid user secret key in SM9 key generation."""
+
+    def __init__(self, name: str, uid: bytes) -> None:
+        self.name = name
+        self.uid = uid
+
+    def __str__(self) -> str:
+        return f"Encountered zero when generating user {self.uid} {self.name} key. Please regenerate master key pair and user keys."
 
 
 class PointNotOnCurveError(GMError):

@@ -226,14 +226,14 @@ class SM9Core(SMCoreBase):
             EcPoint: User secret key for sign.
 
         Raises:
-            InvalidHidError: Encounter zero when generating, need change hid byte and update all users' secret keys.
+            InvalidUserKeyError: Encounter zero when generating, need regenerate master key pair and user keys..
         """
 
         fpn = self.bnbp.fpn
 
         t1 = fpn.add(self._H1(id_ + hid_s), msk_s)
         if fpn.iszero(t1):
-            raise errors.InvalidHidError("Sign key", hid_s)
+            raise errors.InvalidUserKeyError("sign", id_)
 
         t2 = fpn.mul(msk_s, fpn.inv(t1))
         sk_s = self.bnbp.kG1(t2)
@@ -251,14 +251,14 @@ class SM9Core(SMCoreBase):
             EcPoint2: User secret key for encrypt.
 
         Raises:
-            InvalidHidError: Encounter zero when generating, need change hid byte and update all users' secret keys.
+            InvalidUserKeyError: Encounter zero when generating, need regenerate master key pair and user keys..
         """
 
         fpn = self.bnbp.fpn
 
         t1 = fpn.add(self._H1(id_ + hid_e), msk_e)
         if fpn.iszero(t1):
-            raise errors.InvalidHidError("Encrypt key", hid_e)
+            raise errors.InvalidUserKeyError("encrypt", id_)
 
         t2 = fpn.mul(msk_e, fpn.inv(t1))
         sk_e = self.bnbp.kG2(t2)
@@ -411,6 +411,24 @@ class SM9Core(SMCoreBase):
         Z.extend(fp12.etob(g3))
 
         return self._key_derivation_fn(Z, klen)
+
+    def encapsulate(self):
+        ...
+
+    def decapsulate(self):
+        ...
+
+    def encrypt(self):
+        ...
+
+    def decrypt(self):
+        ...
+
+    def encrypt_block(self):
+        ...
+
+    def decrypt_block(self):
+        ...
 
 
 class SM9KGC:
