@@ -344,7 +344,7 @@ class SM9Core(SMCoreBase):
         """
 
         Q = self.bnbp.ec1.add(self.bnbp.kG1(self._H1(uid + hid_e)), mpk_e)
-        r = self._randint(1, self.bnbp.fpn.p)
+        r = self._randint(1, self.bnbp.fpn.p - 1)
         R = self.bnbp.ec1.mul(r, Q)
         return r, R
 
@@ -412,11 +412,80 @@ class SM9Core(SMCoreBase):
 
         return self._key_derivation_fn(Z, klen)
 
-    def encapsulate(self):
-        ...
+    def encapsulate(self, hid_e: bytes, mpk_e: Ec.EcPoint, klen: int, uid: bytes) -> Tuple[bytes, Ec.EcPoint]:
+        """Encapsulate secret key.
 
-    def decapsulate(self):
-        ...
+        Args:
+            hid_e (bytes): Encryption identity byte.
+            mpk_e (EcPoint): Master public key for encryption.
+            klen (int): Key length in bytes to encapsulate.
+            uid (bytes): ID of another user.
+
+        Returns:
+            bytes: Encapsulated secret key of `klen` bytes.
+            EcPoint: Encapsulated cipher.
+        """
+
+        bnbp = self.bnbp
+
+        Q = bnbp.ec1.add(bnbp.kG1(self._H1(uid + hid_e)), mpk_e)
+
+        while True:
+            r = self._randint(1, bnbp.fpn.p - 1)
+            C = bnbp.ec1.mul(r, Q)
+
+            g = bnbp.eG2(mpk_e)
+            w = bnbp.fp12.pow(g, r)
+
+            Z = bytearray()
+            Z.extend(bnbp.fp1.etob(C[0]))
+            Z.extend(bnbp.fp1.etob(C[1]))
+            Z.extend(bnbp.fp12.etob(w))
+            Z.extend(uid)
+
+            K = self._key_derivation_fn(Z, klen)
+
+            if not any(K):
+                continue
+
+            return K, C
+
+    def decapsulate(self, C: Ec.EcPoint, klen: int, sk_e: Ec.EcPoint2, uid: bytes):
+        """Decapsulate secret key.
+
+        Args:
+            C (EcPoint): Encapsulated cipher.
+            klen (int): Key length in bytes to encapsulate.
+            sk_e (EcPoint2): Secret key for encrypt.
+            uid (bytes): User ID.
+
+        Returns:
+            bytes: Encapsulated secret key of `klen` bytes.
+
+        Raises:
+            PointNotOnCurveError: C not on curve.
+            UnknownError: Zero secret key encountered.
+        """
+
+        bnbp = self.bnbp
+
+        if not bnbp.ec1.isvalid(C):
+            raise errors.PointNotOnCurveError(C)
+
+        w = bnbp.e(C, sk_e)
+
+        Z = bytearray()
+        Z.extend(bnbp.fp1.etob(C[0]))
+        Z.extend(bnbp.fp1.etob(C[1]))
+        Z.extend(bnbp.fp12.etob(w))
+        Z.extend(uid)
+
+        K = self._key_derivation_fn(Z, klen)
+
+        if not any(K):
+            raise errors.UnknownError("Zero secret key encountered.")
+
+        return K
 
     def encrypt(self):
         ...
@@ -604,6 +673,14 @@ class SM9:
     def can_exchange_key(self) -> bool:
         return bool(self._hid_e and self._mpk_e and self._sk_e and self._uid)
 
+    @property
+    def can_encapsulate(self) -> bool:
+        return bool(self._hid_e and self._mpk_e)
+
+    @property
+    def can_decapsulate(self) -> bool:
+        return bool(self._sk_e and self._uid)
+
     def sign(self, message: bytes) -> Tuple[bytes, bytes]:
         """Sign.
 
@@ -681,3 +758,37 @@ class SM9:
             return self._core.generate_skey(klen, g2, g1, g3, uid, R2, self._uid, R)
         else:
             raise TypeError(f"Invalid key exchange mode: {mode}")
+
+    def encapsulate(self, klen: int, uid: bytes) -> Tuple[bytes, bytes]:
+        """Encapsulate secret key.
+
+        Args:
+            klen (int): Key length in bytes to encapsulate.
+            uid (bytes): ID of another user.
+
+        Returns:
+            bytes: Encapsulated secret key of `klen` bytes.
+            bytes: Encapsulated cipher.
+        """
+
+        if not self.can_encapsulate:
+            raise errors.RequireArgumentError("encapsulate", "hid_e", "mpk_e")
+
+        K, C = self._core.encapsulate(self._hid_e, self._mpk_e, klen, uid)
+        return K, point_to_bytes_1(C, self._pc_mode)
+
+    def decapsulate(self, C: bytes, klen: int):
+        """Decapsulate secret key.
+
+        Args:
+            C (bytes): Encapsulated cipher.
+            klen (int): Key length in bytes to encapsulate.
+
+        Returns:
+            bytes: Encapsulated secret key of `klen` bytes.
+        """
+
+        if not self.can_decapsulate:
+            raise errors.RequireArgumentError("decapsulate", "sk_e", "uid")
+
+        return self._core.decapsulate(bytes_to_point_1(C), klen, self._sk_e, self._uid)
