@@ -130,7 +130,7 @@ class BNBP:
         Args:
             t (int): t.
             b (int): Parameter b of elliptic curve.
-            beta (Fp2Ele): Parameter beta of twin curve, only implemented for `(1, 0)`.
+            beta (Fp2Ele): Parameter beta of twisted curve, only implemented for `(1, 0)`.
             G1 (EcPoint): Base point of group 1.
             G2 (EcPoint2): Base point of group 2.
         """
