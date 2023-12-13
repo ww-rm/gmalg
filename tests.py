@@ -46,15 +46,15 @@ class TestSM2(unittest.TestCase):
             lambda _: 0x6CB28D99_385C175C_94F94E93_4817663F_C176D925_DD72B727_260DBAAE_1FB2F96F
         )
         d = 0x128B2FA8_BD433C6C_068C8D80_3DFF7979_2A519A55_171B1B65_0C23661D_15897263
-        id_ = b"ALICE123@YAHOO.COM"
+        uid = b"ALICE123@YAHOO.COM"
         P = (0x0AE4C779_8AA0F119_471BEE11_825BE462_02BB79E2_A5844495_E97C04FF_4DF2548A,
              0x7C0240F8_8F1CD4E1_6352A73C_17B7F16F_07353E53_A176D684_A9FE0C6B_B798E857)
 
-        r, s = ecc.sign(b"message digest", d, id_, P)
+        r, s = ecc.sign(b"message digest", d, uid, P)
         self.assertEqual(r, 0x40F1EC59_F793D9F4_9E09DCEF_49130D41_94F79FB1_EED2CAA5_5BACDB49_C4E755D1)
         self.assertEqual(s, 0x6FC6DAC3_2C5D5CF1_0C77DFB2_0F7C2EB6_67A45787_2FB09EC5_6327A67E_C7DEEBE7)
 
-        self.assertEqual(ecc.verify(b"message digest", r, s, id_, P), True)
+        self.assertEqual(ecc.verify(b"message digest", r, s, uid, P), True)
 
     def test_sign2(self):
         sm2 = gmalg.SM2(
@@ -361,15 +361,15 @@ class TestSM9(unittest.TestCase):
                               "41E00A53 DDA532DA 1A7CE027 B7A46F74 1006E85F 5CDFF073 0E75C05F B4E3216D")
         kgc = gmalg.SM9KGC(hid_s=hid_s, msk_s=msk_s, mpk_s=mpk_s)
 
-        id_ = b"Alice"
-        sk_s = kgc.generate_sk_sign(id_)
+        uid = b"Alice"
+        sk_s = kgc.generate_sk_sign(uid)
 
         self.assertEqual(sk_s, bytes.fromhex("04"
                                              "A5702F05CF1315305E2D6EB64B0DEB923DB1A0BCF0CAFF90523AC8754AA69820"
                                              "78559A844411F9825C109F5EE3F52D720DD01785392A727BB1556952B2B013D3"))
 
         sm9 = gmalg.SM9(
-            hid_s=hid_s, mpk_s=mpk_s, sk_s=sk_s, id_=id_,
+            hid_s=hid_s, mpk_s=mpk_s, sk_s=sk_s, uid=uid,
             rnd_fn=lambda _: 0x033C86_16B06704_813203DF_D0096502_2ED15975_C662337A_ED648835_DC4B1CBE
         )
 
@@ -391,16 +391,16 @@ class TestSM9(unittest.TestCase):
                               "54E598C6 BF749A3D ACC9FFFE DD9DB686 6C50457C FC7AA2A4 AD65C316 8FF74210")
         kgc = gmalg.SM9KGC(hid_e=hid_e, msk_e=msk_e, mpk_e=mpk_e)
 
-        id_A = b"Alice"
-        sk_e_A = kgc.generate_sk_encrypt(id_A)
+        uid_A = b"Alice"
+        sk_e_A = kgc.generate_sk_encrypt(uid_A)
         self.assertEqual(sk_e_A, bytes.fromhex("04"
                                                "0FE8EAB3 95199B56 BF1D75BD 2CD610B6 424F08D1 092922C5 882B52DC D6CA832A"
                                                "7DA57BC5 0241F9E5 BFDDC075 DD9D32C7 777100D7 36916CFC 165D8D36 E0634CD7"
                                                "83A457DA F52CAD46 4C903B26 062CAF93 7BB40E37 DADED9ED A401050E 49C8AD0C"
                                                "6970876B 9AAD1B7A 50BB4863 A11E574A F1FE3C59 75161D73 DE4C3AF6 21FB1EFB"))
 
-        id_B = b"Bob"
-        sk_e_B = kgc.generate_sk_encrypt(id_B)
+        uid_B = b"Bob"
+        sk_e_B = kgc.generate_sk_encrypt(uid_B)
         self.assertEqual(sk_e_B, bytes.fromhex("04"
                                                "74CCC3AC 9C383C60 AF083972 B96D05C7 5F12C890 7D128A17 ADAFBAB8 C5A4ACF7"
                                                "01092FF4 DE893626 70C21711 B6DBE52D CD5F8E40 C6654B3D ECE573C2 AB3D29B2"
@@ -408,20 +408,20 @@ class TestSM9(unittest.TestCase):
                                                "8CFC48FB 4FF37F1E 27727464 F3C34E21 53861AD0 8E972D16 25FC1A7B D18D5539"))
 
         sm9_A = gmalg.SM9(
-            hid_e=hid_e, mpk_e=mpk_e, sk_e=sk_e_A, id_=id_A,
+            hid_e=hid_e, mpk_e=mpk_e, sk_e=sk_e_A, uid=uid_A,
             rnd_fn=lambda _: 0x5879_DD1D51E1_75946F23_B1B41E93_BA31C584_AE59A426_EC1046A4_D03B06C8
         )
 
         sm9_B = gmalg.SM9(
-            hid_e=hid_e, mpk_e=mpk_e, sk_e=sk_e_B, id_=id_B,
+            hid_e=hid_e, mpk_e=mpk_e, sk_e=sk_e_B, uid=uid_B,
             rnd_fn=lambda _: 0x018B98_C44BEF9F_8537FB7D_071B2C92_8B3BC65B_D3D69E1E_EE213564_905634FE
         )
 
-        rA, RA = sm9_A.begin_key_exchange(id_B)
-        rB, RB = sm9_B.begin_key_exchange(id_A)
+        rA, RA = sm9_A.begin_key_exchange(uid_B)
+        rB, RB = sm9_B.begin_key_exchange(uid_A)
 
-        KB = sm9_B.end_key_exchange(16, rB, RB, id_A, RA, gmalg.KEYXCHG_MODE.RESPONDER)
-        KA = sm9_A.end_key_exchange(16, rA, RA, id_B, RB, gmalg.KEYXCHG_MODE.INITIATOR)
+        KB = sm9_B.end_key_exchange(16, rB, RB, uid_A, RA, gmalg.KEYXCHG_MODE.RESPONDER)
+        KA = sm9_A.end_key_exchange(16, rA, RA, uid_B, RB, gmalg.KEYXCHG_MODE.INITIATOR)
 
         self.assertEqual(KA.hex(), KB.hex())
         self.assertEqual(KA, bytes.fromhex("C5C13A8F 59A97CDE AE64F16A 2272A9E7"))

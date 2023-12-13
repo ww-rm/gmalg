@@ -122,14 +122,14 @@ class SM2Core(SMCoreBase):
 
         return True
 
-    def entity_info(self, id_: bytes, pk: Ec.EcPoint) -> bytes:
+    def entity_info(self, uid: bytes, pk: Ec.EcPoint) -> bytes:
         """Generate other entity information bytes.
 
         Raises:
             DataOverflowError: ID length more than 8192 bytes.
         """
 
-        ENTL = len(id_) << 3
+        ENTL = len(uid) << 3
         if ENTL.bit_length() >= 16:
             raise errors.DataOverflowError("ID", "8192 bytes")
 
@@ -139,7 +139,7 @@ class SM2Core(SMCoreBase):
 
         Z = bytearray()
         Z.extend(ENTL.to_bytes(2, "big"))
-        Z.extend(id_)
+        Z.extend(uid)
         Z.extend(etob(self.ecdlp.ec.a))
         Z.extend(etob(self.ecdlp.ec.b))
         Z.extend(etob(xG))
@@ -149,14 +149,14 @@ class SM2Core(SMCoreBase):
 
         return self._hash_fn(Z)
 
-    def sign(self, message: bytes, sk: int, id_: bytes, pk: Ec.EcPoint = None) -> Tuple[int, int]:
+    def sign(self, message: bytes, sk: int, uid: bytes, pk: Ec.EcPoint = None) -> Tuple[int, int]:
         """Generate signature on the message.
 
         Args:
-            message (bytes): message to be signed.
-            sk (int): secret key.
-            id_ (bytes): user id.
-            pk (EcPoint): public key
+            message (bytes): Message to be signed.
+            sk (int): Secret key.
+            uid (bytes): User ID.
+            pk (EcPoint): Public key
 
         Returns:
             int: r.
@@ -166,7 +166,7 @@ class SM2Core(SMCoreBase):
         if pk is None:
             pk = self.generate_pk(sk)
 
-        e = bytes_to_int(self._hash_fn(self.entity_info(id_, pk) + message))
+        e = bytes_to_int(self._hash_fn(self.entity_info(uid, pk) + message))
 
         ecdlp = self.ecdlp
         fpn = self.ecdlp.fpn
@@ -184,15 +184,15 @@ class SM2Core(SMCoreBase):
 
             return r, s
 
-    def verify(self, message: bytes, r: int, s: int, id_: bytes, pk: Ec.EcPoint) -> bool:
+    def verify(self, message: bytes, r: int, s: int, uid: bytes, pk: Ec.EcPoint) -> bool:
         """Verify the signature on the message.
 
         Args:
             message (bytes): Message to be verified.
             r (int): r
             s (int): s
-            id_ (bytes): user id.
-            pk (EcPoint): public key.
+            uid (bytes): User ID.
+            pk (EcPoint): Public key.
 
         Returns:
             bool: Whether OK.
@@ -211,7 +211,7 @@ class SM2Core(SMCoreBase):
         if fpn.iszero(t):
             return False
 
-        e = int.from_bytes(self._hash_fn(self.entity_info(id_, pk) + message), "big")
+        e = int.from_bytes(self._hash_fn(self.entity_info(uid, pk) + message), "big")
 
         x, _ = ec.add(self.ecdlp.kG(s), ec.mul(t, pk))
         if fpn.add(e, x) != r:
@@ -352,8 +352,8 @@ class SM2Core(SMCoreBase):
         return S
 
     def generate_skey(self, klen: int, S: Ec.EcPoint,
-                      id_init: bytes, pk_init: Ec.EcPoint,
-                      id_resp: bytes, pk_resp: Ec.EcPoint) -> bytes:
+                      uid_init: bytes, pk_init: Ec.EcPoint,
+                      uid_resp: bytes, pk_resp: Ec.EcPoint) -> bytes:
         """Generate secret key of klen bytes as same as another user.
 
         Args:
@@ -361,10 +361,10 @@ class SM2Core(SMCoreBase):
             x (int): x of secret point.
             y (int): y of secret point.
 
-            id_init (bytes): id bytes of initiator.
+            uid_init (bytes): User ID bytes of initiator.
             pk_init (EcPoint): public key of initiator.
 
-            id_resp (bytes): id bytes of responder.
+            uid_resp (bytes): User ID bytes of responder.
             pk_resp (EcPoint): public key of responder.
 
         Returns:
@@ -377,8 +377,8 @@ class SM2Core(SMCoreBase):
 
         Z.extend(self.ecdlp.fp.etob(x))
         Z.extend(self.ecdlp.fp.etob(y))
-        Z.extend(self.entity_info(id_init, pk_init))
-        Z.extend(self.entity_info(id_resp, pk_resp))
+        Z.extend(self.entity_info(uid_init, pk_init))
+        Z.extend(self.entity_info(uid_resp, pk_resp))
 
         return self._key_derivation_fn(Z, klen)
 
@@ -386,14 +386,14 @@ class SM2Core(SMCoreBase):
 class SM2:
     """SM2."""
 
-    def __init__(self, sk: bytes = None, id_: bytes = None, pk: bytes = None, *,
+    def __init__(self, sk: bytes = None, uid: bytes = None, pk: bytes = None, *,
                  rnd_fn: Callable[[int], int] = None, pc_mode: PC_MODE = PC_MODE.RAW) -> None:
         """SM2.
 
         Args:
             sk (bytes): Secret key.
             pk (bytes): Public key.
-            id_ (bytes): User id.
+            uid (bytes): User ID.
 
             rnd_fn ((int) -> int): Random function used to generate k-bit random number, default to `secrets.randbits`.
             pc_mode (PC_MODE): Point compress mode used for generated data, no effects on the data to be parsed.
@@ -403,7 +403,7 @@ class SM2:
         self._sk = bytes_to_int(sk) if sk else None
         self._pk = self._get_pk(pk)
 
-        self._id = id_
+        self._uid = uid
         self._pc_mode = pc_mode
 
     def _get_pk(self, pk: bytes) -> Ec.EcPoint:
@@ -417,11 +417,11 @@ class SM2:
 
     @property
     def can_sign(self) -> bool:
-        return bool(self._sk and self._id)
+        return bool(self._sk and self._uid)
 
     @property
     def can_verify(self) -> bool:
-        return bool(self._pk and self._id)
+        return bool(self._pk and self._uid)
 
     @property
     def can_encrypt(self) -> bool:
@@ -433,7 +433,7 @@ class SM2:
 
     @property
     def can_exchange_key(self) -> bool:
-        return bool(self._sk and self._id)
+        return bool(self._sk and self._uid)
 
     def generate_pk(self, sk: bytes) -> bytes:
         """Generate public key from secret key."""
@@ -472,18 +472,18 @@ class SM2:
         """
 
         if not self.can_sign:
-            raise errors.RequireArgumentError("sign", "sk", "id")
+            raise errors.RequireArgumentError("sign", "sk", "ID")
 
-        r, s = self._core.sign(message, self._sk, self._id, self._pk)
+        r, s = self._core.sign(message, self._sk, self._uid, self._pk)
         return int_to_bytes(r), int_to_bytes(s)
 
     def verify(self, message: bytes, r: bytes, s: bytes) -> bool:
         """Verify a message and it's signature."""
 
         if not self.can_verify:
-            raise errors.RequireArgumentError("verify", "pk", "id")
+            raise errors.RequireArgumentError("verify", "pk", "ID")
 
-        return self._core.verify(message, bytes_to_int(r), bytes_to_int(s), self._id, self._pk)
+        return self._core.verify(message, bytes_to_int(r), bytes_to_int(s), self._uid, self._pk)
 
     def encrypt(self, plain: bytes) -> bytes:
         """Encrypt.
@@ -540,19 +540,19 @@ class SM2:
         """
 
         if not self.can_exchange_key:
-            raise errors.RequireArgumentError("key exchange", "sk", "id")
+            raise errors.RequireArgumentError("key exchange", "sk", "ID")
 
         R, t = self._core.begin_key_exchange(self._sk)
         return point_to_bytes(R, self._pc_mode), t
 
-    def end_key_exchange(self, klen: int, t: int, R: bytes, id_: bytes, pk: bytes, mode: KEYXCHG_MODE) -> bytes:
+    def end_key_exchange(self, klen: int, t: int, R: bytes, uid: bytes, pk: bytes, mode: KEYXCHG_MODE) -> bytes:
         """End key exchange and get the secret key bytes.
 
         Args:
             klen (int): Length of secret key in bytes to generate.
             t (int): t value of self.
             R (bytes): Random point from another user.
-            id_ (bytes): ID from another user.
+            uid (bytes): ID from another user.
             pk (bytes): Public key from another user.
             mode (KEYXCHG_MODE): Key exchange mode, initiator or responder.
 
@@ -565,8 +565,8 @@ class SM2:
         S = self._core.get_secret_point(t, R, pk)
 
         if mode is KEYXCHG_MODE.INITIATOR:
-            return self._core.generate_skey(klen, S, self._id, self._pk, id_, pk)
+            return self._core.generate_skey(klen, S, self._uid, self._pk, uid, pk)
         elif mode is KEYXCHG_MODE.RESPONDER:
-            return self._core.generate_skey(klen, S, id_, pk, self._id, self._pk)
+            return self._core.generate_skey(klen, S, uid, pk, self._uid, self._pk)
         else:
             raise TypeError(f"Invalid key exchange mode: {mode}")
