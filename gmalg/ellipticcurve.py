@@ -127,8 +127,8 @@ class BNBP:
         p = 36 * t**4 + 36 * t**3 + 24 * t**2 + 6 * t + 1
         n = 36 * t**4 + 36 * t**3 + 18 * t**2 + 6 * t + 1
 
-        self.fpk = Fp.PrimeField12(p)
-        self.fp2 = self.fpk.fp4.fp2
+        self.fp12 = Fp.PrimeField12(p)
+        self.fp2 = self.fp12.fp4.fp2
         self.fp1 = self.fp2.fp
         self.fpn = Fp.PrimeField(n)
 
@@ -152,29 +152,29 @@ class BNBP:
     def _g_fn(self, U: EcPoint12, V: EcPoint12, Q: EcPoint12) -> Fp.Fp12Ele:
         """g(U, V)(Q). U, V, Q are Fp12 points."""
 
-        fpk = self.fpk
+        fp12 = self.fp12
 
         if U == EllipticCurve.INF or V == EllipticCurve.INF or Q == EllipticCurve.INF:
-            return fpk.one()
+            return fp12.one()
 
         xU, yU = U
         xV, yV = V
         xQ, yQ = Q
 
         if xU == xV:
-            if fpk.isoppo(yU, yV):
-                return fpk.sub(xQ, xV), fpk.one()
+            if fp12.isoppo(yU, yV):
+                return fp12.sub(xQ, xV), fp12.one()
             elif yU == yV:
-                lam = fpk.mul(
-                    fpk.smul(3, fpk.mul(xV, xV)),
-                    fpk.inv(fpk.smul(2, yV))
+                lam = fp12.mul(
+                    fp12.smul(3, fp12.mul(xV, xV)),
+                    fp12.inv(fp12.smul(2, yV))
                 )
             else:
                 raise errors.UnknownError(f"y1 and y2 is neither equal nor opposite.")
         else:
-            lam = fpk.mul(fpk.sub(yU, yV), fpk.inv(fpk.sub(xU, xV)))
+            lam = fp12.mul(fp12.sub(yU, yV), fp12.inv(fp12.sub(xU, xV)))
 
-        g = fpk.sub(fpk.mul(lam, fpk.sub(xQ, xV)), fpk.sub(yQ, yV))
+        g = fp12.sub(fp12.mul(lam, fp12.sub(xQ, xV)), fp12.sub(yQ, yV))
         return g
 
     def _phi(self, P: EcPoint2) -> EcPoint12:
@@ -204,14 +204,14 @@ class BNBP:
         return x, y
 
     def _finalexp(self, f: Fp.Fp12Ele) -> Fp.Fp12Ele:
-        fpk = self.fpk
-        M = fpk.mul
-        I = fpk.inv
-        P = fpk.pow
-        F1 = fpk.frob1
-        F2 = fpk.frob2
-        F3 = fpk.frob3
-        F6 = fpk.frob6
+        fp12 = self.fp12
+        M = fp12.mul
+        I = fp12.inv
+        P = fp12.pow
+        F1 = fp12.frob1
+        F2 = fp12.frob2
+        F3 = fp12.frob3
+        F6 = fp12.frob6
 
         # easy part
         f = M(F6(f), I(f))
@@ -250,37 +250,37 @@ class BNBP:
     def e(self, P: EcPoint, Q: EcPoint2) -> Fp.Fp12Ele:
         """R-ate, P in G1, Q in G2"""
 
-        fpk = self.fpk
+        fp12 = self.fp12
         ec2 = self.ec2
         phi = self._phi
         g_fn = self._g_fn
 
-        _P = (fpk.extend(P[0]), fpk.extend(P[1]))  # P on E(Fp12)
+        _P = (fp12.extend(P[0]), fp12.extend(P[1]))  # P on E(Fp12)
         _Q = phi(Q)  # Q on E(Fp12)
 
         T = Q
-        f = fpk.one()
+        f = fp12.one()
         for i in f"{self._a:b}"[1:]:
             _T = phi(T)  # T on E(Fp12)
             g = g_fn(_T, _T, _P)
-            f = fpk.mul(fpk.mul(f, f), g)
+            f = fp12.mul(fp12.mul(f, f), g)
             T = ec2.add(T, T)
 
             if i == "1":
                 g = g_fn(phi(T), _Q, _P)
-                f = fpk.mul(f, g)
+                f = fp12.mul(f, g)
                 T = ec2.add(T, Q)
 
-        _Q1 = (fpk.frob1(_Q[0]), fpk.frob1(_Q[1]))
-        _Q2 = (fpk.frob2(_Q[0]), fpk.neg(fpk.frob2(_Q[1])))
+        _Q1 = (fp12.frob1(_Q[0]), fp12.frob1(_Q[1]))
+        _Q2 = (fp12.frob2(_Q[0]), fp12.neg(fp12.frob2(_Q[1])))
 
         g = g_fn(phi(T), _Q1, _P)
-        f = fpk.mul(f, g)
+        f = fp12.mul(f, g)
 
         T = ec2.add(T, self._phi_inv(_Q1))
 
         g = g_fn(phi(T), _Q2, _P)
-        f = fpk.mul(f, g)
+        f = fp12.mul(f, g)
 
         f = self._finalexp(f)
         return f
@@ -302,3 +302,9 @@ class BNBP:
 
     def btoe2(self, b: bytes) -> Fp.Fp2Ele:
         return self.fp2.btoe(b)
+
+    def etobk(self, e: Fp.Fp12Ele) -> bytes:
+        return self.fp12.etob(e)
+
+    def btoek(self, b: bytes) -> Fp.Fp12Ele:
+        return self.fp12.btoe(b)
