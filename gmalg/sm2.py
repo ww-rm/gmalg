@@ -29,20 +29,21 @@ def point_to_bytes(P: Ec.EcPoint, mode: PC_MODE) -> bytes:
     if P == _ecdlp.ec.INF:
         return b"\x00"
 
+    etob = _ecdlp.fp.etob
     x, y = P
 
     if mode is PC_MODE.RAW:
-        return b"\x04" + _ecdlp.etob(x) + _ecdlp.etob(y)
+        return b"\x04" + etob(x) + etob(y)
     elif mode is PC_MODE.COMPRESS:
         if y & 0x1:
-            return b"\x03" + _ecdlp.etob(x)
+            return b"\x03" + etob(x)
         else:
-            return b"\x02" + _ecdlp.etob(x)
+            return b"\x02" + etob(x)
     elif mode is PC_MODE.MIXED:
         if y & 0x1:
-            return b"\x07" + _ecdlp.etob(x) + _ecdlp.etob(y)
+            return b"\x07" + etob(x) + etob(y)
         else:
-            return b"\x06" + _ecdlp.etob(x) + _ecdlp.etob(y)
+            return b"\x06" + etob(x) + etob(y)
     else:
         raise TypeError(f"Invalid mode {mode}")
 
@@ -50,21 +51,24 @@ def point_to_bytes(P: Ec.EcPoint, mode: PC_MODE) -> bytes:
 def bytes_to_point(b: bytes) -> Ec.EcPoint:
     """Convert bytes to point."""
 
+    fp = _ecdlp.fp
+    ec = _ecdlp.ec
+
     mode = b[0]
     if mode == 0x00:
-        return _ecdlp.ec.INF
+        return ec.INF
 
     point = b[1:]
-    x = _ecdlp.btoe(point[:_ecdlp.fp.e_length])
+    x = fp.btoe(point[:fp.e_length])
     if mode == 0x04 or mode == 0x06 or mode == 0x07:
-        return x, _ecdlp.btoe(point[_ecdlp.fp.e_length:])
+        return x, fp.btoe(point[fp.e_length:])
     elif mode == 0x02 or mode == 0x03:
-        y = _ecdlp.ec.get_y(x)
+        y = ec.get_y(x)
         if y < 0:
             raise errors.PointNotOnCurveError(x, -1)
         ylsb = y & 0x1
         if mode == 0x02 and ylsb or mode == 0x03 and not ylsb:
-            return x, _ecdlp.fp.neg(y)
+            return x, fp.neg(y)
         return x, y
     else:
         raise errors.InvalidPCError(mode)
@@ -129,7 +133,7 @@ class SM2Core(SMCoreBase):
         if ENTL.bit_length() > 16:
             raise errors.DataOverflowError("ID", "2 bytes")
 
-        etob = self.ecdlp.etob
+        etob = self.ecdlp.fp.etob
         xP, yP = pk
         xG, yG = self.ecdlp.G
 
@@ -242,8 +246,8 @@ class SM2Core(SMCoreBase):
                 raise errors.InfinitePointError(f"Infinite point encountered, [0x{self.ecdlp.h:x}](0x{pk[0]:x}, 0x{pk[1]:x})")
 
             x2, y2 = ec.mul(k, pk)
-            x2 = self.ecdlp.etob(x2)
-            y2 = self.ecdlp.etob(y2)
+            x2 = self.ecdlp.fp.etob(x2)
+            y2 = self.ecdlp.fp.etob(y2)
 
             t = self._key_derivation_fn(x2 + y2, len(plain))
             if not any(t):
@@ -282,8 +286,8 @@ class SM2Core(SMCoreBase):
             raise errors.InfinitePointError(f"Infinite point encountered, [0x{self.ecdlp.h:x}](0x{C1[0]:x}, 0x{C1[1]:x})")
 
         x2, y2 = ec.mul(sk, C1)
-        x2 = self.ecdlp.etob(x2)
-        y2 = self.ecdlp.etob(y2)
+        x2 = self.ecdlp.fp.etob(x2)
+        y2 = self.ecdlp.fp.etob(y2)
 
         t = self._key_derivation_fn(x2 + y2, len(C2))
         if not any(t):
@@ -370,8 +374,8 @@ class SM2Core(SMCoreBase):
 
         Z = bytearray()
 
-        Z.extend(self.ecdlp.etob(x))
-        Z.extend(self.ecdlp.etob(y))
+        Z.extend(self.ecdlp.fp.etob(x))
+        Z.extend(self.ecdlp.fp.etob(y))
         Z.extend(self.entity_info(id_init, pk_init))
         Z.extend(self.entity_info(id_resp, pk_resp))
 

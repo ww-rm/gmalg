@@ -99,12 +99,6 @@ class ECDLP:
 
         return self.ec.mul(k, self.G)
 
-    def etob(self, e: int) -> bytes:
-        return self.fp.etob(e)
-
-    def btoe(self, b: bytes) -> int:
-        return self.fp.btoe(b)
-
 
 class BNBP:
     """Bilinear Pairing on Barreto-Naehrig (BN) Elliptic Curve."""
@@ -290,21 +284,3 @@ class BNBP:
 
     def eG2(self, P: EcPoint) -> Fp.Fp12Ele:
         return self.e(P, self.G2)
-
-    def etob1(self, e: int) -> bytes:
-        return self.fp1.etob(e)
-
-    def btoe1(self, b: bytes) -> int:
-        return self.fp1.btoe(b)
-
-    def etob2(self, e: Fp.Fp2Ele) -> bytes:
-        return self.fp2.etob(e)
-
-    def btoe2(self, b: bytes) -> Fp.Fp2Ele:
-        return self.fp2.btoe(b)
-
-    def etobk(self, e: Fp.Fp12Ele) -> bytes:
-        return self.fp12.etob(e)
-
-    def btoek(self, b: bytes) -> Fp.Fp12Ele:
-        return self.fp12.btoe(b)
