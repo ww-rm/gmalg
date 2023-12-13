@@ -426,6 +426,37 @@ class TestSM9(unittest.TestCase):
         self.assertEqual(KA.hex(), KB.hex())
         self.assertEqual(KA, bytes.fromhex("C5C13A8F 59A97CDE AE64F16A 2272A9E7"))
 
+    def test_encapsulate(self):
+        hid_e = b"\x03"
+        msk_e = bytes.fromhex("01EDEE 3778F441 F8DEA3D9 FA0ACC4E 07EE36C9 3F9A0861 8AF4AD85 CEDE1C22")
+        mpk_e = bytes.fromhex("04"
+                              "787ED7B8 A51F3AB8 4E0A6600 3F32DA5C 720B17EC A7137D39 ABC66E3C 80A892FF"
+                              "769DE617 91E5ADC4 B9FF85A3 1354900B 20287127 9A8C49DC 3F220F64 4C57A7B1")
+        kgc = gmalg.SM9KGC(hid_e=hid_e, msk_e=msk_e, mpk_e=mpk_e)
+
+        uid = b"Bob"
+
+        sk_e = kgc.generate_sk_encrypt(uid)
+        self.assertEqual(sk_e, bytes.fromhex("04"
+                                             "94736ACD 2C8C8796 CC4785E9 38301A13 9A059D35 37B64141 40B2D31E ECF41683"
+                                             "115BAE85 F5D8BC6C 3DBD9E53 42979ACC CF3C2F4F 28420B1C B4F8C0B5 9A19B158"
+                                             "7AA5E475 70DA7600 CD760A0C F7BEAF71 C447F384 4753FE74 FA7BA92C A7D3B55F"
+                                             "27538A62 E7F7BFB5 1DCE0870 4796D94C 9D56734F 119EA447 32B50E31 CDEB75C1"))
+
+        sm9 = gmalg.SM9(
+            hid_e=hid_e, mpk_e=mpk_e, sk_e=sk_e, uid=uid,
+            rnd_fn=lambda _: 0x7401_5F8489C0_1EF42704_56F9E647_5BFB602B_DE7F33FD_482AB4E3_684A6722
+        )
+
+        K, C = sm9.encapsulate(32, uid)  # encapsulate key to self
+
+        self.assertEqual(K, bytes.fromhex("4FF5CF86 D2AD40C8 F4BAC98D 76ABDBDE 0C0E2F0A 829D3F91 1EF5B2BC E0695480"))
+        self.assertEqual(C, bytes.fromhex("04"
+                                          "1EDEE2C3 F4659144 91DE44CE FB2CB434 AB02C308 D9DC5E20 67B4FED5 AAAC8A0F"
+                                          "1C9B4C43 5ECA35AB 83BB7341 74C0F78F DE81A533 74AFF3B3 602BBC5E 37BE9A4C"))
+
+        self.assertEqual(sm9.decapsulate(C, 32), K)
+
 
 class TestZUC(unittest.TestCase):
     def test_case1(self):
