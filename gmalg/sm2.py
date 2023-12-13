@@ -324,7 +324,7 @@ class SM2Core(SMCoreBase):
         Args:
             t (int): generated from `begin_key_exchange`
             R (EcPoint): random point from another user.
-            P (EcPoint): public key of another user.
+            pk (EcPoint): public key of another user.
 
         Returns:
             EcPoint: The same secret point as another user.
