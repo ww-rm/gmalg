@@ -1,3 +1,5 @@
+"""Prime field operations."""
+
 from typing import Tuple, Union
 
 from . import errors
@@ -42,6 +44,7 @@ class PrimeFieldBase:
         raise NotImplementedError
 
     def isoppo(self, x: FpExEle, y: FpExEle) -> bool:
+        """Whether is opposite."""
         raise NotImplementedError
 
     def neg(self, x: FpExEle) -> FpExEle:
@@ -74,7 +77,7 @@ class PrimeFieldBase:
     def pow(self, x: FpExEle, e: int) -> FpExEle:
         raise NotImplementedError
 
-    def sqrt(self, x: FpExEle) -> FpExEle:
+    def sqrt(self, x: FpExEle) -> Union[FpExEle, None]:
         raise NotImplementedError
 
     def frob(self, x: FpExEle) -> FpExEle:
@@ -181,7 +184,7 @@ class PrimeField(PrimeFieldBase):
         return pow(x, e, self.p)
 
     def _lucas(self, X: int, Y: int, k: int) -> Tuple[int, int]:
-        """Lucas Sequence, k begin at 0.
+        """Lucas sequence, k begin at 0.
 
         Uk = X * Uk-1 - Y * Uk-2
         Vk = X * Vk-1 - Y * Vk-2
@@ -202,7 +205,7 @@ class PrimeField(PrimeFieldBase):
                 U, V = ((X * U + V) * inv2) % p, ((X * V + delta * U) * inv2) % p
         return U, V
 
-    def _sqrt_4u3(self, x: int):
+    def _sqrt_4u3(self, x: int) -> Union[int, None]:
         """sqrt_8u3 and sqrt_8u7"""
         p = self.p
         u = self._u
@@ -210,9 +213,9 @@ class PrimeField(PrimeFieldBase):
         y = pow(x, u + 1, p)
         if (y * y) % p == x:
             return y
-        return -1
+        return None
 
-    def _sqrt_8u5(self, x: int):
+    def _sqrt_8u5(self, x: int) -> Union[int, None]:
         p = self.p
         u = self._u
 
@@ -221,9 +224,9 @@ class PrimeField(PrimeFieldBase):
             return pow(x, u + 1, p)
         if z == p - 1:
             return (2 * x * pow(4 * x, u, p)) % p
-        return -1
+        return None
 
-    def _sqrt_8u1(self, x: int):
+    def _sqrt_8u1(self, x: int) -> Union[int, None]:
         p = self.p
         p_1 = p - 1
         _4u1 = 4 * self._u + 1
@@ -237,11 +240,11 @@ class PrimeField(PrimeFieldBase):
                 return (V * inv2) % p
 
             if U != 1 or U != p_1:
-                return -1
+                return None
 
-        return -1
+        return None
 
-    def sqrt(self, x: int) -> int:
+    def sqrt(self, x: int) -> Union[int, None]:
         """Square root."""
         raise NotImplementedError
 
@@ -249,11 +252,9 @@ class PrimeField(PrimeFieldBase):
         return x
 
     def etob(self, e: int) -> bytes:
-        """Convert domain element to bytes."""
         return e.to_bytes(self.e_length, "big")
 
     def btoe(self, b: bytes) -> int:
-        """Convert bytes to domain element."""
         return int.from_bytes(b, "big")
 
 
@@ -308,9 +309,7 @@ class PrimeField2(PrimeFieldBase):
         return tuple(self.fp.smul(k, i) for i in x)
 
     def pmul(self, X: Fp2Ele, Y: Fp2Ele) -> Fp2Ele:
-        X1, X0 = X
-        Y1, Y0 = Y
-        return (self.fp.pmul(X1, Y1), self.fp.pmul(X0, Y0))
+        return tuple(self.fp.pmul(i1, i2) for i1, i2 in zip(X, Y))
 
     def add(self, X: Fp2Ele, Y: Fp2Ele) -> Fp2Ele:
         return tuple(self.fp.add(i1, i2) for i1, i2 in zip(X, Y))
@@ -364,7 +363,7 @@ class PrimeField2(PrimeFieldBase):
                 Y = self.mul(Y, X)
         return Y
 
-    def sqrt(self, X: Fp2Ele) -> Fp2Ele:
+    def sqrt(self, X: Fp2Ele) -> Union[Fp2Ele, None]:
         raise NotImplementedError
 
     def frob(self, X: Fp2Ele) -> Fp2Ele:
@@ -437,9 +436,7 @@ class PrimeField4(PrimeFieldBase):
         return tuple(self.fp2.smul(k, i) for i in x)
 
     def pmul(self, X: Fp4Ele, Y: Fp4Ele) -> Fp4Ele:
-        X1, X0 = X
-        Y1, Y0 = Y
-        return (self.fp2.pmul(X1, Y1), self.fp2.pmul(X0, Y0))
+        return tuple(self.fp2.pmul(i1, i2) for i1, i2 in zip(X, Y))
 
     def add(self, X: Fp4Ele, Y: Fp4Ele) -> Fp4Ele:
         return tuple(self.fp2.add(i1, i2) for i1, i2 in zip(X, Y))
@@ -493,7 +490,7 @@ class PrimeField4(PrimeFieldBase):
                 Y = self.mul(Y, X)
         return Y
 
-    def sqrt(self, X: Fp4Ele) -> Fp4Ele:
+    def sqrt(self, X: Fp4Ele) -> Union[Fp4Ele, None]:
         raise NotImplementedError
 
     def frob(self, X: Fp4Ele) -> Fp4Ele:
@@ -574,9 +571,7 @@ class PrimeField12(PrimeFieldBase):
         return tuple(self.fp4.smul(k, i) for i in x)
 
     def pmul(self, X: Fp12Ele, Y: Fp12Ele) -> Fp12Ele:
-        X2, X1, X0 = X
-        Y2, Y1, Y0 = Y
-        return (self.fp4.pmul(X2, Y2), self.fp4.pmul(X1, Y1), self.fp4.pmul(X0, Y0))
+        return tuple(self.fp4.pmul(i1, i2) for i1, i2 in zip(X, Y))
 
     def add(self, X: Fp12Ele, Y: Fp12Ele) -> Fp12Ele:
         return tuple(self.fp4.add(i1, i2) for i1, i2 in zip(X, Y))
@@ -642,7 +637,7 @@ class PrimeField12(PrimeFieldBase):
                 Y = self.mul(Y, X)
         return Y
 
-    def sqrt(self, X: Fp12Ele) -> Fp12Ele:
+    def sqrt(self, X: Fp12Ele) -> Union[Fp12Ele, None]:
         raise NotImplementedError
 
     def frob(self, X: Fp12Ele) -> Fp12Ele:

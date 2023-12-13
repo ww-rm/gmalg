@@ -64,7 +64,7 @@ def bytes_to_point(b: bytes) -> Ec.EcPoint:
         return x, fp.btoe(point[fp.e_length:])
     elif mode == 0x02 or mode == 0x03:
         y = ec.get_y(x)
-        if y < 0:
+        if y is None:
             raise errors.PointNotOnCurveError(x, -1)
         ylsb = y & 0x1
         if mode == 0x02 and ylsb or mode == 0x03 and not ylsb:
@@ -78,12 +78,12 @@ class SM2Core(SMCoreBase):
     """SM2 Core Algorithms."""
 
     def __init__(self, ecdlp: Ec.ECDLP, hash_cls: Type[Hash], rnd_fn: Callable[[int], int] = None) -> None:
-        """Elliptic Curve Cipher
+        """SM2 Core Algorithms.
 
         Args:
             ecdlp (ECDLP): ECDLP used in SM2.
-            hash_cls (Hash): hash class used in SM2.
-            rnd_fn ((int) -> int): random function used to generate k-bit random number.
+            hash_cls (Type[Hash]): Hash class used in SM2.
+            rnd_fn ((int) -> int): Random function used to generate k-bit random number.
         """
 
         super().__init__(hash_cls, rnd_fn)
@@ -95,10 +95,10 @@ class SM2Core(SMCoreBase):
         self._2w = 1 << w
         self._2w_1 = self._2w - 1
 
-    def generate_pk(self, d: int) -> Ec.EcPoint:
-        """Generate public key by secret key d."""
+    def generate_pk(self, sk: int) -> Ec.EcPoint:
+        """Generate public key by secret key."""
 
-        return self.ecdlp.kG(d)
+        return self.ecdlp.kG(sk)
 
     def generate_keypair(self) -> Tuple[int, Ec.EcPoint]:
         """Generate key pair."""
@@ -126,12 +126,12 @@ class SM2Core(SMCoreBase):
         """Generate other entity information bytes.
 
         Raises:
-            DataOverflowError: ID more than 2 bytes.
+            DataOverflowError: ID length more than 8192 bytes.
         """
 
         ENTL = len(id_) << 3
-        if ENTL.bit_length() > 16:
-            raise errors.DataOverflowError("ID", "2 bytes")
+        if ENTL.bit_length() >= 16:
+            raise errors.DataOverflowError("ID", "8192 bytes")
 
         etob = self.ecdlp.fp.etob
         xP, yP = pk
@@ -159,7 +159,8 @@ class SM2Core(SMCoreBase):
             pk (EcPoint): public key
 
         Returns:
-            (int, int): (r, s)
+            int: r.
+            int: s.
         """
 
         if pk is None:
@@ -222,8 +223,8 @@ class SM2Core(SMCoreBase):
         """Encrypt.
 
         Args:
-            data (bytes): plain text to be encrypted.
-            pk (EcPoint): public key.
+            plain (bytes): Plain text to be encrypted.
+            pk (EcPoint): Public key.
 
         Returns:
             EcPoint: C1, kG point
@@ -263,12 +264,12 @@ class SM2Core(SMCoreBase):
 
         Args:
             C1 (EcPoint): kG point.
-            C2 (bytes): cipher.
-            C3 (bytes): hash value.
-            sk (int): secret key.
+            C2 (bytes): Cipher.
+            C3 (bytes): Hash value.
+            sk (int): Secret key.
 
         Returns:
-            bytes: plain text.
+            bytes: Plain text.
 
         Raises:
             PointNotOnCurveError: Invalid C1 point, not on curve.
@@ -309,7 +310,7 @@ class SM2Core(SMCoreBase):
         """Generate data to begin key exchange.
 
         Returns:
-            EcPoint: random point, [r]G, r in [1, n - 1]
+            EcPoint: Random point, [r]G, r in [1, n - 1]
             int: t
         """
 
@@ -326,16 +327,16 @@ class SM2Core(SMCoreBase):
         """Generate same secret point as another user.
 
         Args:
-            t (int): generated from `begin_key_exchange`
-            R (EcPoint): random point from another user.
-            pk (EcPoint): public key of another user.
+            t (int): Generated from `begin_key_exchange`
+            R (EcPoint): Random point from another user.
+            pk (EcPoint): Public key of another user.
 
         Returns:
             EcPoint: The same secret point as another user.
 
         Raises:
-            PointNotOnCurveError
-            InfinitePointError
+            PointNotOnCurveError: `R` not on curve..
+            InfinitePointError: Secret point is infinite point.
         """
 
         ec = self.ecdlp.ec
@@ -383,19 +384,19 @@ class SM2Core(SMCoreBase):
 
 
 class SM2:
-    """SM2"""
+    """SM2."""
 
     def __init__(self, sk: bytes = None, id_: bytes = None, pk: bytes = None, *,
                  rnd_fn: Callable[[int], int] = None, pc_mode: PC_MODE = PC_MODE.RAW) -> None:
         """SM2.
 
         Args:
-            sk (bytes): secret key.
-            pk (bytes): public key (point).
-            id_ (bytes): user id used in sign.
+            sk (bytes): Secret key.
+            pk (bytes): Public key.
+            id_ (bytes): User id.
 
-            rnd_fn ((int) -> int): random function used to generate k-bit random number, default to `secrets.randbits`
-            pc_mode (PC_MODE): pc_mode used for generated data, no effects on the data to be parsed.
+            rnd_fn ((int) -> int): Random function used to generate k-bit random number, default to `secrets.randbits`
+            pc_mode (PC_MODE): Point compress mode used for generated data, no effects on the data to be parsed.
         """
 
         self._core = SM2Core(_ecdlp, SM3, rnd_fn)
@@ -443,8 +444,8 @@ class SM2:
         """Generate key pair.
 
         Returns:
-            bytes: secret key
-            bytes: public key point (xP, yP)
+            bytes: Secret key
+            bytes: Public key.
         """
 
         sk, pk = self._core.generate_keypair()
@@ -457,7 +458,7 @@ class SM2:
             pk (bytes): public key.
 
         Returns:
-            (bool): Whether valid.
+            bool: Whether valid.
         """
 
         return self._core.verify_pk(bytes_to_point(pk))
@@ -485,7 +486,7 @@ class SM2:
         return self._core.verify(message, bytes_to_int(r), bytes_to_int(s), self._id, self._pk)
 
     def encrypt(self, plain: bytes) -> bytes:
-        """Encrypt
+        """Encrypt.
 
         Args:
             plain (bytes): plain text to be encrypted.
@@ -504,7 +505,7 @@ class SM2:
         return bytes(cipher)
 
     def decrypt(self, cipher: bytes) -> bytes:
-        """Decrypt
+        """Decrypt.
 
         Raises:
             ValueError: Invalid PC byte.
@@ -534,7 +535,7 @@ class SM2:
         """Begin key exchange.
 
         Returns:
-            bytes: random point, will be sent to another user.
+            bytes: Random point, will be sent to another user.
             int: t, will be used in next step.
         """
 
@@ -548,15 +549,15 @@ class SM2:
         """End key exchange and get the secret key bytes.
 
         Args:
-            klen (int): length of secret key in bytes to generate.
+            klen (int): Length of secret key in bytes to generate.
             t (int): t value of self.
-            R (bytes): random point from another user.
-            id_ (bytes): id from another user.
-            pk (bytes): public key from another user.
-            mode (KEYXCHG_MODE): key exchange mode, initiator or responder.
+            R (bytes): Random point from another user.
+            id_ (bytes): ID from another user.
+            pk (bytes): Public key from another user.
+            mode (KEYXCHG_MODE): Key exchange mode, initiator or responder.
 
         Returns:
-            bytes: secret key of klen bytes.
+            bytes: Secret key of klen bytes.
         """
 
         R = bytes_to_point(R)

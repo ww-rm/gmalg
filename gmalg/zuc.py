@@ -69,7 +69,7 @@ def _L2(X):
 
 
 class ZUC:
-    """ZUC"""
+    """ZUC."""
 
     @classmethod
     def key_length(self) -> int:
@@ -80,7 +80,7 @@ class ZUC:
         return 16
 
     def __init__(self, key: bytes, iv: bytes) -> None:
-        """ZUC
+        """ZUC.
 
         Args:
             key (bytes): 16 bytes key.
@@ -145,7 +145,7 @@ class ZUC:
         """Generate pseudo-random words.
 
         Returns:
-            bytes: a 32-bit pseudo-random word.
+            bytes: 32-bit pseudo-random word.
         """
 
         S = self._lfsr

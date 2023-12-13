@@ -1,4 +1,6 @@
-from typing import Tuple
+"""Elliptic curve operations."""
+
+from typing import Tuple, Union
 
 from . import errors
 from . import primefield as Fp
@@ -11,11 +13,19 @@ EcPointEx = Tuple[Fp.FpExEle, Fp.FpExEle]
 
 
 class EllipticCurve:
-    """Elliptic Curve (Fp)"""
+    """Elliptic Curve."""
 
     INF: EcPointEx = (float("inf"), float("inf"))
 
     def __init__(self, fp: Fp.PrimeFieldBase, a: Fp.FpExEle, b: Fp.FpExEle) -> None:
+        """Elliptic curve.
+
+        Args:
+            fp (PrimeFieldBase): Prime field operations used in ellitic curve.
+            a (FpExEle): Parameter a.
+            b (FpExEle): Parameter b.
+        """
+
         self.a = a
         self.b = b
         self._fp = fp
@@ -24,19 +34,25 @@ class EllipticCurve:
         fp = self._fp
         return fp.add(fp.pow(x, 3), fp.add(fp.mul(self.a, x), self.b))
 
-    def get_y(self, x: int) -> int:
-        """Get one of valid y of given x, -1 means no solution."""
+    def get_y(self, x: Fp.FpExEle) -> Union[Fp.FpExEle, None]:
+        """Get one of valid y of given x, `None` means no solution."""
         return self._fp.sqrt(self.get_y_sqr(x))
 
     def isvalid(self, P: EcPointEx) -> bool:
+        """Whether point on curve."""
+
         x, y = P
         return self._fp.mul(y, y) == self.get_y_sqr(x)
 
     def neg(self, P: EcPointEx) -> EcPointEx:
+        """Point negetive."""
+
         x, y = P
         return (x, self._fp.neg(y))
 
     def add(self, P1: EcPointEx, P2: EcPointEx) -> EcPointEx:
+        """Add two points."""
+
         fp = self._fp
 
         if P1 == self.INF:
@@ -64,9 +80,13 @@ class EllipticCurve:
         return x3, y3
 
     def sub(self, P1: EcPointEx, P2: EcPointEx) -> EcPointEx:
+        """Sub two points."""
+
         return self.add(P1, self.neg(P2))
 
     def mul(self, k: int, P: EcPointEx) -> EcPointEx:
+        """Scalar multiplication of point."""
+
         Q = P
         for i in f"{k:b}"[1:]:
             Q = self.add(Q, Q)
@@ -76,16 +96,17 @@ class EllipticCurve:
 
 
 class ECDLP:
-    """Elliptic Curve Discrete Logarithm Problem"""
+    """Elliptic Curve Discrete Logarithm Problem."""
 
     def __init__(self, p: int, a: int, b: int, G: EcPoint, n: int, h: int = 1) -> None:
-        """Elliptic Curve Discrete Logarithm Problem
+        """Elliptic Curve Discrete Logarithm Problem.
 
         Elliptic Curve (Fp): y^2 = x^3 + ax + b (mod p)
 
-        Base point: G
-        Order of the base point: n
-        Cofactor: h
+        Args:
+            G (EcPoint): Base point.
+            n (int): Order of base point.
+            h (int): Cofactor of `G`, default to `1`.
         """
 
         self.fp = Fp.PrimeField(p)
@@ -108,8 +129,8 @@ class BNBP:
 
         Args:
             t (int): t.
-            b (int): param b of elliptic curve.
-            beta (Fp2Ele): param beta of twin curve, must be (1, 0)
+            b (int): Parameter b of elliptic curve.
+            beta (Fp2Ele): Parameter beta of twin curve, only implemented for `(1, 0)`.
             G1 (EcPoint): Base point of group 1.
             G2 (EcPoint2): Base point of group 2.
         """
@@ -138,13 +159,20 @@ class BNBP:
         self._inv_neg2 = self.fp1.inv(self._neg2)
 
     def kG1(self, k: int) -> EcPoint:
+        """Scalar multiplication of G1 by k."""
+
         return self.ec1.mul(k, self.G1)
 
     def kG2(self, k: int) -> EcPoint2:
+        """Scalar multiplication of G2 by k."""
+
         return self.ec2.mul(k, self.G2)
 
     def _g_fn(self, U: EcPoint12, V: EcPoint12, Q: EcPoint12) -> Fp.Fp12Ele:
-        """g(U, V)(Q). U, V, Q are Fp12 points."""
+        """g(U, V)(Q).
+
+        U, V, Q are Fp12 points.
+        """
 
         fp12 = self.fp12
 
@@ -172,7 +200,7 @@ class BNBP:
         return g
 
     def _phi(self, P: EcPoint2) -> EcPoint12:
-        """Get x, y in E (Fp12) from E' (Fp2), only implemented for beta=(1, 0)"""
+        """Get x, y in E (Fp12) from E' (Fp2), only implemented for beta=(1, 0)."""
 
         fp1 = self.fp1
         _i2 = self._inv_neg2
@@ -185,7 +213,7 @@ class BNBP:
         return x, y
 
     def _phi_inv(self, P: EcPoint12) -> EcPoint2:
-        """Inversion of phi."""
+        """Inversion of `phi`."""
 
         fp1 = self.fp1
         _2 = self._neg2
@@ -242,7 +270,7 @@ class BNBP:
         return f
 
     def e(self, P: EcPoint, Q: EcPoint2) -> Fp.Fp12Ele:
-        """R-ate, P in G1, Q in G2"""
+        """R-ate pairing, P in G1, Q in G2."""
 
         fp12 = self.fp12
         ec2 = self.ec2
@@ -280,7 +308,11 @@ class BNBP:
         return f
 
     def eG1(self, Q: EcPoint2) -> Fp.Fp12Ele:
+        """R-ate of G1 and Q."""
+
         return self.e(self.G1, Q)
 
     def eG2(self, P: EcPoint) -> Fp.Fp12Ele:
+        """R-ate of P and G2."""
+
         return self.e(P, self.G2)

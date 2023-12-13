@@ -1,4 +1,4 @@
-"""Base abstract classes."""
+"""Base classes."""
 
 import enum
 import secrets
@@ -34,7 +34,7 @@ class Hash:
         """Update internal state.
 
         Args:
-            data (bytes): data stream to be updated.
+            data (bytes): Data stream to be updated.
         """
 
         raise NotImplementedError
@@ -63,22 +63,20 @@ class BlockCipher:
         raise NotImplementedError
 
     def __init__(self, key: bytes) -> None:
-        """Block Cipher
+        """Block Cipher.
 
         Args:
-            key (bytes): key used in cipher, has a length of `BlockCipher.key_length()`
+            key (bytes): Key used in cipher, has a length of `BlockCipher.key_length()`.
         """
 
         raise NotImplementedError
 
     def encrypt(self, block: bytes) -> bytes:
-        """Encrypt"""
-
+        """Encrypt."""
         raise NotImplementedError
 
     def decrypt(self, block: bytes) -> bytes:
-        """Decrypt"""
-
+        """Decrypt."""
         raise NotImplementedError
 
 
@@ -89,8 +87,8 @@ class SMCoreBase:
         """SM Core Base.
 
         Args:
-            hash_fn (Hash): hash function used in cipher.
-            rnd_fn ((int) -> int): random function used to generate k-bit random number.
+            hash_cls (Type[Hash]): Hash class used in cipher.
+            rnd_fn ((int) -> int): Random function used to generate k-bit random number.
         """
 
         self._hash_cls = hash_cls
@@ -113,14 +111,14 @@ class SMCoreBase:
             return n
 
     def _key_derivation_fn(self, Z: bytes, klen: int) -> bytes:
-        """KDF
+        """Key derivation function.
 
         Args:
-            Z (bytes): secret bytes.
-            klen (int): key byte length
+            Z (bytes): Secret bytes.
+            klen (int): Key byte length to derivate.
 
         Raises:
-            DataOverflowError: klen is too large.
+            DataOverflowError: `klen` is too large.
         """
 
         hash_fn = self._hash_fn
@@ -141,11 +139,15 @@ class SMCoreBase:
 
 
 class PC_MODE(enum.Enum):
+    """Point compress mode used in `SM2` and `SM9`."""
+
     RAW = enum.auto()
     COMPRESS = enum.auto()
     MIXED = enum.auto()
 
 
 class KEYXCHG_MODE(enum.Enum):
+    """Key exchange mode used in `SM2`"""
+
     INITIATOR = enum.auto()
     RESPONDER = enum.auto()
