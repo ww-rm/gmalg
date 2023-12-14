@@ -490,6 +490,32 @@ class TestSM9(unittest.TestCase):
 
         self.assertEqual(sm9.decrypt(cipher), plain)
 
+    def test_pc(self):
+        sm9 = gmalg.sm9
+        kgc = gmalg.SM9KGC()
+
+        _, p_bytes = kgc.generate_keypair_encrypt()
+        p_point = sm9.bytes_to_point_1(p_bytes)
+        p_point_2 = sm9.bytes_to_point_1(sm9.point_to_bytes_1(p_point, gmalg.PC_MODE.COMPRESS))
+
+        self.assertEqual(p_point, p_point_2)
+
+        p_bytes = bytes.fromhex("04"
+                                "9F64080B 3084F733 E48AFF4B 41B56501 1CE0711C 5E392CFB 0AB1B679 1B94C408"
+                                "29DBA116 152D1F78 6CE843ED 24A3B573 414D2177 386A92DD 8F14D656 96EA5E32"
+                                "69850938 ABEA0112 B57329F4 47E3A0CB AD3E2FDB 1A77F335 E89E1408 D0EF1C25"
+                                "41E00A53 DDA532DA 1A7CE027 B7A46F74 1006E85F 5CDFF073 0E75C05F B4E3216D")
+        p_point = sm9.bytes_to_point_2(p_bytes)
+        p_point_2 = sm9.bytes_to_point_2(sm9.point_to_bytes_2(p_point, gmalg.PC_MODE.COMPRESS))
+
+        self.assertEqual(p_point, p_point_2)
+
+        _, p_bytes = kgc.generate_keypair_sign()
+        p_point = sm9.bytes_to_point_2(p_bytes)
+        p_point_2 = sm9.bytes_to_point_2(sm9.point_to_bytes_2(p_point, gmalg.PC_MODE.COMPRESS))
+
+        self.assertEqual(p_point, p_point_2)
+
 
 class TestZUC(unittest.TestCase):
     def test_case1(self):
