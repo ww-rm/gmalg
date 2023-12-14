@@ -376,7 +376,33 @@ class PrimeField2(PrimeFieldBase):
         return Y
 
     def sqrt(self, X: Fp2Ele) -> Union[Fp2Ele, None]:
-        raise NotImplementedError
+        n = self.fp.neg
+        a = self.fp.add
+        s = self.fp.sub
+        m = self.fp.mul
+
+        X1, X0 = X
+        U = s(m(X0, X0), m(n(self._ALPHA), m(X1, X1)))
+
+        w1 = self.fp.sqrt(U)
+        if w1 is None:
+            return None
+
+        w2 = n(w1)
+        i2 = self.fp.inv(2)
+
+        for w in (w1, w2):
+            V = m(a(X0, w), i2)
+            y = self.fp.sqrt(V)
+            if y is None:
+                continue
+
+            Y1 = m(X1, self.fp.inv(m(2, y)))
+            Y0 = y
+
+            return Y1, Y0
+
+        return None
 
     def frob(self, X: Fp2Ele) -> Fp2Ele:
         f = self.fp.frob
