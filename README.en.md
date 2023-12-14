@@ -1,6 +1,6 @@
 # gmalg
 
-GM algorithms implemented in pure python.
+GM algorithms implemented in pure Python, without dependencies beyond standard libraries.
 
 ## Install
 
