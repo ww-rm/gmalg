@@ -170,12 +170,6 @@ class SM9Core(SMCoreBase):
     def _H2(self, Z: bytes) -> int:
         return self._cipher_fn(b"\x02", Z, self._hlen)
 
-    def _bc_encrypt(self, key: bytes, plain: bytes) -> bytes:
-        return self._bc_cls(key).encrypt(plain)
-
-    def _bc_decrypt(self, key: bytes, cipher: bytes) -> bytes:
-        return self._bc_cls(key).decrypt(cipher)
-
     def _mac(self, key: bytes, Z: bytes) -> bytes:
         return self._hash_fn(Z + key)
 
