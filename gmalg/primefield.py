@@ -589,11 +589,6 @@ class PrimeField12(PrimeFieldBase):
         self._f1 = self.pow((self.fp4.zero(), self.fp4.one(), self.fp4.zero()), p)
         self._f2 = self.mul(self._f1, self._f1)
 
-        self._frob1_factor = self.frob((((1, 1), (1, 1)), ((1, 1), (1, 1)), ((1, 1), (1, 1))))
-        self._frob2_factor = self.frob1(self._frob1_factor)
-        self._frob3_factor = self.frob1(self._frob2_factor)
-        self._frob6_factor = self.frob3(self._frob3_factor)
-
     def isoppo(self, X: Fp12Ele, Y: Fp12Ele) -> bool:
         return all(self.fp4.isoppo(i1, i2) for i1, i2 in zip(X, Y))
 
@@ -685,18 +680,6 @@ class PrimeField12(PrimeFieldBase):
         X1 = self.mul(self.extend(f(X1)), self._f1)
         X0 = self.extend(f(X0))
         return self.add(self.add(X2, X1), X0)
-
-    def frob1(self, X: Fp12Ele) -> Fp12Ele:
-        return self.pmul(X, self._frob1_factor)
-
-    def frob2(self, X: Fp12Ele) -> Fp12Ele:
-        return self.pmul(X, self._frob2_factor)
-
-    def frob3(self, X: Fp12Ele) -> Fp12Ele:
-        return self.pmul(X, self._frob3_factor)
-
-    def frob6(self, X: Fp12Ele) -> Fp12Ele:
-        return self.pmul(X, self._frob6_factor)
 
     def etob(self, e: Fp12Ele) -> bytes:
         b = bytearray()

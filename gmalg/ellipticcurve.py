@@ -169,6 +169,11 @@ class BNBP:
         self._neg2 = self.fp1.neg(2)
         self._inv_neg2 = self.fp1.inv(self._neg2)
 
+        self._frob1_factor = self.fp12.frob((((1, 1), (1, 1)), ((1, 1), (1, 1)), ((1, 1), (1, 1))))
+        self._frob2_factor = self._frob1(self._frob1_factor)
+        self._frob3_factor = self._frob1(self._frob2_factor)
+        self._frob6_factor = self._frob3(self._frob3_factor)
+
     def kG1(self, k: int) -> EcPoint:
         """Scalar multiplication of G1 by k."""
 
@@ -236,15 +241,27 @@ class BNBP:
 
         return x, y
 
+    def _frob1(self, X: Fp.Fp12Ele) -> Fp.Fp12Ele:
+        return self.fp12.pmul(X, self._frob1_factor)
+
+    def _frob2(self, X: Fp.Fp12Ele) -> Fp.Fp12Ele:
+        return self.fp12.pmul(X, self._frob2_factor)
+
+    def _frob3(self, X: Fp.Fp12Ele) -> Fp.Fp12Ele:
+        return self.fp12.pmul(X, self._frob3_factor)
+
+    def _frob6(self, X: Fp.Fp12Ele) -> Fp.Fp12Ele:
+        return self.fp12.pmul(X, self._frob6_factor)
+
     def _finalexp(self, f: Fp.Fp12Ele) -> Fp.Fp12Ele:
         fp12 = self.fp12
         M = fp12.mul
         I = fp12.inv
         P = fp12.pow
-        F1 = fp12.frob1
-        F2 = fp12.frob2
-        F3 = fp12.frob3
-        F6 = fp12.frob6
+        F1 = self._frob1
+        F2 = self._frob2
+        F3 = self._frob3
+        F6 = self._frob6
 
         # easy part
         f = M(F6(f), I(f))
@@ -304,8 +321,8 @@ class BNBP:
                 f = fp12.mul(f, g)
                 T = ec2.add(T, Q)
 
-        _Q1 = (fp12.frob1(_Q[0]), fp12.frob1(_Q[1]))
-        _Q2 = (fp12.frob2(_Q[0]), fp12.neg(fp12.frob2(_Q[1])))
+        _Q1 = (self._frob1(_Q[0]), self._frob1(_Q[1]))
+        _Q2 = (self._frob2(_Q[0]), fp12.neg(self._frob2(_Q[1])))
 
         g = g_fn(phi(T), _Q1, _P)
         f = fp12.mul(f, g)
