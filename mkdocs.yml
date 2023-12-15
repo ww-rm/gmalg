@@ -14,3 +14,7 @@ nav:
   - "主页": "index.md"
   - "quickstart.md"
   - "api-reference.md"
+
+markdown_extensions:
+  - toc:
+      permalink: true
