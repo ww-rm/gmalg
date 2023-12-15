@@ -15,10 +15,7 @@ __all__ = [
     "KEYXCHG_MODE",
 ]
 
-_bnbp = Ec.BNBP(
-    0x600000000058F98A,
-    0x05,
-    (1, 0),
+_bnbp = Ec.SM9BNBP(
     (0x93DE051D_62BF718F_F5ED0704_487D01D6_E1E40869_09DC3280_E8C4E481_7C66DDDD,
      0x21FE8DDA_4F21E607_63106512_5C395BBC_1C1C00CB_FA602435_0C464CD7_0A3EA616),
     ((0x85AEF3D0_78640C98_597B6027_B441A01F_F1DD2C19_0F5E93C4_54806C11_D8806141,
@@ -130,7 +127,7 @@ def bytes_to_point_2(p: bytes) -> Ec.EcPoint2:
 class SM9Core(SMCoreBase):
     """SM9 Core Algorithms."""
 
-    def __init__(self, bnbp: Ec.BNBP, hash_cls: Type[Hash], rnd_fn: Callable[[int], int] = None) -> None:
+    def __init__(self, bnbp: Ec.SM9BNBP, hash_cls: Type[Hash], rnd_fn: Callable[[int], int] = None) -> None:
         """ID Based Encryption.
 
         Args:

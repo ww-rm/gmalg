@@ -13,7 +13,7 @@ __all__ = [
     "EcPointEx",
     "EllipticCurve",
     "ECDLP",
-    "BNBP",
+    "SM9BNBP",
 ]
 
 EcPoint = Tuple[int, int]
@@ -132,26 +132,26 @@ class ECDLP:
         return self.ec.mul(k, self.G)
 
 
-class BNBP:
-    """Bilinear Pairing on Barreto-Naehrig (BN) Elliptic Curve."""
+class SM9BNBP:
+    """SM9 Bilinear Pairing on Barreto-Naehrig (BN) Elliptic Curve."""
 
-    def __init__(self, t: int, b: int, beta: Fp.Fp2Ele, G1: EcPoint, G2: EcPoint2) -> None:
-        """BN Elliptic Curve Bilinear Inverse Diffie-Hellman.
+    def __init__(self, G1: EcPoint, G2: EcPoint2) -> None:
+        """SM9 Bilinear Pairing on Barreto-Naehrig (BN) Elliptic Curve.
 
         Args:
-            t (int): t.
-            b (int): Parameter b of elliptic curve.
-            beta (Fp2Ele): Parameter beta of twisted curve, only implemented for `(1, 0)`.
             G1 (EcPoint): Base point of group 1.
             G2 (EcPoint2): Base point of group 2.
         """
 
-        if beta != (1, 0):
-            raise NotImplementedError(f"beta: {beta}")
+        # SM9 parameters
+
+        t = 0x600000000058F98A
+        p = 0xB640000002A3A6F1D603AB4FF58EC74521F2934B1A7AEEDBE56F9B27E351457D  # 36 * t**4 + 36 * t**3 + 24 * t**2 + 6 * t + 1
+        n = 0xB640000002A3A6F1D603AB4FF58EC74449F2934B18EA8BEEE56EE19CD69ECF25  # 36 * t**4 + 36 * t**3 + 18 * t**2 + 6 * t + 1
+        b = 0x05
+        beta_b = (5, 0)  # (1, 0) * (0, 5)
 
         self.t = t
-        p = 36 * t**4 + 36 * t**3 + 24 * t**2 + 6 * t + 1
-        n = 36 * t**4 + 36 * t**3 + 18 * t**2 + 6 * t + 1
 
         self.fp12 = Fp.PrimeField12(p)
         self.fp2 = self.fp12.fp4.fp2
@@ -159,20 +159,32 @@ class BNBP:
         self.fpn = Fp.PrimeField(n)
 
         self.ec1 = EllipticCurve(self.fp1, 0, b)
-        self.ec2 = EllipticCurve(self.fp2, self.fp2.zero(), self.fp2.mul(beta, self.fp2.extend(b)))
+        self.ec2 = EllipticCurve(self.fp2, (0, 0), beta_b)
 
         self.G1 = G1
         self.G2 = G2
 
-        self._a = 6 * t + 2
+        # self._a = 0x2400000000215D93E  # 6 * t + 2
+        self._e_a = "00100000000000000000000000000000000000010000101011101100100111110"  # f"{self._a:b}"[1:]
 
-        self._neg2 = self.fp1.neg(2)
-        self._inv_neg2 = self.fp1.inv(self._neg2)
+        # phi factors
 
-        self._frob1_factor = self.fp12.frob((((1, 1), (1, 1)), ((1, 1), (1, 1)), ((1, 1), (1, 1))))
-        self._frob2_factor = self._frob1(self._frob1_factor)
-        self._frob3_factor = self._frob1(self._frob2_factor)
-        self._frob6_factor = self._frob3(self._frob3_factor)
+        self._neg2 = 0xB640000002A3A6F1D603AB4FF58EC74521F2934B1A7AEEDBE56F9B27E351457B  # self.fp1.neg(2)
+        self._inv_neg2 = 0x5B2000000151D378EB01D5A7FAC763A290F949A58D3D776DF2B7CD93F1A8A2BE  # self.fp1.inv(self._neg2)
+
+        # Frobenius factors
+
+        w5 = 0x2D40A38CF6983351711E5F99520347CC57D778A9F8FF4C8A4C949C7FA2A96686
+        w4 = 0xF300000002A3A6F2780272354F8B78F4D5FC11967BE65333
+        w3 = 0x6C648DE5DC0A3F2CF55ACC93EE0BAF159F9D411806DC5177F5B21FD3DA24D011
+        w2 = 0xF300000002A3A6F2780272354F8B78F4D5FC11967BE65334
+        w1 = 0x3F23EA58E5720BDB843C6CFA9C08674947C5C86E0DDD04EDA91D8354377B698B
+        w0 = 0x1
+
+        self._frob1_factor = (((p - w5, w5), (p - w2, w2)), ((p - w4, w4), (p - w1, w1)), ((p - w3, w3), (p - w0, w0)))
+        self._frob2_factor = (((p - w4, p - w4), (w4, w4)), ((p - w2, p - w2), (w2, w2)), ((p - w0, p - w0), (w0, w0)))
+        self._frob3_factor = (((p - w3, w3), (w0, p - w0)), ((p - w0, w0), (p - w3, w3)), ((w3, p - w3), (p - w0, w0)))
+        self._frob6_factor = (((p - w0, p - w0), (w0, w0)), ((w0, w0), (p - w0, p - w0)), ((p - w0, p - w0), (w0, w0)))
 
     def kG1(self, k: int) -> EcPoint:
         """Scalar multiplication of G1 by k."""
@@ -251,7 +263,9 @@ class BNBP:
         return self.fp12.pmul(X, self._frob3_factor)
 
     def _frob6(self, X: Fp.Fp12Ele) -> Fp.Fp12Ele:
-        return self.fp12.pmul(X, self._frob6_factor)
+        fp4 = self.fp12.fp4
+        X2, X1, X0 = X
+        return (fp4.conj(X2), fp4.neg(fp4.conj(X1)), fp4.conj(X0))
 
     def _finalexp(self, f: Fp.Fp12Ele) -> Fp.Fp12Ele:
         fp12 = self.fp12
@@ -310,7 +324,7 @@ class BNBP:
 
         T = Q
         f = fp12.one()
-        for i in f"{self._a:b}"[1:]:
+        for i in self._e_a:
             _T = phi(T)  # T on E(Fp12)
             g = g_fn(_T, _T, _P)
             f = fp12.mul(fp12.mul(f, f), g)
