@@ -92,10 +92,6 @@ class PrimeFieldBase:
     def sqrt(self, x: FpExEle) -> Union[FpExEle, None]:
         raise NotImplementedError
 
-    def frob(self, x: FpExEle) -> FpExEle:
-        """Frobenius."""
-        raise NotImplementedError
-
     def etob(self, e: FpExEle) -> bytes:
         """Convert domain element to bytes."""
         raise NotImplementedError
@@ -260,9 +256,6 @@ class PrimeField(PrimeFieldBase):
         """Square root."""
         raise NotImplementedError
 
-    def frob(self, x: int) -> int:
-        return x
-
     def etob(self, e: int) -> bytes:
         return e.to_bytes(self.e_length, "big")
 
@@ -303,8 +296,6 @@ class PrimeField2(PrimeFieldBase):
     def __init__(self, p: int) -> None:
         self.fp = PrimeField(p)
         self.e_length = self.fp.e_length * 2
-
-        self._f1 = self.pow((self.fp.one(), self.fp.zero()), p)
 
     def isoppo(self, X: Fp2Ele, Y: Fp2Ele) -> bool:
         return all(self.fp.isoppo(i1, i2) for i1, i2 in zip(X, Y))
@@ -404,13 +395,6 @@ class PrimeField2(PrimeFieldBase):
 
         return None
 
-    def frob(self, X: Fp2Ele) -> Fp2Ele:
-        f = self.fp.frob
-        X1, X0 = X
-        X1 = self.mul(self.extend(f(X1)), self._f1)
-        X0 = self.extend(f(X0))
-        return self.add(X1, X0)
-
     def etob(self, e: Fp2Ele) -> bytes:
         b = bytearray()
         for i in e:
@@ -456,8 +440,6 @@ class PrimeField4(PrimeFieldBase):
     def __init__(self, p: int) -> None:
         self.fp2 = PrimeField2(p)
         self.e_length = self.fp2.e_length * 2
-
-        self._f1 = self.pow((self.fp2.one(), self.fp2.zero()), p)
 
     def isoppo(self, X: Fp4Ele, Y: Fp4Ele) -> bool:
         return all(self.fp2.isoppo(i1, i2) for i1, i2 in zip(X, Y))
@@ -531,13 +513,6 @@ class PrimeField4(PrimeFieldBase):
     def sqrt(self, X: Fp4Ele) -> Union[Fp4Ele, None]:
         raise NotImplementedError
 
-    def frob(self, X: Fp4Ele) -> Fp4Ele:
-        f = self.fp2.frob
-        X1, X0 = X
-        X1 = self.mul(self.extend(f(X1)), self._f1)
-        X0 = self.extend(f(X0))
-        return self.add(X1, X0)
-
     def etob(self, e: Fp4Ele) -> bytes:
         b = bytearray()
         for i in e:
@@ -585,9 +560,6 @@ class PrimeField12(PrimeFieldBase):
     def __init__(self, p: int) -> None:
         self.fp4 = PrimeField4(p)
         self.e_length = self.fp4.e_length * 3
-
-        self._f1 = self.pow((self.fp4.zero(), self.fp4.one(), self.fp4.zero()), p)
-        self._f2 = self.mul(self._f1, self._f1)
 
     def isoppo(self, X: Fp12Ele, Y: Fp12Ele) -> bool:
         return all(self.fp4.isoppo(i1, i2) for i1, i2 in zip(X, Y))
@@ -672,14 +644,6 @@ class PrimeField12(PrimeFieldBase):
 
     def sqrt(self, X: Fp12Ele) -> Union[Fp12Ele, None]:
         raise NotImplementedError
-
-    def frob(self, X: Fp12Ele) -> Fp12Ele:
-        f = self.fp4.frob
-        X2, X1, X0 = X
-        X2 = self.mul(self.extend(f(X2)), self._f2)
-        X1 = self.mul(self.extend(f(X1)), self._f1)
-        X0 = self.extend(f(X0))
-        return self.add(self.add(X2, X1), X0)
 
     def etob(self, e: Fp12Ele) -> bytes:
         b = bytearray()
