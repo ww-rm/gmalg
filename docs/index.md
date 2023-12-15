@@ -27,6 +27,6 @@ pip install gmalg
 
 初次使用请继续阅读[快速开始](./quickstart.md).
 
-详细接口文档请前往[API 参考](./apireference.md).
+详细接口文档请前往[API 参考](./api-reference.md).
 
 查看源代码请访问 Github 仓库 [gmalg](https://github.com/ww-rm/gmalg).
