@@ -1,1 +1,2 @@
 mkdocs[i18n]
+mkdocstrings[python]
