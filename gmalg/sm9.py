@@ -505,7 +505,7 @@ class SM9Core(SMCoreBase):
 
             return K, C
 
-    def decapsulate(self, C: Ec.EcPoint, klen: int, sk_e: Ec.EcPoint2, uid: bytes):
+    def decapsulate(self, C: Ec.EcPoint, klen: int, sk_e: Ec.EcPoint2, uid: bytes) -> bytes:
         """Decapsulate secret key.
 
         Args:

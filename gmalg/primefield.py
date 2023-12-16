@@ -1,4 +1,20 @@
-"""Prime field operations."""
+"""Prime field operations module.
+
+This module provides basic operations on extension fields.
+    The extension field is constructed through a tower extension in the "1-2-4-12" manner,
+    as detailed in the SM9 standard documentation.
+
+For convenience, the module defines the following custom type:
+
+```python
+Fp2Ele = Tuple[int, int]
+Fp4Ele = Tuple[Fp2Ele, Fp2Ele]
+Fp12Ele = Tuple[Fp4Ele, Fp4Ele, Fp4Ele]
+FpExEle = Union[int, Fp2Ele, Fp4Ele, Fp12Ele]
+```
+
+All operations on the extension field are performed by computing between `int` and the specified types mentioned above.
+"""
 
 from typing import Tuple, Union
 
@@ -27,16 +43,24 @@ FpExEle = Union[int, Fp2Ele, Fp4Ele, Fp12Ele]
 
 
 class PrimeFieldBase:
-    """Base class of Fp operations."""
+    """Base class of Fp operations.
+
+    All subclasses derived from this class have the same methods as the base class,
+        with the only difference being the replacement of the type `FpExEle` with the corresponding field element type.
+
+    Any variations will be explicitly documented within the respective subclass.
+    """
 
     @classmethod
     def zero(cls) -> FpExEle:
         """Get Zero."""
+
         raise NotImplementedError
 
     @classmethod
     def one(cls) -> FpExEle:
         """Get One."""
+
         raise NotImplementedError
 
     @classmethod
@@ -49,60 +73,94 @@ class PrimeFieldBase:
 
     @classmethod
     def extend(cls, x: FpExEle) -> FpExEle:
-        """Extend element."""
+        """Extend domain element."""
+
         raise NotImplementedError
 
     def __init__(self, p: int) -> None:
+        """Base class of Fp operations.
+
+        Args:
+            p (int): A prime number.
+        """
+
         raise NotImplementedError
 
     def isoppo(self, x: FpExEle, y: FpExEle) -> bool:
         """Whether is opposite."""
+
         raise NotImplementedError
 
     def neg(self, x: FpExEle) -> FpExEle:
+        """Negative."""
+
         raise NotImplementedError
 
     def sadd(self, n: int, x: FpExEle) -> FpExEle:
         """Scalar add."""
+
         raise NotImplementedError
 
     def smul(self, k: int, x: FpExEle) -> FpExEle:
         """Scalar mul."""
+
         raise NotImplementedError
 
     def pmul(self, x: FpExEle, y: FpExEle) -> FpExEle:
         """Multiply by position."""
+
         raise NotImplementedError
 
     def add(self, x: FpExEle, y: FpExEle) -> FpExEle:
+        """Add two elements."""
+
         raise NotImplementedError
 
     def sub(self, x: FpExEle, y: FpExEle) -> FpExEle:
+        """Substract two elements."""
+
         raise NotImplementedError
 
     def mul(self, x: FpExEle, y: FpExEle) -> FpExEle:
+        """Multiply two elements."""
+
         raise NotImplementedError
 
     def inv(self, x: FpExEle) -> FpExEle:
+        """Inverse of element."""
+
         raise NotImplementedError
 
     def pow(self, x: FpExEle, e: int) -> FpExEle:
+        """Get the exponentiation of x raised to the power of e."""
+
         raise NotImplementedError
 
     def sqrt(self, x: FpExEle) -> Union[FpExEle, None]:
+        """Square root of x."""
+
         raise NotImplementedError
 
     def etob(self, e: FpExEle) -> bytes:
         """Convert domain element to bytes."""
+
         raise NotImplementedError
 
     def btoe(self, b: bytes) -> FpExEle:
         """Convert bytes to domain element."""
+
         raise NotImplementedError
 
 
 class PrimeField(PrimeFieldBase):
-    """Fp operations."""
+    """Fp operations.
+
+    Attributes:
+        p (int): Prime number used in operations.
+        p_bitlength (int): Bit length of p.
+        p_length (int): Byte length of p.
+        e_length (int): Byte length of domain element.
+    """
 
     _ZERO = 0
     _ONE = 1
@@ -173,8 +231,6 @@ class PrimeField(PrimeFieldBase):
         return (x * y) % self.p
 
     def inv(self, x: int):
-        """Modular inverse."""
-
         r1 = self.p
         r2 = x
         t1 = 0
@@ -253,7 +309,6 @@ class PrimeField(PrimeFieldBase):
         return None
 
     def sqrt(self, x: int) -> Union[int, None]:
-        """Square root."""
         raise NotImplementedError
 
     def etob(self, e: int) -> bytes:
@@ -264,7 +319,12 @@ class PrimeField(PrimeFieldBase):
 
 
 class PrimeField2(PrimeFieldBase):
-    """Fp2 operations."""
+    """Fp2 operations.
+
+    Attributes:
+        fp (PrimeField): `PrimeField` used in operations.
+        e_length (int): Byte length of domain element.
+    """
 
     _ALPHA: int = -2
 
@@ -407,7 +467,12 @@ class PrimeField2(PrimeFieldBase):
 
 
 class PrimeField4(PrimeFieldBase):
-    """Fp4 operations."""
+    """Fp4 operations.
+
+    Attributes:
+        fp2 (PrimeField2): `PrimeField2` used in operations.
+        e_length (int): Byte length of domain element.
+    """
 
     _ALPHA: Fp2Ele = (1, 0)
     _ZERO = (PrimeField2.zero(), PrimeField2.zero())
@@ -525,7 +590,11 @@ class PrimeField4(PrimeFieldBase):
 
 
 class PrimeField12(PrimeFieldBase):
-    """Fp12 operations."""
+    """Fp12 operations.
+
+    Attributes:
+        fp4 (PrimeField4): `PrimeField4` used in operations.
+        e_length (int): Byte length of domain element."""
 
     _ALPHA: Fp4Ele = ((0, 1), (0, 0))
     _ZERO = (PrimeField4.zero(), PrimeField4.zero(), PrimeField4.zero())
