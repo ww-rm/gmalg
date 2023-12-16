@@ -1,4 +1,20 @@
-"""Elliptic curve operations."""
+"""Elliptic curve operations.
+
+This module provides fundamental operations related to elliptic curves,
+    including but not limited to those specified in the national cryptographic standard documents.
+
+For convenience, the module defines the following custom types related to elliptic curve points:
+
+```python
+EcPoint = Tuple[int, int]
+EcPoint2 = Tuple[Fp2Ele, Fp2Ele]
+EcPoint4 = Tuple[Fp4Ele, Fp4Ele]
+EcPoint12 = Tuple[Fp12Ele, Fp12Ele]
+EcPointEx = Tuple[FpExEle, FpExEle]
+```
+
+These data types align with extension field element types and are used by the module to perform operations on elliptic curves.
+"""
 
 from typing import Tuple, Union
 
@@ -24,7 +40,13 @@ EcPointEx = Tuple[Fp.FpExEle, Fp.FpExEle]
 
 
 class EllipticCurve:
-    """Elliptic Curve."""
+    """Elliptic Curve.
+
+    Attributes:
+        INF: Infinite point.
+        a (FpExEle): Parameter a of curve.
+        b (FpExEle): Parameter b of curve.
+    """
 
     INF: EcPointEx = (float("inf"), float("inf"))
 
@@ -32,9 +54,13 @@ class EllipticCurve:
         """Elliptic curve.
 
         Args:
-            fp (PrimeFieldBase): Prime field operations used in ellitic curve.
-            a (FpExEle): Parameter a.
-            b (FpExEle): Parameter b.
+            fp (PrimeFieldBase): Prime field operations used in ellitic curve, must be derived from class `PrimeFieldBase`. 
+            a (FpExEle): Parameter a of curve.
+            b (FpExEle): Parameter b of curve.
+
+        Note:
+            When instantiating the class, the `FpExEle` or `EcPointEx` type in the methods will correspond to the type of `fp`.
+                Here, a generic placeholder are used to denote the data type.
         """
 
         self.a = a
@@ -42,21 +68,24 @@ class EllipticCurve:
         self._fp = fp
 
     def get_y_sqr(self, x: Fp.FpExEle) -> Fp.FpExEle:
+        """Get the square of y for the specified x."""
+
         fp = self._fp
         return fp.add(fp.pow(x, 3), fp.add(fp.mul(self.a, x), self.b))
 
     def get_y(self, x: Fp.FpExEle) -> Union[Fp.FpExEle, None]:
-        """Get one of valid y of given x, `None` means no solution."""
+        """Get one of valid y for given x, `None` means no solution."""
+
         return self._fp.sqrt(self.get_y_sqr(x))
 
     def isvalid(self, P: EcPointEx) -> bool:
-        """Whether point on curve."""
+        """Whether the point is on curve."""
 
         x, y = P
         return self._fp.mul(y, y) == self.get_y_sqr(x)
 
     def neg(self, P: EcPointEx) -> EcPointEx:
-        """Point negetive."""
+        """Get negative point."""
 
         x, y = P
         return (x, self._fp.neg(y))
@@ -91,12 +120,12 @@ class EllipticCurve:
         return x3, y3
 
     def sub(self, P1: EcPointEx, P2: EcPointEx) -> EcPointEx:
-        """Sub two points."""
+        """Substract two points."""
 
         return self.add(P1, self.neg(P2))
 
     def mul(self, k: int, P: EcPointEx) -> EcPointEx:
-        """Scalar multiplication of point."""
+        """Scalar multiplication of point by k."""
 
         Q = P
         for i in f"{k:b}"[1:]:
@@ -107,14 +136,23 @@ class EllipticCurve:
 
 
 class ECDLP:
-    """Elliptic Curve Discrete Logarithm Problem."""
+    """Elliptic Curve Discrete Logarithm Problem.
+
+    Attributes:
+        fp (PrimeField): `PrimeField` used in ECDLP.
+        ec (EllipticCurve): `EllipticCurve` used in ECDLP.
+        G (EcPoint): Base point.
+        fpn (PrimeField): `PrimeField` operations for the order of base point.
+        h (int): Cofactor of base point.
+    """
 
     def __init__(self, p: int, a: int, b: int, G: EcPoint, n: int, h: int = 1) -> None:
         """Elliptic Curve Discrete Logarithm Problem.
 
-        Elliptic Curve (Fp): y^2 = x^3 + ax + b (mod p)
-
         Args:
+            p (int): Parameter p of curve.
+            a (int): Parameter a of curve.
+            b (int): Parameter b of curve.
             G (EcPoint): Base point.
             n (int): Order of base point.
             h (int): Cofactor of `G`, default to `1`.
@@ -133,7 +171,36 @@ class ECDLP:
 
 
 class SM9BNBP:
-    """SM9 Bilinear Pairing on Barreto-Naehrig (BN) Elliptic Curve."""
+    """SM9 Bilinear Pairing on Barreto-Naehrig (BN) Elliptic Curve.
+
+    For performance reasons,
+        this implementation focuses solely on operations on the BN curve in the context of SM9.
+        Consequently, certain intermediate values can be precomputed to enhance computational efficiency.
+
+    The fundamental parameters used in SM9 are as follows:
+
+    ```python
+    t = 0x600000000058F98A
+    p = 0xB640000002A3A6F1D603AB4FF58EC74521F2934B1A7AEEDBE56F9B27E351457D
+    n = 0xB640000002A3A6F1D603AB4FF58EC74449F2934B18EA8BEEE56EE19CD69ECF25
+    b = 0x05
+    beta_b = (5, 0)
+    ```
+
+    There are some more precomputed intermediate values.
+        Refer to the source code for detailed information.
+
+    Attributes:
+        t (int): Parameter t of SM9.
+        fp12 (PrimeField12): `PrimeField12` operations used in SM9.
+        fp2 (PrimeField2): `PrimeField2` operations used in SM9.
+        fp1 (PrimeField): `PrimeField` operations used in SM9.
+        fpn (PrimeField): `PrimeField` operations for the order of base point.
+        ec1 (EllipticCurve): `EllipticCurve` on Fp operations used in SM9.
+        ec2 (EllipticCurve): `EllipticCurve` on Fp2 operations used in SM9.
+        G1 (EcPoint): Base point of group 1.
+        G2 (EcPoint2): Base point of group 2.
+    """
 
     def __init__(self, G1: EcPoint, G2: EcPoint2) -> None:
         """SM9 Bilinear Pairing on Barreto-Naehrig (BN) Elliptic Curve.
@@ -312,7 +379,15 @@ class SM9BNBP:
         return f
 
     def e(self, P: EcPoint, Q: EcPoint2) -> Fp.Fp12Ele:
-        """R-ate pairing, P in G1, Q in G2."""
+        """R-ate bilinear pairing.
+
+        Args:
+            P (EcPoint): Element of group 1.
+            Q (EcPoint2): Element of group 2.
+
+        Returns:
+            Fp12Ele: Pairing value on Fp12.
+        """
 
         fp12 = self.fp12
         ec2 = self.ec2
