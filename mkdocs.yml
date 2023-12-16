@@ -26,6 +26,9 @@ plugins:
   - mkdocstrings:
       handlers:
         python:
+          import:
+            - url: https://docs.python.org/3/objects.inv
+              domains: [py, std]
           options:
             show_root_heading: true
             show_root_full_path: true
