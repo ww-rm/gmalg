@@ -1,3 +1,5 @@
+"""SM9 Algorithm Implementation Module."""
+
 import math
 from typing import Callable, Tuple, Type
 
@@ -26,7 +28,18 @@ _bnbp = Ec.SM9BNBP(
 
 
 def point_to_bytes_1(P: Ec.EcPoint, mode: PC_MODE) -> bytes:
-    """Convert point to bytes (Fp)."""
+    """Convert point to bytes (Fp).
+
+    Args:
+        P (EcPoint): Point to be converted.
+        mode (PC_MODE): Compress mode.
+
+    Returns:
+        bytes: Converted point.
+
+    Raises:
+        TypeError: Invalid mode.
+    """
 
     if P == _bnbp.ec1.INF:
         return b"\x00"
@@ -51,7 +64,18 @@ def point_to_bytes_1(P: Ec.EcPoint, mode: PC_MODE) -> bytes:
 
 
 def bytes_to_point_1(p: bytes) -> Ec.EcPoint:
-    """Convert bytes to point (Fp)."""
+    """Convert bytes to point (Fp).
+
+    Args:
+        p (bytes): Bytes to be converted point.
+
+    Returns:
+        EcPoint: Point to be converted.
+
+    Raises:
+        PointNotOnCurveError: Point not on curve.
+        InvalidPCError: Invalid PC byte.
+    """
 
     ec1 = _bnbp.ec1
     fp1 = _bnbp.fp1
@@ -77,7 +101,18 @@ def bytes_to_point_1(p: bytes) -> Ec.EcPoint:
 
 
 def point_to_bytes_2(P: Ec.EcPoint2, mode: PC_MODE) -> bytes:
-    """Convert point to bytes (Fp2)."""
+    """Convert point to bytes (Fp2).
+
+    Args:
+        P (EcPoint2): Point to be converted.
+        mode (PC_MODE): Compress mode.
+
+    Returns:
+        bytes: Converted point.
+
+    Raises:
+        TypeError: Invalid mode.
+    """
 
     if P == _bnbp.ec2.INF:
         return b"\x00"
@@ -102,7 +137,18 @@ def point_to_bytes_2(P: Ec.EcPoint2, mode: PC_MODE) -> bytes:
 
 
 def bytes_to_point_2(p: bytes) -> Ec.EcPoint2:
-    """Convert bytes to point (Fp2)."""
+    """Convert bytes to point (Fp2).
+
+    Args:
+        p (bytes): Bytes to be converted point.
+
+    Returns:
+        EcPoint2: Point to be converted.
+
+    Raises:
+        PointNotOnCurveError: Point not on curve.
+        InvalidPCError: Invalid PC byte.
+    """
 
     mode = p[0]
     if mode == 0x00:
@@ -125,15 +171,19 @@ def bytes_to_point_2(p: bytes) -> Ec.EcPoint2:
 
 
 class SM9Core(SMCoreBase):
-    """SM9 Core Algorithms."""
+    """SM9 Core Algorithms.
+
+    Attributes:
+        bnbp (SM9BNBP): BNBP used in SM9.
+    """
 
     def __init__(self, bnbp: Ec.SM9BNBP, hash_cls: Type[Hash], rnd_fn: Callable[[int], int] = None) -> None:
         """ID Based Encryption.
 
         Args:
-            bnbp (BNBP): BNBP used in SM9.
+            bnbp (SM9BNBP): BNBP used in SM9.
             hash_cls (Type[Hash]): Hash class used in SM9.
-            rnd_fn ((int) -> int): Random function used to generate k-bit random number.
+            rnd_fn (Callable[[int], int]): Random function used to generate k-bit random number, default to `secrets.randbits`.
         """
 
         super().__init__(hash_cls, rnd_fn)
@@ -171,7 +221,14 @@ class SM9Core(SMCoreBase):
         return self._hash_fn(Z + key)
 
     def generate_mpk_sign(self, msk_s: int) -> Ec.EcPoint2:
-        """Generate master key for sign."""
+        """Generate master key for sign.
+
+        Args:
+            msk_s (int): Master secret key for sign.
+
+        Returns:
+            EcPoint2: Master public key for sign.
+        """
 
         return self.bnbp.kG2(msk_s)
 
@@ -187,7 +244,14 @@ class SM9Core(SMCoreBase):
         return msk_s, self.generate_mpk_sign(msk_s)
 
     def generate_mpk_encrypt(self, msk_e: int) -> Ec.EcPoint:
-        """Generate master key for encrypt."""
+        """Generate master key for encrypt.
+
+        Args:
+            msk_e (int): Master secret key for encrypt.
+
+        Returns:
+            EcPoint: Master public key for encrypt.
+        """
 
         return self.bnbp.kG1(msk_e)
 
@@ -214,7 +278,7 @@ class SM9Core(SMCoreBase):
             EcPoint: User secret key for sign.
 
         Raises:
-            InvalidUserKeyError: Encounter zero when generating, need regenerate master key pair and user keys..
+            InvalidUserKeyError: Encounter zero when generating, need regenerate master key pair and user keys.
         """
 
         fpn = self.bnbp.fpn
@@ -239,7 +303,7 @@ class SM9Core(SMCoreBase):
             EcPoint2: User secret key for encrypt.
 
         Raises:
-            InvalidUserKeyError: Encounter zero when generating, need regenerate master key pair and user keys..
+            InvalidUserKeyError: Encounter zero when generating, need regenerate master key pair and user keys.
         """
 
         fpn = self.bnbp.fpn
@@ -261,8 +325,8 @@ class SM9Core(SMCoreBase):
             sk_s (EcPoint): User secret key for sign.
 
         Returns:
-            int: h
-            EcPoint: S
+            int: h.
+            EcPoint: S.
         """
 
         fp12 = self.bnbp.fp12
@@ -349,6 +413,9 @@ class SM9Core(SMCoreBase):
             Fp12Ele: g1.
             Fp12Ele: g2.
             Fp12Ele: g3.
+
+        Raises:
+            PointNotOnCurveError: `R` not on curve.
         """
 
         bnbp = self.bnbp
@@ -369,9 +436,9 @@ class SM9Core(SMCoreBase):
 
         Args:
             klen (int): Key length in bytes to generate.
-            g1 (Fp12Ele): g1.
-            g2 (Fp12Ele): g2.
-            g3 (Fp12Ele): g3.
+            g1 (Fp12Ele): g1 from `get_secret_data`.
+            g2 (Fp12Ele): g2 from `get_secret_data`.
+            g3 (Fp12Ele): g3 from `get_secret_data`.
 
             uid_init (bytes): User ID bytes of initiator.
             R_init (EcPoint): Random point of initiator.
@@ -533,12 +600,12 @@ class SM9Core(SMCoreBase):
 
 
 class SM9KGC:
-    """SM9 KGC."""
+    """SM9 Key Generation Center."""
 
     def __init__(self, hid_s: bytes = None, msk_s: bytes = None, mpk_s: bytes = None,
                  hid_e: bytes = None, msk_e: bytes = None, mpk_e: bytes = None, *,
                  rnd_fn: Callable[[int], int] = None, pc_mode: PC_MODE = PC_MODE.RAW) -> None:
-        """SM9 KGC.
+        """SM9 Key Generation Center.
 
         Args:
             hid_s (btyes): Single byte for sign key generation.
@@ -549,7 +616,8 @@ class SM9KGC:
             msk_e (bytes): Master secret key for encrypt.
             mpk_e (bytes): Master public key for encrypt.
 
-            rnd_fn ((int) -> int): random function used to generate k-bit random number, default to `secrets.randbits`.
+            rnd_fn (Callable[[int], int]): random function used to generate k-bit random number, default to `secrets.randbits`.
+            pc_mode (PC_MODE): Point compress mode used for generated data, no effects on the data to be parsed.
         """
 
         self._core = SM9Core(_bnbp, SM3, rnd_fn)
@@ -584,14 +652,25 @@ class SM9KGC:
 
     @property
     def can_generate_sk_sign(self) -> bool:
+        """Whether can generate user secret key for sign."""
+
         return bool(self._msk_s and self._hid_s)
 
     @property
     def can_generate_sk_encrypt(self) -> bool:
+        """Whether can generate user secret key for encrypt."""
+
         return bool(self._msk_e and self._hid_e)
 
     def generate_mpk_sign(self, msk_s: bytes) -> bytes:
-        """Generate master key for sign."""
+        """Generate master key for sign.
+
+        Args:
+            msk_s (bytes): Master secret key for sign.
+
+        Returns:
+            bytes: Master public key for sign.
+        """
 
         mpk_s = self._core.generate_mpk_sign(bytes_to_int(msk_s))
         return point_to_bytes_2(mpk_s, self._pc_mode)
@@ -608,7 +687,14 @@ class SM9KGC:
         return int_to_bytes(msk_s), point_to_bytes_2(mpk_s, self._pc_mode)
 
     def generate_mpk_encrypt(self, msk_e: bytes) -> bytes:
-        """Generate master key for encrypt."""
+        """Generate master key for encrypt.
+
+        Args:
+            msk_e (bytes): Master secret key for encrypt.
+
+        Returns:
+            bytes: Master public key for encrypt.
+        """
 
         mpk_e = self._core.generate_mpk_encrypt(bytes_to_int(msk_e))
         return point_to_bytes_1(mpk_e, self._pc_mode)
@@ -658,13 +744,13 @@ class SM9KGC:
 
 
 class SM9:
-    """SM9."""
+    """SM9 Algorithm."""
 
     def __init__(self, hid_s: bytes = None, mpk_s: bytes = None, sk_s: bytes = None,
                  hid_e: bytes = None, mpk_e: bytes = None, sk_e: bytes = None,
                  uid: bytes = None, *,
                  rnd_fn: Callable[[int], int] = None, pc_mode: PC_MODE = PC_MODE.RAW, mac_klen: int = 32) -> None:
-        """SM9.
+        """SM9 Algorithm.
 
         Args:
             hid_s (btyes): Single byte for sign key generation.
@@ -698,30 +784,44 @@ class SM9:
 
     @property
     def can_sign(self) -> bool:
+        """Whether can do sign."""
+
         return bool(self._mpk_s and self._sk_s)
 
     @property
     def can_verify(self) -> bool:
+        """Whether can do verify."""
+
         return bool(self._hid_s and self._mpk_s and self._uid)
 
     @property
     def can_exchange_key(self) -> bool:
+        """Whether can do key exchange."""
+
         return bool(self._hid_e and self._mpk_e and self._sk_e and self._uid)
 
     @property
     def can_encapsulate(self) -> bool:
+        """Whether can do key encapsulate."""
+
         return bool(self._hid_e and self._mpk_e)
 
     @property
     def can_decapsulate(self) -> bool:
+        """Whether can do key decapsulate."""
+
         return bool(self._sk_e and self._uid)
 
     @property
     def can_encrypt(self) -> bool:
+        """Whether can do encrypt."""
+
         return bool(self.can_encapsulate and self._mac_klen)
 
     @property
     def can_decrypt(self) -> bool:
+        """Whether can do decrypt."""
+
         return bool(self.can_decapsulate and self._mac_klen)
 
     def sign(self, message: bytes) -> Tuple[bytes, bytes]:
@@ -731,8 +831,11 @@ class SM9:
             message (bytes): Message to be signed.
 
         Returns:
-            bytes: h
-            bytes: S
+            bytes: h of signature.
+            bytes: S of signature.
+
+        Raises:
+            RequireArgumentError: Missing some required arguments.
         """
 
         if not self.can_sign:
@@ -747,11 +850,14 @@ class SM9:
 
         Args:
             message (bytes): Message to be verified.
-            h (bytes): h
-            S (bytes): S
+            h (bytes): h of signature.
+            S (bytes): S of signature.
 
         Returns:
             bool: Whether OK.
+
+        Raises:
+            RequireArgumentError: Missing some required arguments.
         """
 
         if not self.can_verify:
@@ -768,6 +874,9 @@ class SM9:
         Returns:
             int: r, random number.
             bytes: Random point, will be sent to another user.
+
+        Raises:
+            RequireArgumentError: Missing some required arguments.
         """
 
         if not self.can_exchange_key:
@@ -789,6 +898,9 @@ class SM9:
 
         Returns:
             bytes: Secret key of klen bytes.
+
+        Raises:
+            TypeError: Invalid key exchange mode.
         """
 
         R = bytes_to_point_1(R)
@@ -812,6 +924,9 @@ class SM9:
         Returns:
             bytes: Encapsulated secret key of `klen` bytes.
             bytes: Encapsulated cipher.
+
+        Raises:
+            RequireArgumentError: Missing some required arguments.
         """
 
         if not self.can_encapsulate:
@@ -820,7 +935,7 @@ class SM9:
         K, C = self._core.encapsulate(self._hid_e, self._mpk_e, klen, uid)
         return K, point_to_bytes_1(C, self._pc_mode)
 
-    def decapsulate(self, C: bytes, klen: int):
+    def decapsulate(self, C: bytes, klen: int) -> bytes:
         """Decapsulate secret key.
 
         Args:
@@ -829,6 +944,9 @@ class SM9:
 
         Returns:
             bytes: Encapsulated secret key of `klen` bytes.
+
+        Raises:
+            RequireArgumentError: Missing some required arguments.
         """
 
         if not self.can_decapsulate:
@@ -836,7 +954,7 @@ class SM9:
 
         return self._core.decapsulate(bytes_to_point_1(C), klen, self._sk_e, self._uid)
 
-    def encrypt(self, plain: bytes, uid: bytes):
+    def encrypt(self, plain: bytes, uid: bytes) -> bytes:
         """Encrypt.
 
         Args:
@@ -845,6 +963,9 @@ class SM9:
 
         Returns:
             bytes: Cipher data.
+
+        Raises:
+            RequireArgumentError: Missing some required arguments.
         """
 
         if not self.can_encrypt:
@@ -869,6 +990,7 @@ class SM9:
             bytes: Plain data.
 
         Raises:
+            RequireArgumentError: Missing some required arguments.
             ValueError: Invalid PC byte.
         """
 

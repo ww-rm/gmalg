@@ -1,3 +1,5 @@
+"""SM4 Algorithm Implementation Module."""
+
 from typing import List
 
 from . import errors
@@ -70,18 +72,22 @@ def _key_expand(key: bytes, rkey: List[int]):
 
 
 class SM4(BlockCipher):
-    """SM4"""
+    """SM4 Algorithm."""
 
     @classmethod
     def key_length(self) -> int:
+        """Get key length in bytes."""
+
         return 16
 
     @classmethod
     def block_length(self) -> int:
+        """Get block length in bytes."""
+
         return 16
 
     def __init__(self, key: bytes) -> None:
-        """SM4
+        """SM4 Algorithm.
 
         Args:
             key (bytes): 16 bytes key.
@@ -103,7 +109,7 @@ class SM4(BlockCipher):
         """Encrypt.
 
         Args:
-            block (bytes): plain block to encrypt, must be 16 bytes.
+            block (bytes): Plain block to encrypt, must be 16 bytes.
 
         Returns:
             bytes: 16 bytes cipher block.

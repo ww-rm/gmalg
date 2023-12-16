@@ -1,3 +1,5 @@
+"""ZUC Algorithm Implementation Module."""
+
 from typing import List
 
 from . import errors
@@ -69,22 +71,26 @@ def _L2(X):
 
 
 class ZUC:
-    """ZUC."""
+    """ZUC Algorithm."""
 
     @classmethod
     def key_length(self) -> int:
+        """Get key length in bytes."""
+
         return 16
 
     @classmethod
     def iv_length(self) -> int:
+        """Get IV length in bytes."""
+
         return 16
 
     def __init__(self, key: bytes, iv: bytes) -> None:
-        """ZUC.
+        """ZUC Algorithm.
 
         Args:
             key (bytes): 16 bytes key.
-            iv (bytes): 16 bytes key.
+            iv (bytes): 16 bytes iv.
 
         Raises:
             IncorrectLengthError: Incorrect key length.

@@ -34,6 +34,9 @@ def point_to_bytes(P: Ec.EcPoint, mode: PC_MODE) -> bytes:
 
     Returns:
         bytes: Converted point bytes.
+
+    Raises:
+        TypeError: Invalid mode.
     """
 
     if P == _ecdlp.ec.INF:
@@ -66,6 +69,10 @@ def bytes_to_point(b: bytes) -> Ec.EcPoint:
 
     Returns:
         EcPoint: Point converted.
+
+    Raises:
+        PointNotOnCurveError: Point not on curve.
+        InvalidPCError: Invalid PC byte.
     """
 
     fp = _ecdlp.fp

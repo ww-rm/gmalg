@@ -1,3 +1,5 @@
+"""SM3 Algorithm Implementation Module."""
+
 from typing import List
 
 from . import errors
@@ -83,17 +85,23 @@ def _compress(W1: List[int], W2: List[int], V: List[int]):
 
 
 class SM3(Hash):
-    """SM3"""
+    """SM3 Algorithm."""
 
     @classmethod
     def max_msg_length(self) -> int:
+        """Get maximum message length in bytes."""
+
         return 0x1fffffffffffffff  # (1 << 64 - 1) >> 3
 
     @classmethod
     def hash_length(self) -> int:
+        """Get output hash value length in bytes."""
+
         return 32
 
     def __init__(self) -> None:
+        """SM3 Algorithm."""
+
         self._value: List[int] = [0x7380166f, 0x4914b2b9, 0x172442d7, 0xda8a0600, 0xa96f30bc, 0x163138aa, 0xe38dee4d, 0xb0fb0e4e]
         self._msg_len: int = 0
         self._msg_block_buffer: bytearray = bytearray()
@@ -142,6 +150,16 @@ class SM3(Hash):
         self._msg_len += d_len
 
     def value(self) -> bytes:
+        """Get current hash value.
+
+        Returns:
+            bytes: Current hash value.
+
+        Note:
+            Each invocation of the method will dynamically compute the hash value that should be output,
+                so it is advisable to retain the resulting hash value after the method call.
+        """
+
         B = self._msg_block_buffer.copy()
         W1 = self._words_buffer1
         W2 = self._words_buffer2
