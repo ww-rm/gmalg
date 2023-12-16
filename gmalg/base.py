@@ -4,7 +4,7 @@ import enum
 import secrets
 from typing import Callable, Type
 
-from . import errors
+from .errors import *
 
 __all__ = [
     "PC_MODE",
@@ -158,7 +158,7 @@ class SMCoreBase:
 
         count, tail = divmod(klen, v)
         if count + (tail > 0) > 0xffffffff:
-            raise errors.DataOverflowError("Key stream", f"{0xffffffff * v} bytes")
+            raise DataOverflowError("Key stream", f"{0xffffffff * v} bytes")
 
         K = bytearray()
         for ct in range(1, count + 1):

@@ -2,8 +2,8 @@
 
 from typing import List
 
-from . import errors
 from .base import BlockCipher
+from .errors import *
 from .utils import ROL32
 
 __all__ = ["SM4"]
@@ -97,7 +97,7 @@ class SM4(BlockCipher):
         """
 
         if len(key) != self.key_length():
-            raise errors.IncorrectLengthError("Key", f"{self.key_length()} bytes", f"{len(key)} bytes")
+            raise IncorrectLengthError("Key", f"{self.key_length()} bytes", f"{len(key)} bytes")
 
         self._key: bytes = key
         self._rkey: List[int] = [0] * 32
@@ -119,7 +119,7 @@ class SM4(BlockCipher):
         """
 
         if len(block) != self.block_length():
-            raise errors.IncorrectLengthError("Block", f"{self.block_length()} bytes", f"{len(block)} bytes")
+            raise IncorrectLengthError("Block", f"{self.block_length()} bytes", f"{len(block)} bytes")
 
         RK = self._rkey
 
@@ -156,7 +156,7 @@ class SM4(BlockCipher):
         """
 
         if len(block) != self.block_length():
-            raise errors.IncorrectLengthError("Block", f"{self.block_length()} bytes", f"{len(block)} bytes")
+            raise IncorrectLengthError("Block", f"{self.block_length()} bytes", f"{len(block)} bytes")
 
         RK = self._rkey
 

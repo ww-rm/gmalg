@@ -4,8 +4,8 @@ import math
 from typing import Callable, Tuple, Type
 
 from . import ellipticcurve as Ec
-from . import errors
 from .base import KEYXCHG_MODE, PC_MODE, Hash, SMCoreBase
+from .errors import *
 from .sm3 import SM3
 from .utils import bytes_to_int, int_to_bytes
 
@@ -89,13 +89,13 @@ def bytes_to_point(b: bytes) -> Ec.EcPoint:
     elif mode == 0x02 or mode == 0x03:
         y = ec.get_y(x)
         if y is None:
-            raise errors.PointNotOnCurveError((x, y))
+            raise PointNotOnCurveError((x, y))
         ylsb = y & 0x1
         if mode == 0x02 and ylsb or mode == 0x03 and not ylsb:
             return x, fp.neg(y)
         return x, y
     else:
-        raise errors.InvalidPCError(mode)
+        raise InvalidPCError(mode)
 
 
 class SM2Core(SMCoreBase):
@@ -185,7 +185,7 @@ class SM2Core(SMCoreBase):
 
         ENTL = len(uid) << 3
         if ENTL.bit_length() >= 16:
-            raise errors.DataOverflowError("ID", "8192 bytes")
+            raise DataOverflowError("ID", "8192 bytes")
 
         etob = self.ecdlp.fp.etob
         xP, yP = pk
@@ -299,7 +299,7 @@ class SM2Core(SMCoreBase):
             x1, y1 = self.ecdlp.kG(k)  # C1
 
             if ec.mul(self.ecdlp.h, pk) == ec.INF:
-                raise errors.InfinitePointError(f"Infinite point encountered, [0x{self.ecdlp.h:x}](0x{pk[0]:x}, 0x{pk[1]:x})")
+                raise InfinitePointError(f"Infinite point encountered, [0x{self.ecdlp.h:x}](0x{pk[0]:x}, 0x{pk[1]:x})")
 
             x2, y2 = ec.mul(k, pk)
             x2 = self.ecdlp.fp.etob(x2)
@@ -336,10 +336,10 @@ class SM2Core(SMCoreBase):
         ec = self.ecdlp.ec
 
         if not ec.isvalid(C1):
-            raise errors.PointNotOnCurveError(C1)
+            raise PointNotOnCurveError(C1)
 
         if ec.mul(self.ecdlp.h, C1) == ec.INF:
-            raise errors.InfinitePointError(f"Infinite point encountered, [0x{self.ecdlp.h:x}](0x{C1[0]:x}, 0x{C1[1]:x})")
+            raise InfinitePointError(f"Infinite point encountered, [0x{self.ecdlp.h:x}](0x{C1[0]:x}, 0x{C1[1]:x})")
 
         x2, y2 = ec.mul(sk, C1)
         x2 = self.ecdlp.fp.etob(x2)
@@ -347,12 +347,12 @@ class SM2Core(SMCoreBase):
 
         t = self._key_derivation_fn(x2 + y2, len(C2))
         if not any(t):
-            raise errors.UnknownError("Zero bytes key stream.")
+            raise UnknownError("Zero bytes key stream.")
 
         M = bytes(map(lambda b1, b2: b1 ^ b2, C2, t))
 
         if self._hash_fn(x2 + M + y2) != C3:
-            raise errors.CheckFailedError("Incorrect hash value.")
+            raise CheckFailedError("Incorrect hash value.")
 
         return M
 
@@ -400,12 +400,12 @@ class SM2Core(SMCoreBase):
         ec = self.ecdlp.ec
 
         if not ec.isvalid(R):
-            raise errors.PointNotOnCurveError(R)
+            raise PointNotOnCurveError(R)
 
         S = ec.mul(self.ecdlp.h * t, ec.add(pk, ec.mul(self._x_bar(R[0]), R)))
 
         if S == ec.INF:
-            raise errors.InfinitePointError("Infinite point encountered.")
+            raise InfinitePointError("Infinite point encountered.")
 
         return S
 
@@ -549,7 +549,7 @@ class SM2:
         """
 
         if not self.can_sign:
-            raise errors.RequireArgumentError("sign", "sk", "ID")
+            raise RequireArgumentError("sign", "sk", "ID")
 
         r, s = self._core.sign(message, self._sk, self._uid, self._pk)
         return int_to_bytes(r), int_to_bytes(s)
@@ -570,7 +570,7 @@ class SM2:
         """
 
         if not self.can_verify:
-            raise errors.RequireArgumentError("verify", "pk", "ID")
+            raise RequireArgumentError("verify", "pk", "ID")
 
         return self._core.verify(message, bytes_to_int(r), bytes_to_int(s), self._uid, self._pk)
 
@@ -588,7 +588,7 @@ class SM2:
         """
 
         if not self.can_encrypt:
-            raise errors.RequireArgumentError("encrypt", "pk")
+            raise RequireArgumentError("encrypt", "pk")
 
         C1, C2, C3 = self._core.encrypt(plain, self._pk)
 
@@ -614,7 +614,7 @@ class SM2:
         """
 
         if not self.can_decrypt:
-            raise errors.RequireArgumentError("decrypt", "sk")
+            raise RequireArgumentError("decrypt", "sk")
 
         length = self._core.ecdlp.fp.e_length
         mode = cipher[0]
@@ -625,7 +625,7 @@ class SM2:
             C1 = cipher[:1 + length]
             c1_length = 1 + length
         else:
-            raise errors.InvalidPCError(mode)
+            raise InvalidPCError(mode)
 
         hash_length = self._core._hash_cls.hash_length()
         C3 = cipher[c1_length:c1_length + hash_length]
@@ -645,7 +645,7 @@ class SM2:
         """
 
         if not self.can_exchange_key:
-            raise errors.RequireArgumentError("key exchange", "sk", "ID")
+            raise RequireArgumentError("key exchange", "sk", "ID")
 
         R, t = self._core.begin_key_exchange(self._sk)
         return point_to_bytes(R, self._pc_mode), t

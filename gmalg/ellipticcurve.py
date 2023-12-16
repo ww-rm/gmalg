@@ -18,8 +18,8 @@ These data types align with extension field element types and are used by the mo
 
 from typing import Tuple, Union
 
-from . import errors
 from . import primefield as Fp
+from .errors import *
 
 __all__ = [
     "EcPoint",
@@ -111,7 +111,7 @@ class EllipticCurve:
                 _t2 = fp.inv(fp.smul(2, y1))
                 lam = fp.mul(_t1, _t2)
             else:
-                raise errors.UnknownError(f"y1 and y2 is neither equal nor opposite.")
+                raise UnknownError(f"y1 and y2 is neither equal nor opposite.")
         else:
             lam = fp.mul(fp.sub(y2, y1), fp.inv(fp.sub(x2, x1)))
 
@@ -287,7 +287,7 @@ class SM9BNBP:
                     fp12.inv(fp12.smul(2, yV))
                 )
             else:
-                raise errors.UnknownError(f"y1 and y2 is neither equal nor opposite.")
+                raise UnknownError(f"y1 and y2 is neither equal nor opposite.")
         else:
             lam = fp12.mul(fp12.sub(yU, yV), fp12.inv(fp12.sub(xU, xV)))
 

@@ -4,9 +4,9 @@ import math
 from typing import Callable, Tuple, Type
 
 from . import ellipticcurve as Ec
-from . import errors
 from . import primefield as Fp
 from .base import KEYXCHG_MODE, PC_MODE, Hash, SMCoreBase
+from .errors import *
 from .sm3 import SM3
 from .utils import bytes_to_int, int_to_bytes
 
@@ -91,13 +91,13 @@ def bytes_to_point_1(p: bytes) -> Ec.EcPoint:
     elif mode == 0x02 or mode == 0x03:
         y = ec1.get_y(x)
         if y is None:
-            raise errors.PointNotOnCurveError((x, y))
+            raise PointNotOnCurveError((x, y))
         ylsb = y & 0x1
         if mode == 0x02 and ylsb or mode == 0x03 and not ylsb:
             return x, fp1.neg(y)
         return x, y
     else:
-        raise errors.InvalidPCError(mode)
+        raise InvalidPCError(mode)
 
 
 def point_to_bytes_2(P: Ec.EcPoint2, mode: PC_MODE) -> bytes:
@@ -161,13 +161,13 @@ def bytes_to_point_2(p: bytes) -> Ec.EcPoint2:
     elif mode == 0x02 or mode == 0x03:
         y = _bnbp.ec2.get_y(x)
         if y is None:
-            raise errors.PointNotOnCurveError((x, y))
+            raise PointNotOnCurveError((x, y))
         ylsb = y[1] & 0x1
         if mode == 0x02 and ylsb or mode == 0x03 and not ylsb:
             return x, _bnbp.fp2.neg(y)
         return x, y
     else:
-        raise errors.InvalidPCError(mode)
+        raise InvalidPCError(mode)
 
 
 class SM9Core(SMCoreBase):
@@ -197,7 +197,7 @@ class SM9Core(SMCoreBase):
 
         count, tail = divmod(hlen, v)
         if count + (tail > 0) > 0xffffffff:
-            raise errors.DataOverflowError("cipher fn", f"{0xffffffff * v} bytes")
+            raise DataOverflowError("cipher fn", f"{0xffffffff * v} bytes")
 
         Z = prefix_byte + Z
 
@@ -285,7 +285,7 @@ class SM9Core(SMCoreBase):
 
         t1 = fpn.add(self._H1(uid + hid_s), msk_s)
         if fpn.iszero(t1):
-            raise errors.InvalidUserKeyError("sign", uid)
+            raise InvalidUserKeyError("sign", uid)
 
         t2 = fpn.mul(msk_s, fpn.inv(t1))
         sk_s = self.bnbp.kG1(t2)
@@ -310,7 +310,7 @@ class SM9Core(SMCoreBase):
 
         t1 = fpn.add(self._H1(uid + hid_e), msk_e)
         if fpn.iszero(t1):
-            raise errors.InvalidUserKeyError("encrypt", uid)
+            raise InvalidUserKeyError("encrypt", uid)
 
         t2 = fpn.mul(msk_e, fpn.inv(t1))
         sk_e = self.bnbp.kG2(t2)
@@ -421,7 +421,7 @@ class SM9Core(SMCoreBase):
         bnbp = self.bnbp
 
         if not bnbp.ec1.isvalid(R):
-            raise errors.PointNotOnCurveError(R)
+            raise PointNotOnCurveError(R)
 
         g1 = bnbp.fp12.pow(bnbp.eG2(mpk_e), r)
         g2 = bnbp.e(R, sk_e)
@@ -525,7 +525,7 @@ class SM9Core(SMCoreBase):
         bnbp = self.bnbp
 
         if not bnbp.ec1.isvalid(C):
-            raise errors.PointNotOnCurveError(C)
+            raise PointNotOnCurveError(C)
 
         w = bnbp.e(C, sk_e)
 
@@ -538,7 +538,7 @@ class SM9Core(SMCoreBase):
         K = self._key_derivation_fn(Z, klen)
 
         if not any(K):
-            raise errors.UnknownError("Zero secret key encountered.")
+            raise UnknownError("Zero secret key encountered.")
 
         return K
 
@@ -594,7 +594,7 @@ class SM9Core(SMCoreBase):
 
         u = self._mac(K2, C2)
         if u != C3:
-            raise errors.CheckFailedError("Invalid MAC value.")
+            raise CheckFailedError("Invalid MAC value.")
 
         return plain
 
@@ -721,7 +721,7 @@ class SM9KGC:
         """
 
         if not self.can_generate_sk_sign:
-            raise errors.RequireArgumentError("generate sk sign", "msk_s", "hid_s")
+            raise RequireArgumentError("generate sk sign", "msk_s", "hid_s")
 
         sk_s = self._core.generate_sk_sign(self._hid_s, self._msk_s, uid)
         return point_to_bytes_1(sk_s, self._pc_mode)
@@ -737,7 +737,7 @@ class SM9KGC:
         """
 
         if not self.can_generate_sk_encrypt:
-            raise errors.RequireArgumentError("generate sk encrypt", "msk_e", "hid_e")
+            raise RequireArgumentError("generate sk encrypt", "msk_e", "hid_e")
 
         sk_e = self._core.generate_sk_encrypt(self._hid_e, self._msk_e, uid)
         return point_to_bytes_2(sk_e, self._pc_mode)
@@ -839,7 +839,7 @@ class SM9:
         """
 
         if not self.can_sign:
-            raise errors.RequireArgumentError("sign", "mpk_s", "sk_s")
+            raise RequireArgumentError("sign", "mpk_s", "sk_s")
 
         h, S = self._core.sign(message, self._mpk_s, self._sk_s)
 
@@ -861,7 +861,7 @@ class SM9:
         """
 
         if not self.can_verify:
-            raise errors.RequireArgumentError("verify", "hid_s", "mpk_s", "ID")
+            raise RequireArgumentError("verify", "hid_s", "mpk_s", "ID")
 
         return self._core.verify(message, bytes_to_int(h), bytes_to_point_1(S), self._hid_s, self._mpk_s, self._uid)
 
@@ -880,7 +880,7 @@ class SM9:
         """
 
         if not self.can_exchange_key:
-            raise errors.RequireArgumentError("key exchange", "hid_e", "mpk_e", "sk_e", "ID")
+            raise RequireArgumentError("key exchange", "hid_e", "mpk_e", "sk_e", "ID")
 
         r, R = self._core.begin_key_exchange(self._hid_e, self._mpk_e, uid)
         return r, point_to_bytes_1(R, self._pc_mode)
@@ -930,7 +930,7 @@ class SM9:
         """
 
         if not self.can_encapsulate:
-            raise errors.RequireArgumentError("encapsulate", "hid_e", "mpk_e")
+            raise RequireArgumentError("encapsulate", "hid_e", "mpk_e")
 
         K, C = self._core.encapsulate(self._hid_e, self._mpk_e, klen, uid)
         return K, point_to_bytes_1(C, self._pc_mode)
@@ -950,7 +950,7 @@ class SM9:
         """
 
         if not self.can_decapsulate:
-            raise errors.RequireArgumentError("decapsulate", "sk_e", "uid")
+            raise RequireArgumentError("decapsulate", "sk_e", "uid")
 
         return self._core.decapsulate(bytes_to_point_1(C), klen, self._sk_e, self._uid)
 
@@ -969,7 +969,7 @@ class SM9:
         """
 
         if not self.can_encrypt:
-            raise errors.RequireArgumentError("encrypt", "hid_e", "mpk_e", "mac_klen")
+            raise RequireArgumentError("encrypt", "hid_e", "mpk_e", "mac_klen")
 
         C1, C2, C3 = self._core.encrypt(self._hid_e, self._mpk_e, plain, uid, self._mac_klen)
 
@@ -995,7 +995,7 @@ class SM9:
         """
 
         if not self.can_decrypt:
-            raise errors.RequireArgumentError("decrypt", "sk_e", "uid", "mac_klen")
+            raise RequireArgumentError("decrypt", "sk_e", "uid", "mac_klen")
 
         length = self._core.bnbp.fp1.e_length
         mode = cipher[0]
@@ -1006,7 +1006,7 @@ class SM9:
             C1 = cipher[:1 + length]
             c1_length = 1 + length
         else:
-            raise errors.InvalidPCError(mode)
+            raise InvalidPCError(mode)
 
         mac_length = self._core._hash_cls.hash_length()
         C3 = cipher[c1_length:c1_length + mac_length]

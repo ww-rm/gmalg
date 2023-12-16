@@ -18,7 +18,7 @@ All operations on the extension field are performed by computing between `int` a
 
 from typing import Tuple, Union
 
-from . import errors
+from .errors import *
 
 __all__ = [
     "Fp2Ele",
@@ -204,7 +204,7 @@ class PrimeField(PrimeFieldBase):
             self._u = self._u * 2 + 1
             self.sqrt = self._sqrt_4u3
         else:
-            raise errors.InvalidArgumentError(f"0x{p:x} is not a prime number.")
+            raise InvalidArgumentError(f"0x{p:x} is not a prime number.")
 
     def isoppo(self, x: int, y: int) -> bool:
         return x == 0 and y == 0 or x + y == self.p

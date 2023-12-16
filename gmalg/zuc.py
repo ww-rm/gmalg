@@ -2,7 +2,7 @@
 
 from typing import List
 
-from . import errors
+from .errors import *
 from .utils import ROL32
 
 __all__ = ["ZUC"]
@@ -98,9 +98,9 @@ class ZUC:
         """
 
         if len(key) != self.key_length():
-            raise errors.IncorrectLengthError("Key", f"{self.key_length()} bytes", f"{len(key)} bytes")
+            raise IncorrectLengthError("Key", f"{self.key_length()} bytes", f"{len(key)} bytes")
         if len(iv) != self.iv_length():
-            raise errors.IncorrectLengthError("IV", f"{self.iv_length()} bytes", f"{len(iv)} bytes")
+            raise IncorrectLengthError("IV", f"{self.iv_length()} bytes", f"{len(iv)} bytes")
 
         self._key: bytes = key
         self._iv: bytes = iv

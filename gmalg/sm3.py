@@ -2,8 +2,8 @@
 
 from typing import List
 
-from . import errors
 from .base import Hash
+from .errors import *
 from .utils import ROL32
 
 __all__ = ["SM3"]
@@ -120,7 +120,7 @@ class SM3(Hash):
         """
 
         if self._msg_len + len(data) > self.max_msg_length():
-            raise errors.DataOverflowError("Message", f"0x{self.max_msg_length():x} bytes")
+            raise DataOverflowError("Message", f"0x{self.max_msg_length():x} bytes")
 
         B = self._msg_block_buffer
         W1 = self._words_buffer1
