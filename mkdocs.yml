@@ -10,6 +10,9 @@ theme:
   name: readthedocs
   locale: zh_CN
 
+extra_css: []
+extra_javascript: []
+
 nav:
   - "主页": "index.md"
   - "quickstart.md"
