@@ -763,7 +763,7 @@ class SM9:
 
             uid (bytes): User ID.
 
-            rnd_fn ((int) -> int): Random function used to generate k-bit random number, default to `secrets.randbits`.
+            rnd_fn (Callable[[int], int]): Random function used to generate k-bit random number, default to `secrets.randbits`.
             pc_mode (PC_MODE): Point compress mode used for generated data, no effects on the data to be parsed.
             mac_klen (int): MAC value key length in bytes, default to `32`.
         """
