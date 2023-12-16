@@ -1,4 +1,4 @@
-"""Base classes."""
+"""This module provides some base classes and common items."""
 
 import enum
 import secrets
@@ -7,14 +7,42 @@ from typing import Callable, Type
 from . import errors
 
 __all__ = [
-    "Hash",
-    "BlockCipher",
     "PC_MODE",
     "KEYXCHG_MODE",
+    "Hash",
+    "BlockCipher",
 ]
 
 
+class PC_MODE(enum.Enum):
+    """Point compress mode.
+
+    Attributes:
+        RAW: Raw mode.
+        COMPRESS: Compressed mode.
+        MIXED: Mixed mode.
+    """
+
+    RAW = enum.auto()
+    COMPRESS = enum.auto()
+    MIXED = enum.auto()
+
+
+class KEYXCHG_MODE(enum.Enum):
+    """Key exchange mode.
+
+    Attributes:
+        INITIATOR: Initiator mode.
+        RESPONDER: Responder mode.
+    """
+
+    INITIATOR = enum.auto()
+    RESPONDER = enum.auto()
+
+
 class Hash:
+    """Base class of hash algorithm."""
+
     @classmethod
     def max_msg_length(self) -> int:
         """Get maximum message length in bytes."""
@@ -50,6 +78,8 @@ class Hash:
 
 
 class BlockCipher:
+    """Base class of block cipher algorithm."""
+
     @classmethod
     def key_length(self) -> int:
         """Get key length in bytes."""
@@ -73,22 +103,24 @@ class BlockCipher:
 
     def encrypt(self, block: bytes) -> bytes:
         """Encrypt."""
+
         raise NotImplementedError
 
     def decrypt(self, block: bytes) -> bytes:
         """Decrypt."""
+
         raise NotImplementedError
 
 
 class SMCoreBase:
-    """SM Core base."""
+    """SM core algorithm base class."""
 
     def __init__(self, hash_cls: Type[Hash], rnd_fn: Callable[[int], int] = None) -> None:
-        """SM Core Base.
+        """SM core algorithm base class.
 
         Args:
             hash_cls (Type[Hash]): Hash class used in cipher.
-            rnd_fn ((int) -> int): Random function used to generate k-bit random number, default to `secrets.randbits`.
+            rnd_fn (Callable[[int], int]): Random function used to generate k-bit random number, default to `secrets.randbits`.
         """
 
         self._hash_cls = hash_cls
@@ -136,18 +168,3 @@ class SMCoreBase:
             K.extend(hash_fn(Z + (count + 1).to_bytes(4, "big"))[:tail])
 
         return bytes(K)
-
-
-class PC_MODE(enum.Enum):
-    """Point compress mode used in `SM2` and `SM9`."""
-
-    RAW = enum.auto()
-    COMPRESS = enum.auto()
-    MIXED = enum.auto()
-
-
-class KEYXCHG_MODE(enum.Enum):
-    """Key exchange mode used in `SM2`."""
-
-    INITIATOR = enum.auto()
-    RESPONDER = enum.auto()
