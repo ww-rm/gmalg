@@ -242,7 +242,7 @@ print(cipher.hex())
 print(sm9.decrypt(cipher))
 ```
 
-更多详细用法可以查看[文档:TODO]
+更多详细用法可以查看[文档](https://gmalg.readthedocs.io).
 
 ---
 

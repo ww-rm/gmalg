@@ -240,7 +240,7 @@ print(cipher.hex())
 print(sm9.decrypt(cipher))
 ```
 
-Go to [docs:TODO] see more detailed usages.
+Go to [docs](https://gmalg.readthedocs.io) and see more detailed usages.
 
 ---
 
