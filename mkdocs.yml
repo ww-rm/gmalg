@@ -1,7 +1,7 @@
-site_name: gmalg 用户指南
+site_name: gmalg 用户手册
 site_url: "https://gmalg.readthedocs.io/zh-cn/latest/"
 site_author: ww-rm
-site_description: "gmalg 用户指南"
+site_description: "gmalg 用户手册"
 
 repo_url: https://github.com/ww-rm/gmalg/
 
