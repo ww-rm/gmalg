@@ -14,7 +14,7 @@ theme:
 nav:
   - "主页": "index.md"
   - "quickstart.md"
-  - "api-reference.md"
+  - "api.md"
 
 markdown_extensions:
   - toc:
@@ -33,7 +33,7 @@ plugins:
             show_object_full_path: true
             show_source: false
             merge_init_into_class: true
-            separate_signature: true
+            members_order: source
 
             docstring_options:
               ignore_init_summary: true
