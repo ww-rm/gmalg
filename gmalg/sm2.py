@@ -1,3 +1,5 @@
+"""SM2 Algorithm Implementation Module."""
+
 import math
 from typing import Callable, Tuple, Type
 
@@ -24,7 +26,15 @@ _ecdlp = Ec.ECDLP(
 
 
 def point_to_bytes(P: Ec.EcPoint, mode: PC_MODE) -> bytes:
-    """Convert point to bytes."""
+    """Convert point to bytes.
+
+    Args:
+        P (EcPoint): Point to be converted.
+        mode: (PC_MODE): Compress mode.
+
+    Returns:
+        bytes: Converted point bytes.
+    """
 
     if P == _ecdlp.ec.INF:
         return b"\x00"
@@ -49,7 +59,14 @@ def point_to_bytes(P: Ec.EcPoint, mode: PC_MODE) -> bytes:
 
 
 def bytes_to_point(b: bytes) -> Ec.EcPoint:
-    """Convert bytes to point."""
+    """Convert bytes to point.
+
+    Args:
+        b (bytes): Point bytes.
+
+    Returns:
+        EcPoint: Point converted.
+    """
 
     fp = _ecdlp.fp
     ec = _ecdlp.ec
@@ -75,7 +92,11 @@ def bytes_to_point(b: bytes) -> Ec.EcPoint:
 
 
 class SM2Core(SMCoreBase):
-    """SM2 Core Algorithms."""
+    """SM2 Core Algorithms.
+
+    Attributes:
+        ecdlp (ECDLP): ECDLP used in SM2.
+    """
 
     def __init__(self, ecdlp: Ec.ECDLP, hash_cls: Type[Hash], rnd_fn: Callable[[int], int] = None) -> None:
         """SM2 Core Algorithms.
@@ -83,7 +104,7 @@ class SM2Core(SMCoreBase):
         Args:
             ecdlp (ECDLP): ECDLP used in SM2.
             hash_cls (Type[Hash]): Hash class used in SM2.
-            rnd_fn ((int) -> int): Random function used to generate k-bit random number, default to `secrets.randbits`.
+            rnd_fn (Callable[[int], int]): Random function used to generate k-bit random number, default to `secrets.randbits`.
         """
 
         super().__init__(hash_cls, rnd_fn)
@@ -96,18 +117,37 @@ class SM2Core(SMCoreBase):
         self._2w_1 = self._2w - 1
 
     def generate_pk(self, sk: int) -> Ec.EcPoint:
-        """Generate public key by secret key."""
+        """Generate public key by secret key.
+
+        Args:
+            sk (int): Secret key.
+
+        Returns:
+            EcPoint: Point of public key.
+        """
 
         return self.ecdlp.kG(sk)
 
     def generate_keypair(self) -> Tuple[int, Ec.EcPoint]:
-        """Generate key pair."""
+        """Generate key pair.
+
+        Returns:
+            int: Secret key.
+            EcPoint: Public key.
+        """
 
         sk = self._randint(1, self.ecdlp.fpn.p - 2)
         return sk, self.generate_pk(sk)
 
     def verify_pk(self, pk: Ec.EcPoint) -> bool:
-        """Verify if a public key is valid."""
+        """Verify if a public key is valid.
+
+        Args:
+            pk (EcPoint): Public key point.
+
+        Returns:
+            bool: Whether valid.
+        """
 
         ec = self.ecdlp.ec
 
@@ -124,6 +164,13 @@ class SM2Core(SMCoreBase):
 
     def entity_info(self, uid: bytes, pk: Ec.EcPoint) -> bytes:
         """Generate other entity information bytes.
+
+        Args:
+            uid (bytes): User ID.
+            pk (EcPoint): Public key point.
+
+        Returns:
+            bytes: User entity information.
 
         Raises:
             DataOverflowError: ID length more than 8192 bytes.
@@ -227,14 +274,15 @@ class SM2Core(SMCoreBase):
             pk (EcPoint): Public key.
 
         Returns:
-            EcPoint: C1, kG point
-            bytes: C2, cipher
-            bytes: C3, hash value
+            EcPoint: C1, kG point.
+            bytes: C2, cipher.
+            bytes: C3, hash value of cipher.
 
         Raises:
             InfinitePointError: Infinite point encountered.
 
-        The return order is `C1, C2, C3`, **NOT** `C1, C3, C2`.
+        Note:
+            The return order is `C1, C2, C3`, **NOT** `C1, C3, C2`.
         """
 
         ec = self.ecdlp.ec
@@ -309,8 +357,11 @@ class SM2Core(SMCoreBase):
     def begin_key_exchange(self, sk: int) -> Tuple[Ec.EcPoint, int]:
         """Generate data to begin key exchange.
 
+        Args:
+            sk (int): Secret key.
+
         Returns:
-            EcPoint: Random point, [r]G, r in [1, n - 1]
+            EcPoint: Random point.
             int: t
         """
 
@@ -358,17 +409,16 @@ class SM2Core(SMCoreBase):
 
         Args:
             klen (int): key length in bytes to generate.
-            x (int): x of secret point.
-            y (int): y of secret point.
+            S (EcPoint): Secret point.
 
             uid_init (bytes): User ID bytes of initiator.
-            pk_init (EcPoint): public key of initiator.
+            pk_init (EcPoint): Public key of initiator.
 
             uid_resp (bytes): User ID bytes of responder.
-            pk_resp (EcPoint): public key of responder.
+            pk_resp (EcPoint): Public key of responder.
 
         Returns:
-            bytes: secret key of klen bytes.
+            bytes: Secret key of klen bytes.
         """
 
         x, y = S
@@ -384,18 +434,18 @@ class SM2Core(SMCoreBase):
 
 
 class SM2:
-    """SM2."""
+    """SM2 Algorithm."""
 
     def __init__(self, sk: bytes = None, uid: bytes = None, pk: bytes = None, *,
                  rnd_fn: Callable[[int], int] = None, pc_mode: PC_MODE = PC_MODE.RAW) -> None:
-        """SM2.
+        """SM2 Algorithm.
 
         Args:
             sk (bytes): Secret key.
             pk (bytes): Public key.
             uid (bytes): User ID.
 
-            rnd_fn ((int) -> int): Random function used to generate k-bit random number, default to `secrets.randbits`.
+            rnd_fn (Callable[[int], int]): Random function used to generate k-bit random number, default to `secrets.randbits`.
             pc_mode (PC_MODE): Point compress mode used for generated data, no effects on the data to be parsed.
         """
 
@@ -417,26 +467,43 @@ class SM2:
 
     @property
     def can_sign(self) -> bool:
+        """Whether can do sign."""
+
         return bool(self._sk and self._uid)
 
     @property
     def can_verify(self) -> bool:
+        """Whether can do verify."""
+
         return bool(self._pk and self._uid)
 
     @property
     def can_encrypt(self) -> bool:
+        """Whether can do encrypt."""
+
         return bool(self._pk)
 
     @property
     def can_decrypt(self) -> bool:
+        """Whether can do decrypt."""
+
         return bool(self._sk)
 
     @property
     def can_exchange_key(self) -> bool:
+        """Whether can do key exchange."""
+
         return bool(self._sk and self._uid)
 
     def generate_pk(self, sk: bytes) -> bytes:
-        """Generate public key from secret key."""
+        """Generate public key from secret key.
+
+        Args:
+            sk (bytes): Secret key.
+
+        Returns:
+            bytes: Public key.
+        """
 
         return point_to_bytes(self._core.generate_pk(bytes_to_int(sk)), self._pc_mode)
 
@@ -467,8 +534,11 @@ class SM2:
         """Generate signature on message.
 
         Returns:
-            bytes: r
-            bytes: s
+            bytes: r.
+            bytes: s.
+
+        Raises:
+            RequireArgumentError: Missing some required arguments.
         """
 
         if not self.can_sign:
@@ -478,7 +548,19 @@ class SM2:
         return int_to_bytes(r), int_to_bytes(s)
 
     def verify(self, message: bytes, r: bytes, s: bytes) -> bool:
-        """Verify a message and it's signature."""
+        """Verify a message and it's signature.
+
+        Args:
+            message (bytes): Message to be signed.
+            r (bytes): r of signature.
+            s (bytes): s of signature.
+
+        Returns:
+            bool: Whether OK.
+
+        Raises:
+            RequireArgumentError: Missing some required arguments.
+        """
 
         if not self.can_verify:
             raise errors.RequireArgumentError("verify", "pk", "ID")
@@ -490,6 +572,12 @@ class SM2:
 
         Args:
             plain (bytes): plain text to be encrypted.
+
+        Returns:
+            bytes: Cipher data.
+
+        Raises:
+            RequireArgumentError: Missing some required arguments.
         """
 
         if not self.can_encrypt:
@@ -507,8 +595,15 @@ class SM2:
     def decrypt(self, cipher: bytes) -> bytes:
         """Decrypt.
 
+        Args:
+            cipher (bytes): Cipher data.
+
+        Returns:
+            bytes: Plain data.
+
         Raises:
-            ValueError: Invalid PC byte.
+            RequireArgumentError: Missing some required arguments.
+            InvalidPCError: Invalid PC byte.
         """
 
         if not self.can_decrypt:
@@ -537,6 +632,9 @@ class SM2:
         Returns:
             bytes: Random point, will be sent to another user.
             int: t, will be used in next step.
+
+        Raises:
+            RequireArgumentError: Missing some required arguments.
         """
 
         if not self.can_exchange_key:
@@ -552,12 +650,15 @@ class SM2:
             klen (int): Length of secret key in bytes to generate.
             t (int): t value of self.
             R (bytes): Random point from another user.
-            uid (bytes): ID from another user.
-            pk (bytes): Public key from another user.
+            uid (bytes): ID of another user.
+            pk (bytes): Public key of another user.
             mode (KEYXCHG_MODE): Key exchange mode, initiator or responder.
 
         Returns:
             bytes: Secret key of klen bytes.
+
+        Raises:
+            TypeError: Invalid key exchange mode.
         """
 
         R = bytes_to_point(R)
