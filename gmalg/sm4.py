@@ -90,7 +90,7 @@ class SM4(BlockCipher):
         """SM4 Algorithm.
 
         Args:
-            key (bytes): 16 bytes key.
+            key: 16 bytes key.
 
         Raises:
             IncorrectLengthError: Incorrect key length.
@@ -109,7 +109,7 @@ class SM4(BlockCipher):
         """Encrypt.
 
         Args:
-            block (bytes): Plain block to encrypt, must be 16 bytes.
+            block: Plain block to encrypt, must be 16 bytes.
 
         Returns:
             bytes: 16 bytes cipher block.
@@ -146,7 +146,7 @@ class SM4(BlockCipher):
         """Decrypt.
 
         Args:
-            block (bytes): cipher block to decrypt, must be 16 bytes.
+            block: cipher block to decrypt, must be 16 bytes.
 
         Returns:
             bytes: 16 bytes plain block.

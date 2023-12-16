@@ -89,8 +89,8 @@ class ZUC:
         """ZUC Algorithm.
 
         Args:
-            key (bytes): 16 bytes key.
-            iv (bytes): 16 bytes iv.
+            key: 16 bytes key.
+            iv: 16 bytes iv.
 
         Raises:
             IncorrectLengthError: Incorrect key length.

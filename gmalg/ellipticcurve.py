@@ -44,8 +44,8 @@ class EllipticCurve:
 
     Attributes:
         INF: Infinite point.
-        a (FpExEle): Parameter a of curve.
-        b (FpExEle): Parameter b of curve.
+        a: Parameter a of curve.
+        b: Parameter b of curve.
     """
 
     INF: EcPointEx = (float("inf"), float("inf"))
@@ -54,9 +54,9 @@ class EllipticCurve:
         """Elliptic curve.
 
         Args:
-            fp (PrimeFieldBase): Prime field operations used in ellitic curve, must be derived from class `PrimeFieldBase`. 
-            a (FpExEle): Parameter a of curve.
-            b (FpExEle): Parameter b of curve.
+            fp: Prime field operations used in ellitic curve, must be derived from class `PrimeFieldBase`. 
+            a: Parameter a of curve.
+            b: Parameter b of curve.
 
         Note:
             When instantiating the class, the `FpExEle` or `EcPointEx` type in the methods will correspond to the type of `fp`.
@@ -139,23 +139,23 @@ class ECDLP:
     """Elliptic Curve Discrete Logarithm Problem.
 
     Attributes:
-        fp (PrimeField): `PrimeField` used in ECDLP.
-        ec (EllipticCurve): `EllipticCurve` used in ECDLP.
-        G (EcPoint): Base point.
-        fpn (PrimeField): `PrimeField` operations for the order of base point.
-        h (int): Cofactor of base point.
+        fp: `PrimeField` used in ECDLP.
+        ec: `EllipticCurve` used in ECDLP.
+        G: Base point.
+        fpn: `PrimeField` operations for the order of base point.
+        h: Cofactor of base point.
     """
 
     def __init__(self, p: int, a: int, b: int, G: EcPoint, n: int, h: int = 1) -> None:
         """Elliptic Curve Discrete Logarithm Problem.
 
         Args:
-            p (int): Parameter p of curve.
-            a (int): Parameter a of curve.
-            b (int): Parameter b of curve.
-            G (EcPoint): Base point.
-            n (int): Order of base point.
-            h (int): Cofactor of `G`, default to `1`.
+            p: Parameter p of curve.
+            a: Parameter a of curve.
+            b: Parameter b of curve.
+            G: Base point.
+            n: Order of base point.
+            h: Cofactor of `G`, default to `1`.
         """
 
         self.fp = Fp.PrimeField(p)
@@ -191,23 +191,23 @@ class SM9BNBP:
         Refer to the source code for detailed information.
 
     Attributes:
-        t (int): Parameter t of SM9.
-        fp12 (PrimeField12): `PrimeField12` operations used in SM9.
-        fp2 (PrimeField2): `PrimeField2` operations used in SM9.
-        fp1 (PrimeField): `PrimeField` operations used in SM9.
-        fpn (PrimeField): `PrimeField` operations for the order of base point.
-        ec1 (EllipticCurve): `EllipticCurve` on Fp operations used in SM9.
-        ec2 (EllipticCurve): `EllipticCurve` on Fp2 operations used in SM9.
-        G1 (EcPoint): Base point of group 1.
-        G2 (EcPoint2): Base point of group 2.
+        t: Parameter t of SM9.
+        fp12: `PrimeField12` operations used in SM9.
+        fp2: `PrimeField2` operations used in SM9.
+        fp1: `PrimeField` operations used in SM9.
+        fpn: `PrimeField` operations for the order of base point.
+        ec1: `EllipticCurve` on Fp operations used in SM9.
+        ec2: `EllipticCurve` on Fp2 operations used in SM9.
+        G1: Base point of group 1.
+        G2: Base point of group 2.
     """
 
     def __init__(self, G1: EcPoint, G2: EcPoint2) -> None:
         """SM9 Bilinear Pairing on Barreto-Naehrig (BN) Elliptic Curve.
 
         Args:
-            G1 (EcPoint): Base point of group 1.
-            G2 (EcPoint2): Base point of group 2.
+            G1: Base point of group 1.
+            G2: Base point of group 2.
         """
 
         # SM9 parameters
@@ -382,8 +382,8 @@ class SM9BNBP:
         """R-ate bilinear pairing.
 
         Args:
-            P (EcPoint): Element of group 1.
-            Q (EcPoint2): Element of group 2.
+            P: Element of group 1.
+            Q: Element of group 2.
 
         Returns:
             Fp12Ele: Pairing value on Fp12.

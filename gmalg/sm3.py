@@ -113,7 +113,7 @@ class SM3(Hash):
         """Update internal state.
 
         Args:
-            data (bytes): data stream to be updated.
+            data: Data stream to be updated.
 
         Raises:
             DataOverflowError: Message too long.

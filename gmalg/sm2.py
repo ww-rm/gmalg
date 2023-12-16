@@ -29,8 +29,8 @@ def point_to_bytes(P: Ec.EcPoint, mode: PC_MODE) -> bytes:
     """Convert point to bytes.
 
     Args:
-        P (EcPoint): Point to be converted.
-        mode: (PC_MODE): Compress mode.
+        P: Point to be converted.
+        mode:: Compress mode.
 
     Returns:
         bytes: Converted point bytes.
@@ -65,7 +65,7 @@ def bytes_to_point(b: bytes) -> Ec.EcPoint:
     """Convert bytes to point.
 
     Args:
-        b (bytes): Point bytes.
+        b: Point bytes.
 
     Returns:
         EcPoint: Point converted.
@@ -102,14 +102,14 @@ class SM2Core(SMCoreBase):
     """SM2 Core Algorithms.
 
     Attributes:
-        ecdlp (ECDLP): ECDLP used in SM2.
+        ecdlp: ECDLP used in SM2.
     """
 
     def __init__(self, ecdlp: Ec.ECDLP, hash_cls: Type[Hash], rnd_fn: Callable[[int], int] = None) -> None:
         """SM2 Core Algorithms.
 
         Args:
-            ecdlp (ECDLP): ECDLP used in SM2.
+            ecdlp: ECDLP used in SM2.
             hash_cls (Type[Hash]): Hash class used in SM2.
             rnd_fn (Callable[[int], int]): Random function used to generate k-bit random number, default to `secrets.randbits`.
         """
@@ -127,7 +127,7 @@ class SM2Core(SMCoreBase):
         """Generate public key by secret key.
 
         Args:
-            sk (int): Secret key.
+            sk: Secret key.
 
         Returns:
             EcPoint: Point of public key.
@@ -150,7 +150,7 @@ class SM2Core(SMCoreBase):
         """Verify if a public key is valid.
 
         Args:
-            pk (EcPoint): Public key point.
+            pk: Public key point.
 
         Returns:
             bool: Whether valid.
@@ -173,8 +173,8 @@ class SM2Core(SMCoreBase):
         """Generate other entity information bytes.
 
         Args:
-            uid (bytes): User ID.
-            pk (EcPoint): Public key point.
+            uid: User ID.
+            pk: Public key point.
 
         Returns:
             bytes: User entity information.
@@ -207,10 +207,10 @@ class SM2Core(SMCoreBase):
         """Generate signature on the message.
 
         Args:
-            message (bytes): Message to be signed.
-            sk (int): Secret key.
-            uid (bytes): User ID.
-            pk (EcPoint): Public key
+            message: Message to be signed.
+            sk: Secret key.
+            uid: User ID.
+            pk: Public key
 
         Returns:
             int: r.
@@ -242,11 +242,11 @@ class SM2Core(SMCoreBase):
         """Verify the signature on the message.
 
         Args:
-            message (bytes): Message to be verified.
-            r (int): r
-            s (int): s
-            uid (bytes): User ID.
-            pk (EcPoint): Public key.
+            message: Message to be verified.
+            r: r
+            s: s
+            uid: User ID.
+            pk: Public key.
 
         Returns:
             bool: Whether OK.
@@ -277,8 +277,8 @@ class SM2Core(SMCoreBase):
         """Encrypt.
 
         Args:
-            plain (bytes): Plain text to be encrypted.
-            pk (EcPoint): Public key.
+            plain: Plain text to be encrypted.
+            pk: Public key.
 
         Returns:
             EcPoint: C1, kG point.
@@ -318,10 +318,10 @@ class SM2Core(SMCoreBase):
         """Decrypt.
 
         Args:
-            C1 (EcPoint): kG point.
-            C2 (bytes): Cipher.
-            C3 (bytes): Hash value.
-            sk (int): Secret key.
+            C1: kG point.
+            C2: Cipher.
+            C3: Hash value.
+            sk: Secret key.
 
         Returns:
             bytes: Plain text.
@@ -365,7 +365,7 @@ class SM2Core(SMCoreBase):
         """Generate data to begin key exchange.
 
         Args:
-            sk (int): Secret key.
+            sk: Secret key.
 
         Returns:
             EcPoint: Random point.
@@ -385,9 +385,9 @@ class SM2Core(SMCoreBase):
         """Generate same secret point as another user.
 
         Args:
-            t (int): Generated from `begin_key_exchange`
-            R (EcPoint): Random point from another user.
-            pk (EcPoint): Public key of another user.
+            t: Generated from `begin_key_exchange`
+            R: Random point from another user.
+            pk: Public key of another user.
 
         Returns:
             EcPoint: The same secret point as another user.
@@ -415,14 +415,14 @@ class SM2Core(SMCoreBase):
         """Generate secret key of klen bytes as same as another user.
 
         Args:
-            klen (int): key length in bytes to generate.
-            S (EcPoint): Secret point.
+            klen: key length in bytes to generate.
+            S: Secret point.
 
-            uid_init (bytes): User ID bytes of initiator.
-            pk_init (EcPoint): Public key of initiator.
+            uid_init: User ID bytes of initiator.
+            pk_init: Public key of initiator.
 
-            uid_resp (bytes): User ID bytes of responder.
-            pk_resp (EcPoint): Public key of responder.
+            uid_resp: User ID bytes of responder.
+            pk_resp: Public key of responder.
 
         Returns:
             bytes: Secret key of klen bytes.
@@ -448,12 +448,12 @@ class SM2:
         """SM2 Algorithm.
 
         Args:
-            sk (bytes): Secret key.
-            pk (bytes): Public key.
-            uid (bytes): User ID.
+            sk: Secret key.
+            pk: Public key.
+            uid: User ID.
 
             rnd_fn (Callable[[int], int]): Random function used to generate k-bit random number, default to `secrets.randbits`.
-            pc_mode (PC_MODE): Point compress mode used for generated data, no effects on the data to be parsed.
+            pc_mode: Point compress mode used for generated data, no effects on the data to be parsed.
         """
 
         self._core = SM2Core(_ecdlp, SM3, rnd_fn)
@@ -506,7 +506,7 @@ class SM2:
         """Generate public key from secret key.
 
         Args:
-            sk (bytes): Secret key.
+            sk: Secret key.
 
         Returns:
             bytes: Public key.
@@ -529,7 +529,7 @@ class SM2:
         """Verify if a public key is valid.
 
         Args:
-            pk (bytes): public key.
+            pk: public key.
 
         Returns:
             bool: Whether valid.
@@ -558,9 +558,9 @@ class SM2:
         """Verify a message and it's signature.
 
         Args:
-            message (bytes): Message to be signed.
-            r (bytes): r of signature.
-            s (bytes): s of signature.
+            message: Message to be signed.
+            r: r of signature.
+            s: s of signature.
 
         Returns:
             bool: Whether OK.
@@ -578,7 +578,7 @@ class SM2:
         """Encrypt.
 
         Args:
-            plain (bytes): plain text to be encrypted.
+            plain: plain text to be encrypted.
 
         Returns:
             bytes: Cipher data.
@@ -603,7 +603,7 @@ class SM2:
         """Decrypt.
 
         Args:
-            cipher (bytes): Cipher data.
+            cipher: Cipher data.
 
         Returns:
             bytes: Plain data.
@@ -654,12 +654,12 @@ class SM2:
         """End key exchange and get the secret key bytes.
 
         Args:
-            klen (int): Length of secret key in bytes to generate.
-            t (int): t value of self.
-            R (bytes): Random point from another user.
-            uid (bytes): ID of another user.
-            pk (bytes): Public key of another user.
-            mode (KEYXCHG_MODE): Key exchange mode, initiator or responder.
+            klen: Length of secret key in bytes to generate.
+            t: t value of self.
+            R: Random point from another user.
+            uid: ID of another user.
+            pk: Public key of another user.
+            mode: Key exchange mode, initiator or responder.
 
         Returns:
             bytes: Secret key of klen bytes.

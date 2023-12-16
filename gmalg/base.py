@@ -62,7 +62,7 @@ class Hash:
         """Update internal state.
 
         Args:
-            data (bytes): Data stream to be updated.
+            data: Data stream to be updated.
         """
 
         raise NotImplementedError
@@ -96,7 +96,7 @@ class BlockCipher:
         """Block Cipher.
 
         Args:
-            key (bytes): Key used in cipher, has a length of `BlockCipher.key_length()`.
+            key: Key used in cipher, has a length of `BlockCipher.key_length()`.
         """
 
         raise NotImplementedError
@@ -146,8 +146,8 @@ class SMCoreBase:
         """Key derivation function.
 
         Args:
-            Z (bytes): Secret bytes.
-            klen (int): Key byte length to derivate.
+            Z: Secret bytes.
+            klen: Key byte length to derivate.
 
         Raises:
             DataOverflowError: `klen` is too large.

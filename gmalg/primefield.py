@@ -81,7 +81,7 @@ class PrimeFieldBase:
         """Base class of Fp operations.
 
         Args:
-            p (int): A prime number.
+            p: A prime number.
         """
 
         raise NotImplementedError
@@ -156,10 +156,10 @@ class PrimeField(PrimeFieldBase):
     """Fp operations.
 
     Attributes:
-        p (int): Prime number used in operations.
-        p_bitlength (int): Bit length of p.
-        p_length (int): Byte length of p.
-        e_length (int): Byte length of domain element.
+        p: Prime number used in operations.
+        p_bitlength: Bit length of p.
+        p_length: Byte length of p.
+        e_length: Byte length of domain element.
     """
 
     _ZERO = 0
@@ -322,8 +322,8 @@ class PrimeField2(PrimeFieldBase):
     """Fp2 operations.
 
     Attributes:
-        fp (PrimeField): `PrimeField` used in operations.
-        e_length (int): Byte length of domain element.
+        fp: `PrimeField` used in operations.
+        e_length: Byte length of domain element.
     """
 
     _ALPHA: int = -2
@@ -470,8 +470,8 @@ class PrimeField4(PrimeFieldBase):
     """Fp4 operations.
 
     Attributes:
-        fp2 (PrimeField2): `PrimeField2` used in operations.
-        e_length (int): Byte length of domain element.
+        fp2: `PrimeField2` used in operations.
+        e_length: Byte length of domain element.
     """
 
     _ALPHA: Fp2Ele = (1, 0)
@@ -593,8 +593,8 @@ class PrimeField12(PrimeFieldBase):
     """Fp12 operations.
 
     Attributes:
-        fp4 (PrimeField4): `PrimeField4` used in operations.
-        e_length (int): Byte length of domain element."""
+        fp4: `PrimeField4` used in operations.
+        e_length: Byte length of domain element."""
 
     _ALPHA: Fp4Ele = ((0, 1), (0, 0))
     _ZERO = (PrimeField4.zero(), PrimeField4.zero(), PrimeField4.zero())
