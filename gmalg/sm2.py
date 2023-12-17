@@ -102,7 +102,7 @@ class SM2Core(SMCoreBase):
     """SM2 Core Algorithms.
 
     Attributes:
-        ecdlp: ECDLP used in SM2.
+        ecdlp (ECDLP): ECDLP used in SM2.
     """
 
     def __init__(self, ecdlp: Ec.ECDLP, hash_cls: Type[Hash], rnd_fn: Callable[[int], int] = None) -> None:

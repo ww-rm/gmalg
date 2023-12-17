@@ -174,7 +174,7 @@ class SM9Core(SMCoreBase):
     """SM9 Core Algorithms.
 
     Attributes:
-        bnbp: BNBP used in SM9.
+        bnbp (SM9BNBP): BNBP used in SM9.
     """
 
     def __init__(self, bnbp: Ec.SM9BNBP, hash_cls: Type[Hash], rnd_fn: Callable[[int], int] = None) -> None:
