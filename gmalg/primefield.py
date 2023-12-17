@@ -3,17 +3,6 @@
 This module provides basic operations on extension fields.
     The extension field is constructed through a tower extension in the "1-2-4-12" manner,
     as detailed in the SM9 standard documentation.
-
-For convenience, the module defines the following custom type:
-
-```python
-Fp2Ele = Tuple[int, int]
-Fp4Ele = Tuple[Fp2Ele, Fp2Ele]
-Fp12Ele = Tuple[Fp4Ele, Fp4Ele, Fp4Ele]
-FpExEle = Union[int, Fp2Ele, Fp4Ele, Fp12Ele]
-```
-
-All operations on the extension field are performed by computing between `int` and the specified types mentioned above.
 """
 
 from typing import Tuple, Union

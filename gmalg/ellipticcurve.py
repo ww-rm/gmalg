@@ -2,18 +2,6 @@
 
 This module provides fundamental operations related to elliptic curves,
     including but not limited to those specified in the national cryptographic standard documents.
-
-For convenience, the module defines the following custom types related to elliptic curve points:
-
-```python
-EcPoint = Tuple[int, int]
-EcPoint2 = Tuple[Fp2Ele, Fp2Ele]
-EcPoint4 = Tuple[Fp4Ele, Fp4Ele]
-EcPoint12 = Tuple[Fp12Ele, Fp12Ele]
-EcPointEx = Tuple[FpExEle, FpExEle]
-```
-
-These data types align with extension field element types and are used by the module to perform operations on elliptic curves.
 """
 
 from typing import Tuple, Union
