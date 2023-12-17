@@ -31,7 +31,7 @@ print(sk.hex())
 print(pk.hex())
 ```
 
-然后实例化 `gmalg.SM2` 并设置密钥参数.
+然后实例化 [`SM2`][gmalg.SM2] 并设置密钥参数.
 
 ```python
 sm2 = gmalg.SM2(sk, b"Alice", pk)
@@ -100,9 +100,9 @@ print(KA == KB)
 print(KA.hex())
 ```
 
-使用 `begin_key_exchange` 生成密钥交换必需的交换数据.
+使用 [`begin_key_exchange`][gmalg.SM2.begin_key_exchange] 生成密钥交换必需的交换数据.
 
-使用 `end_key_exchange` 来结束密钥交换并得到指定长度的密钥, 需要指定调用者是发起方还是响应方.
+使用 [`end_key_exchange`][gmalg.SM2.end_key_exchange] 来结束密钥交换并得到指定长度的密钥, 需要指定调用者是发起方还是响应方.
 
 ### 参数需求
 
@@ -137,7 +137,7 @@ hash_value = sm3.value()
 print(hash_value.hex())
 ```
 
-使用前需要实例化 `gmalg.SM3` 类, 使用 `value` 方法可以随时获取当前内容的哈希值, 使用 `update` 方法可以向内部继续添加内容.
+使用前需要实例化 [`SM3`][gmalg.SM3] 类, 使用 [`value`][gmalg.SM3.value] 方法可以随时获取当前内容的哈希值, 使用 [`update`][gmalg.SM3.update] 方法可以向内部继续添加内容.
 
 SM3 的哈希值长度为 32 字节. 即使是空值, SM3 算法也有固定的哈希值输出.
 
@@ -168,7 +168,7 @@ plain = sm4.decrypt(cipher)
 print(plain)
 ```
 
-初始化 `gmalg.SM4` 类, 需要指定一次密钥, 密钥长度为 16 字节. 之后使用 `encrypt` 和 `decrypt` 方法进行加密和解密, 分组长度为 16 字节.
+初始化 [`SM4`][gmalg.SM4] 类, 需要指定一次密钥, 密钥长度为 16 字节. 之后使用 [`encrypt`][gmalg.SM4.encrypt] 和 [`decrypt`][gmalg.SM4.decrypt] 方法进行加密和解密, 分组长度为 16 字节.
 
 ## SM9 标识密码算法
 
@@ -199,6 +199,8 @@ KGC 在生成用户私钥时, 还会额外用到一个生成标识符 (hid), 该
 在有了以上必要的基础知识储备后, 我们便可以开始使用 gmalg 中的 SM9 算法.
 
 使用签名/验签, 如果没有系统主密钥对, 则首先进行随机生成, 并确定 1 个字节的用户密钥生成标识符.
+
+实例化类 [`SM9KGC`][gmalg.SM9KGC] 获取 KGC 的功能, 实例化类 [`SM9`][gmalg.SM9] 获得用户功能.
 
 ```python
 import gmalg
@@ -321,7 +323,7 @@ print(KA.hex() == KB.hex())
 print(KA.hex())
 ```
 
-同样的, 在使用 `end_key_exchange` 时, 也需要指定调用者是发起方还是响应方.
+同样的, 在使用 [`end_key_exchange`][gmalg.SM9.end_key_exchange] 时, 也需要指定调用者是发起方还是响应方.
 
 ### 参数需求
 
@@ -365,4 +367,4 @@ k = zuc.generate()
 print(k.hex())
 ```
 
-`gmalg.ZUC` 需要提供 `key` 和 `iv` 两个参数, 长度均为 16 字节, 使用 `generate` 方法可以生成伪随机数据流, 每次生成的数据长度为 4 字节.
+[`ZUC`][gmalg.ZUC] 需要提供 `key` 和 `iv` 两个参数, 长度均为 16 字节, 使用 [`generate`][gmalg.ZUC] 方法可以生成伪随机数据流, 每次生成的数据长度为 4 字节.
