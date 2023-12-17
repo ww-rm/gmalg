@@ -21,7 +21,7 @@ dynamic = ["version", "readme"]
 [project.urls]
 "Homepage" = "https://github.com/ww-rm/gmalg"
 "Issues" = "https://github.com/ww-rm/gmalg/issues"
-"Documentation" = "https://gmalg.readthedocs.io
+"Documentation" = "https://gmalg.readthedocs.io"
 
 [tool.setuptools]
 packages = ["gmalg"]
