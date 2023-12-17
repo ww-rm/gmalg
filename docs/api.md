@@ -2,15 +2,15 @@
 
 常用接口已经自动导入 `gmalg` 命名空间, 可以直接使用, 点击下方链接快速跳转至说明.
 
-- [gmalg.SM2][gmalg.sm2.SM2]
-- [gmalg.SM3][gmalg.sm3.SM3]
-- [gmalg.SM4][gmalg.sm4.SM4]
-- [gmalg.SM9KGC][gmalg.sm9.SM9KGC]
-- [gmalg.SM9][gmalg.sm9.SM9]
-- [gmalg.ZUC][gmalg.zuc.ZUC]
-- [gmalg.errors][gmalg.errors]
-- [gmalg.KEYXCHG_MODE][gmalg.base.KEYXCHG_MODE]
-- [gmalg.PC_MODE][gmalg.base.PC_MODE]
+- [`gmalg.SM2`][]
+- [`gmalg.SM3`][]
+- [`gmalg.SM4`][]
+- [`gmalg.SM9KGC`][]
+- [`gmalg.SM9`][]
+- [`gmalg.ZUC`][]
+- [`gmalg.KEYXCHG_MODE`][]
+- [`gmalg.PC_MODE`][]
+- [`gmalg.errors`][]
 
 继续向下阅读 `gmalg` 中涉及的所有主要接口及其参数说明.
 
