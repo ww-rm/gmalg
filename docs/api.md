@@ -67,12 +67,52 @@
 ---
 
 ::: gmalg.primefield
+
+---
+
+::: gmalg.primefield.Fp2Ele
     options:
-        members_order: source
+        heading_level: 3
+        show_root_full_path: false
+::: gmalg.primefield.Fp4Ele
+    options:
+        heading_level: 3
+        show_root_full_path: false
+::: gmalg.primefield.Fp12Ele
+    options:
+        heading_level: 3
+        show_root_full_path: false
+::: gmalg.primefield.FpExEle
+    options:
+        heading_level: 3
+        show_root_full_path: false
 
 ---
 
 ::: gmalg.ellipticcurve
+
+---
+
+::: gmalg.ellipticcurve.EcPoint
+    options:
+        heading_level: 3
+        show_root_full_path: false
+::: gmalg.ellipticcurve.EcPoint2
+    options:
+        heading_level: 3
+        show_root_full_path: false
+::: gmalg.ellipticcurve.EcPoint4
+    options:
+        heading_level: 3
+        show_root_full_path: false
+::: gmalg.ellipticcurve.EcPoint12
+    options:
+        heading_level: 3
+        show_root_full_path: false
+::: gmalg.ellipticcurve.EcPointEx
+    options:
+        heading_level: 3
+        show_root_full_path: false
 
 ---
 
