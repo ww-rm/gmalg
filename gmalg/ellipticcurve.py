@@ -44,8 +44,8 @@ class EllipticCurve:
 
     Attributes:
         INF: Infinite point.
-        a: Parameter a of curve.
-        b: Parameter b of curve.
+        a (FpExEle): Parameter a of curve.
+        b (FpExEle): Parameter b of curve.
     """
 
     INF: EcPointEx = (float("inf"), float("inf"))
@@ -139,11 +139,11 @@ class ECDLP:
     """Elliptic Curve Discrete Logarithm Problem.
 
     Attributes:
-        fp: `PrimeField` used in ECDLP.
-        ec: `EllipticCurve` used in ECDLP.
-        G: Base point.
-        fpn: `PrimeField` operations for the order of base point.
-        h: Cofactor of base point.
+        fp (PrimeField): `PrimeField` used in ECDLP.
+        ec (EllipticCurve): `EllipticCurve` used in ECDLP.
+        G (EcPoint): Base point.
+        fpn (PrimeField): `PrimeField` operations for the order of base point.
+        h (int): Cofactor of base point.
     """
 
     def __init__(self, p: int, a: int, b: int, G: EcPoint, n: int, h: int = 1) -> None:
@@ -191,15 +191,15 @@ class SM9BNBP:
         Refer to the source code for detailed information.
 
     Attributes:
-        t: Parameter t of SM9.
-        fp12: `PrimeField12` operations used in SM9.
-        fp2: `PrimeField2` operations used in SM9.
-        fp1: `PrimeField` operations used in SM9.
-        fpn: `PrimeField` operations for the order of base point.
-        ec1: `EllipticCurve` on Fp operations used in SM9.
-        ec2: `EllipticCurve` on Fp2 operations used in SM9.
-        G1: Base point of group 1.
-        G2: Base point of group 2.
+        t (int): Parameter t of SM9.
+        fp12 (PrimeField12): `PrimeField12` operations used in SM9.
+        fp2 (PrimeField2): `PrimeField2` operations used in SM9.
+        fp1 (PrimeField): `PrimeField` operations used in SM9.
+        fpn (PrimeField): `PrimeField` operations for the order of base point.
+        ec1 (EllipticCurve): `EllipticCurve` on Fp operations used in SM9.
+        ec2 (EllipticCurve): `EllipticCurve` on Fp2 operations used in SM9.
+        G1 (EcPoint): Base point of group 1.
+        G2 (EcPoint2): Base point of group 2.
     """
 
     def __init__(self, G1: EcPoint, G2: EcPoint2) -> None:
