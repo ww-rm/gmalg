@@ -36,7 +36,7 @@ class EllipticCurve:
         b (FpExEle): Parameter b of curve.
     """
 
-    INF: EcPointEx = (float("inf"), float("inf"))
+    INF = (float("inf"), float("inf"))
 
     def __init__(self, fp: Fp.PrimeFieldBase, a: Fp.FpExEle, b: Fp.FpExEle) -> None:
         """Elliptic curve.

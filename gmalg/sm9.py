@@ -183,7 +183,7 @@ class SM9Core(SMCoreBase):
         Args:
             bnbp: BNBP used in SM9.
             hash_cls (Type[Hash]): Hash class used in SM9.
-            rnd_fn (Callable[[int], int]): Random function used to generate k-bit random number, default to [`secrets.randbits`][secrets.randbits].
+            rnd_fn (Callable[[int], int]): Random function used to generate k-bit random number, default to [`secrets.randbits`][].
         """
 
         super().__init__(hash_cls, rnd_fn)
@@ -616,7 +616,7 @@ class SM9KGC:
             msk_e: Master secret key for encrypt.
             mpk_e: Master public key for encrypt.
 
-            rnd_fn (Callable[[int], int]): random function used to generate k-bit random number, default to [`secrets.randbits`][secrets.randbits].
+            rnd_fn (Callable[[int], int]): random function used to generate k-bit random number, default to [`secrets.randbits`][].
             pc_mode: Point compress mode used for generated data, no effects on the data to be parsed.
         """
 
@@ -763,7 +763,7 @@ class SM9:
 
             uid: User ID.
 
-            rnd_fn (Callable[[int], int]): Random function used to generate k-bit random number, default to [`secrets.randbits`][secrets.randbits].
+            rnd_fn (Callable[[int], int]): Random function used to generate k-bit random number, default to [`secrets.randbits`][].
             pc_mode: Point compress mode used for generated data, no effects on the data to be parsed.
             mac_klen: MAC value key length in bytes, default to `32`.
         """
