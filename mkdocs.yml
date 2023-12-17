@@ -40,4 +40,3 @@ plugins:
 
             docstring_options:
               ignore_init_summary: true
-              returns_named_value: false
