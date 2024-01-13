@@ -1,5 +1,8 @@
 # gmalg
 
+[![Unittest](https://github.com/ww-rm/gmalg/actions/workflows/python-test.yml/badge.svg)](https://github.com/ww-rm/gmalg/actions/workflows/python-test.yml)
+[![PyPI](https://github.com/ww-rm/gmalg/actions/workflows/python-publish.yml/badge.svg)](https://github.com/ww-rm/gmalg/actions/workflows/python-publish.yml)
+
 GM algorithms implemented in pure Python, without dependencies beyond standard libraries.
 
 ## Install
