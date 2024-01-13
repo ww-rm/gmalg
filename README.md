@@ -1,5 +1,7 @@
 # gmalg
 
+[![Unittest](https://github.com/ww-rm/gmalg/actions/workflows/python-test.yml/badge.svg)](https://github.com/ww-rm/gmalg/actions/workflows/python-test.yml)
+
 国密算法的纯 Python 实现, 不依赖除标准库以外的任何第三方库.
 
 ~~国密体验装~~.
