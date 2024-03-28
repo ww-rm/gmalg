@@ -313,6 +313,19 @@ class TestSM3(unittest.TestCase):
         self.h.update(b"abcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcd")
         self.assertEqual(self.h.value(), bytes.fromhex("debe9ff92275b8a138604889c18e5a4d6fdb70e5387e5765293dcba39c0c5732"))
 
+    def test_case3(self):
+        self.h.update(b"123456781234567812345678123456781234567812345678123456781234")
+        self.assertEqual(self.h.value(), bytes.fromhex("ee80054c075990ac9f1551527d0ff3078db12ad00765a0237da5b7ddeafdf12e"))
+
+    def test_case4(self):
+        self.h.update(b"12345678123456781234567812345678123456781234567812345678123456781234")
+        self.assertEqual(self.h.value(), bytes.fromhex("22a8cd2050742da0488ff1a6ef2196052b8f01e9ba03662a71ab8d28543e4787"))
+
+    def test_case5(self):
+        self.h.update(b"1234567812345678123456781234567812345678123456781234567812345678"
+                      b"123456781234567812345678123456781234567812345678123456781234")
+        self.assertEqual(self.h.value(), bytes.fromhex("8d6585be4f2db3c3565d2d72435f9e4ed778023338a92414352feff4285c4db0"))
+
     def test_update(self):
         self.h.update(b"abc")
         self.assertEqual(self.h.value(), bytes.fromhex("66c7f0f462eeedd9d1f2d46bdc10e4e24167c4875cf2f7a2297da02b8f4ba8e0"))
