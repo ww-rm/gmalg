@@ -138,7 +138,7 @@ class SM3(Hash):
             B.clear()
 
             pos = begin
-            while pos + 64 < d_len:
+            while pos + 63 < d_len:
                 _expand(data[pos:pos+64], W1, W2)
                 _compress(W1, W2, V)
                 pos += 64
