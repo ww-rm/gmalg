@@ -306,31 +306,76 @@ class TestSM3(unittest.TestCase):
         self.h = gmalg.SM3()
 
     def test_case1(self):
-        self.h.update(b"abc")
-        self.assertEqual(self.h.value(), bytes.fromhex("66c7f0f462eeedd9d1f2d46bdc10e4e24167c4875cf2f7a2297da02b8f4ba8e0"))
+        self.h.update(b"12345")
+        self.assertEqual(self.h.value(), bytes.fromhex("91A7ADDE5B0919D53FFB7DC7253F9F345C3C902A759FE5A2493C70ABB7E25095"))
 
     def test_case2(self):
-        self.h.update(b"abcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcd")
-        self.assertEqual(self.h.value(), bytes.fromhex("debe9ff92275b8a138604889c18e5a4d6fdb70e5387e5765293dcba39c0c5732"))
+        self.h.update(b"1234567812345678123456781234567812345678123456781234567")
+        self.assertEqual(self.h.value(), bytes.fromhex("84FA82E235020F62BEBD48C0995E2AD7CB4B12AC70E90282110D8D972863DC8E"))
 
     def test_case3(self):
-        self.h.update(b"123456781234567812345678123456781234567812345678123456781234")
-        self.assertEqual(self.h.value(), bytes.fromhex("ee80054c075990ac9f1551527d0ff3078db12ad00765a0237da5b7ddeafdf12e"))
+        self.h.update(b"12345678123456781234567812345678123456781234567812345678")
+        self.assertEqual(self.h.value(), bytes.fromhex("84A1C27DDCC45E60FF8EF4C55084FD280ECF6CE5A1626B0107A768452F1CFCB3"))
 
     def test_case4(self):
-        self.h.update(b"12345678123456781234567812345678123456781234567812345678123456781234")
-        self.assertEqual(self.h.value(), bytes.fromhex("22a8cd2050742da0488ff1a6ef2196052b8f01e9ba03662a71ab8d28543e4787"))
+        self.h.update(b"123456781234567812345678123456781234567812345678123456781")
+        self.assertEqual(self.h.value(), bytes.fromhex("9AC2E4FF798A09A5F48FFDCA727EBECB230EC069A185F4D81B84E44738ADAEC1"))
 
     def test_case5(self):
+        self.h.update(b"1234567812345678123456781234567812345678123456781234567812345678")
+        self.assertEqual(self.h.value(), bytes.fromhex("7883E626D07F179E5A5E06445462BD08F08156A8DDCE5FE9E6DAE4D6DAD49CF8"))
+    
+    def test_case6(self):
         self.h.update(b"1234567812345678123456781234567812345678123456781234567812345678"
-                      b"123456781234567812345678123456781234567812345678123456781234")
-        self.assertEqual(self.h.value(), bytes.fromhex("8d6585be4f2db3c3565d2d72435f9e4ed778023338a92414352feff4285c4db0"))
+                      b"1234567812345678123456781234567812345678123456781234567812345678")
+        self.assertEqual(self.h.value(), bytes.fromhex("16ABFDD57F52837457D36F7E3B5E806E568E3BDA6AD920259FEC4CEB5B382921"))
 
-    def test_update(self):
-        self.h.update(b"abc")
-        self.assertEqual(self.h.value(), bytes.fromhex("66c7f0f462eeedd9d1f2d46bdc10e4e24167c4875cf2f7a2297da02b8f4ba8e0"))
-        self.h.update(b"dabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcda")
-        self.assertEqual(self.h.value(), bytes.fromhex("0d24d8847bb36d29b998d0e191a65e4c39a311303e7b8332fe7fec8341169ad7"))
+    def test_update1(self):
+        self.h.update(b"123456781")
+        self.h.update(b"2345678123456781234567812345678123456781234567")
+        self.assertEqual(self.h.value(), bytes.fromhex("84FA82E235020F62BEBD48C0995E2AD7CB4B12AC70E90282110D8D972863DC8E"))
+    
+    def test_update2(self):
+        self.h.update(b"12345")
+        self.h.update(b"678123456781234567812345678123456781234567812345678")
+        self.assertEqual(self.h.value(), bytes.fromhex("84A1C27DDCC45E60FF8EF4C55084FD280ECF6CE5A1626B0107A768452F1CFCB3"))
+    
+    def test_update3(self):
+        self.h.update(b"12345")
+        self.h.update(b"6781234567812345678123456781234567812345678123456781")
+        self.assertEqual(self.h.value(), bytes.fromhex("9AC2E4FF798A09A5F48FFDCA727EBECB230EC069A185F4D81B84E44738ADAEC1"))
+    
+    def test_update4(self):
+        self.h.update(b"12345")
+        self.h.update(b"67812345678123456781234567812345678123456781234567812345678")
+        self.assertEqual(self.h.value(), bytes.fromhex("7883E626D07F179E5A5E06445462BD08F08156A8DDCE5FE9E6DAE4D6DAD49CF8"))
+    
+    def test_update51(self):
+        self.h.update(b"12345")
+        self.h.update(b"6781234567812345678123456781234567812345678123456781234567812345")
+        self.assertEqual(self.h.value(), bytes.fromhex("40EDF000B67036C78BC4B394FB3F3201D466E5084FFAA1C4EA6A8427D12F4C40"))
+    
+    def test_update52(self):
+        self.h.update(b"1234567812345678123456781234567812345678123456781234567812345678")
+        self.h.update(b"12345")
+        self.assertEqual(self.h.value(), bytes.fromhex("40EDF000B67036C78BC4B394FB3F3201D466E5084FFAA1C4EA6A8427D12F4C40"))
+
+    def test_update6(self):
+        self.h.update(b"1234567812345678123456781234567812345678123456781234567812345678")
+        self.h.update(b"1234567812345678123456781234567812345678123456781234567812345678")
+        self.assertEqual(self.h.value(), bytes.fromhex("16ABFDD57F52837457D36F7E3B5E806E568E3BDA6AD920259FEC4CEB5B382921"))
+    
+    def test_update71(self):
+        self.h.update(b"1234567812345678123456781234567812345678123456781234567812345678")
+        self.h.update(b"1234567812345678123456781234567812345678123456781234567812345678"
+                      b"1234567812345678123456781234567812345678123456781234567812345678")
+        self.assertEqual(self.h.value(), bytes.fromhex("45418F14DC9077297E5E8480664A294DB2C05F73382469933917E662208B948B"))
+    
+    def test_update72(self):
+        self.h.update(b"1234567812345678123456781234567812345678123456781234567812345678"
+                      b"1234567812345678123456781234567812345678123456781234567812345678")
+        self.h.update(b"1234567812345678123456781234567812345678123456781234567812345678")
+        self.assertEqual(self.h.value(), bytes.fromhex("45418F14DC9077297E5E8480664A294DB2C05F73382469933917E662208B948B"))
 
 
 class TestSM4(unittest.TestCase):
