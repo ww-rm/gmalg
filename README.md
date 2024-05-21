@@ -247,6 +247,12 @@ print(sm9.decrypt(cipher))
 
 更多详细用法可以查看[文档](https://gmalg.readthedocs.io).
 
+## 关于密文顺序
+
+无论是 SM2 还是 SM9, 均遵循国标要求按照 `C1|C3|C2` 的顺序构造和解析密文**字节流**.
+
+但是在计算各部分数值的时候, 代码里是没有顺序的, 仅仅按照三个独立的 `C1`, `C2`, `C3` 对象返回, 这与密文字节流的构造是分开的.
+
 ---
 
 *If you think this project is helpful to you, :star: it and let more people see!*
