@@ -199,7 +199,7 @@ class PrimeField(PrimeFieldBase):
         return x == 0 and y == 0 or x + y == self.p
 
     def neg(self, x: int) -> int:
-        return self.p - x if x > 0 else x
+        return (-x) % self.p
 
     def sadd(self, n: int, x: int) -> int:
         return (n + x) % self.p
@@ -422,7 +422,7 @@ class PrimeField2(PrimeFieldBase):
         m = self.fp.mul
 
         X1, X0 = X
-        U = s(m(X0, X0), m(n(self._ALPHA), m(X1, X1)))
+        U = s(m(X0, X0), m(self._ALPHA, m(X1, X1)))
 
         w1 = self.fp.sqrt(U)
         if w1 is None:
