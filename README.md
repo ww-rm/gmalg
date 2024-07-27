@@ -5,7 +5,8 @@
 
 国密算法的纯 Python 实现, 不依赖除标准库以外的任何第三方库.
 
-~~国密体验装~~.
+- ~~国密体验装~~
+- ~~课程作业专供~~
 
 ## 安装
 
@@ -29,6 +30,8 @@ pip install gmalg
   - 加密解密 (基于密钥派生函数的序列密码算法)
 
 ## 用法
+
+详细文档: [gmalg.readthedocs.io](https://gmalg.readthedocs.io)
 
 ### ZUC 生成伪随机密钥流
 
