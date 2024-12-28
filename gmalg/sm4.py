@@ -274,3 +274,70 @@ class SM4_CBC(SM4):
         """Remove padding from decrypted data."""
         padding_length = data[-1]
         return data[:-padding_length]
+
+
+
+class SM4_ECB(SM4):
+    """SM4 ECB Mode Algorithm."""
+
+    def __init__(self, key: bytes) -> None:
+        """SM4 ECB Mode.
+
+        Args:
+            key: 16 bytes key.
+
+        Raises:
+            IncorrectLengthError: Incorrect key length.
+        """
+        super().__init__(key)
+
+    def encrypt(self, data: bytes) -> bytes:
+        """Encrypt data using SM4 ECB mode.
+
+        Args:
+            data: Data to encrypt. Must be a multiple of the block size.
+
+        Returns:
+            bytes: Encrypted data.
+        """
+        # Pad the data to make it a multiple of the block size (16 bytes)
+        data = self._pad(data)
+
+        cipher_text = bytearray()
+        # Process each 16-byte block
+        for i in range(0, len(data), self.block_length()):
+            block = data[i:i + self.block_length()]
+            encrypted_block = super().encrypt(block)
+            cipher_text.extend(encrypted_block)
+
+        return bytes(cipher_text)
+
+    def decrypt(self, data: bytes) -> bytes:
+        """Decrypt data using SM4 ECB mode.
+
+        Args:
+            data: Encrypted data to decrypt. Must be a multiple of the block size.
+
+        Returns:
+            bytes: Decrypted data.
+        """
+        # Decrypt in blocks
+        decrypted_data = bytearray()
+        for i in range(0, len(data), self.block_length()):
+            block = data[i:i + self.block_length()]
+            decrypted_block = super().decrypt(block)
+            decrypted_data.extend(decrypted_block)
+
+        # Remove padding
+        return self._unpad(decrypted_data)
+
+    def _pad(self, data: bytes) -> bytes:
+        """Pad data to a multiple of the block size (16 bytes)."""
+        padding_length = self.block_length() - len(data) % self.block_length()
+        padding = bytes([padding_length] * padding_length)
+        return data + padding
+
+    def _unpad(self, data: bytes) -> bytes:
+        """Remove padding from decrypted data."""
+        padding_length = data[-1]
+        return data[:-padding_length]
