@@ -257,3 +257,77 @@ class SM4_CFB(SM4):
         """Print the current key and IV in hex format."""
         print(f"Key: {self.key.hex()}")
         print(f"IV:  {self.iv.hex()}")
+
+class SM4_OFB(SM4):
+    """SM4 OFB (Output Feedback Mode)."""
+
+    def __init__(self, key: bytes, iv: Optional[bytes] = None):
+        """
+        Initialize OFB mode.
+        :param key: 16-byte encryption key.
+        :param iv: 16-byte initialization vector (IV), randomly generated if not provided.
+        """
+        super().__init__(key)
+        if iv and len(iv) != 16:
+            raise ValueError("IV must be exactly 16 bytes long.")
+        self.iv = iv or os.urandom(16)  # Ensure IV exists.
+
+    def encrypt(self, plaintext: bytes) -> bytes:
+        """
+        Encrypt using OFB mode.
+        :param plaintext: Data to encrypt.
+        :return: IV + encrypted data.
+        """
+        ciphertext = b""
+        keystream = self.iv  # Initial keystream (IV)
+
+        for i in range(0, len(plaintext), 16):
+            keystream = self.encrypt_block(keystream)  # Encrypt the previous keystream.
+            block = bytes(a ^ b for a, b in zip(keystream, plaintext[i:i+16]))
+            ciphertext += block
+
+        return self.iv + ciphertext  # Prepend IV to ciphertext for decryption.
+
+    def decrypt(self, ciphertext: bytes) -> bytes:
+        """
+        Decrypt using OFB mode.
+        :param ciphertext: Data to decrypt (first 16 bytes are IV).
+        :return: Decrypted plaintext.
+        """
+        if len(ciphertext) < 16:
+            raise ValueError("Ciphertext must be at least 16 bytes long.")
+
+        iv, ciphertext = ciphertext[:16], ciphertext[16:]  # Extract IV.
+        plaintext = b""
+        keystream = iv  # Initial keystream (IV)
+
+        for i in range(0, len(ciphertext), 16):
+            keystream = self.encrypt_block(keystream)  # Encrypt the previous keystream.
+            block = bytes(a ^ b for a, b in zip(keystream, ciphertext[i:i+16]))
+            plaintext += block
+
+        return plaintext  # OFB does not require padding/unpadding.
+
+    def encrypt_hex(self, plaintext: str) -> str:
+        """
+        Encrypt plaintext and return the result as a hex string.
+        :param plaintext: Plaintext to encrypt (string).
+        :return: Hex-encoded ciphertext.
+        """
+        encrypted_bytes = self.encrypt(plaintext.encode())
+        return encrypted_bytes.hex()
+
+    def decrypt_hex(self, ciphertext_hex: str) -> str:
+        """
+        Decrypt a hex-encoded ciphertext.
+        :param ciphertext_hex: Hex string of encrypted data.
+        :return: Decrypted plaintext.
+        """
+        encrypted_bytes = bytes.fromhex(ciphertext_hex)
+        decrypted_bytes = self.decrypt(encrypted_bytes)
+        return decrypted_bytes.decode()
+
+    def display_info(self):
+        """Print the current key and IV in hex format."""
+        print(f"Key: {self.key.hex()}")
+        print(f"IV:  {self.iv.hex()}")
