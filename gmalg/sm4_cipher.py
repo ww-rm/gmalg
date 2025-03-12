@@ -1,5 +1,6 @@
 import os
 from typing import List, Optional
+import struct
 
 from .errors import *
 from .sm4 import SM4
