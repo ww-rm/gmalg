@@ -1,6 +1,8 @@
 import os
-from typing import List, Optional
+from typing import List, Optional, Tuple
 import struct
+import hmac
+import hashlib
 
 from .errors import *
 from .sm4 import SM4
@@ -416,3 +418,87 @@ class SM4_CTR(SM4):
         print(f"Key:    {self.key.hex()}")
         print(f"Nonce:  {self.nonce.hex()}")
         print(f"Counter: {self.counter}")
+        
+        
+class SM4_GCM(SM4):
+    """SM4 GCM（Galois/Counter Mode）"""
+
+    def __init__(self, key: bytes, iv: Optional[bytes] = None):
+        """
+        初始化 GCM 模式
+        :param key: 16 字节加密密钥
+        :param iv: 12 字节初始化向量（默认生成随机 IV）
+        """
+        super().__init__(key)
+        if iv and len(iv) != 12:
+            raise ValueError("IV 必须为 12 字节长")
+        self.iv = iv or os.urandom(12)  # 生成随机 IV
+
+    def _generate_keystream(self, counter: int) -> bytes:
+        """
+        生成密钥流块
+        :param counter: 计数器值
+        :return: 16 字节密钥流
+        """
+        counter_bytes = struct.pack(">I", counter)  # 4 字节计数器
+        nonce_counter = self.iv + counter_bytes  # 12 字节 IV + 4 字节计数器
+        return self.encrypt_block(nonce_counter)  # 生成密钥流
+
+    def _compute_gmac(self, aad: bytes, ciphertext: bytes) -> bytes:
+        """
+        计算 GMAC（Galois Message Authentication Code）
+        :param aad: 附加认证数据
+        :param ciphertext: 加密后的数据
+        :return: 16 字节 GMAC 认证码
+        """
+        hmac_key = self.encrypt_block(b"\x00" * 16)  # 生成 GMAC 密钥
+        gmac = hmac.new(hmac_key, aad + ciphertext, hashlib.sha256).digest()[:16]
+        return gmac
+
+    def encrypt(self, plaintext: bytes, aad: bytes = b"") -> Tuple[bytes, bytes]:
+        """
+        GCM 加密
+        :param plaintext: 需要加密的数据
+        :param aad: 附加认证数据（默认无）
+        :return: (密文, GMAC 认证码)
+        """
+        ciphertext = b""
+        for i in range(0, len(plaintext), 16):
+            keystream = self._generate_keystream(i // 16 + 1)
+            block = bytes(a ^ b for a, b in zip(keystream, plaintext[i:i+16]))
+            ciphertext += block
+
+        gmac = self._compute_gmac(aad, ciphertext)
+        return self.iv + ciphertext, gmac  # 预置 IV 以便解密时使用
+
+    def decrypt(self, ciphertext: bytes, gmac: bytes, aad: bytes = b"") -> Optional[bytes]:
+        """
+        GCM 解密
+        :param ciphertext: 需要解密的数据（前 12 字节为 IV）
+        :param gmac: GMAC 认证码
+        :param aad: 附加认证数据（默认无）
+        :return: 明文，如果认证失败则返回 None
+        """
+        if len(ciphertext) < 12:
+            raise ValueError("密文必须至少包含 12 字节的 IV")
+
+        iv, ciphertext = ciphertext[:12], ciphertext[12:]
+        plaintext = b""
+
+        # 认证检测
+        computed_gmac = self._compute_gmac(aad, ciphertext)
+        if computed_gmac != gmac:
+            print("认证失败，数据可能被篡改！")
+            return None
+
+        for i in range(0, len(ciphertext), 16):
+            keystream = self._generate_keystream(i // 16 + 1)
+            block = bytes(a ^ b for a, b in zip(keystream, ciphertext[i:i+16]))
+            plaintext += block
+
+        return plaintext  # 无需填充/去填充
+
+    def display_info(self):
+        """打印当前密钥和 IV"""
+        print(f"密钥: {self.key.hex()}")
+        print(f"IV:  {self.iv.hex()}")
