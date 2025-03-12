@@ -331,3 +331,87 @@ class SM4_OFB(SM4):
         """Print the current key and IV in hex format."""
         print(f"Key: {self.key.hex()}")
         print(f"IV:  {self.iv.hex()}")
+
+class SM4_CTR(SM4):
+    """SM4 CTR (Counter Mode)."""
+
+    def __init__(self, key: bytes, nonce: Optional[bytes] = None, counter: int = 0):
+        """
+        Initialize CTR mode.
+        :param key: 16-byte encryption key.
+        :param nonce: 8-byte nonce (randomly generated if not provided).
+        :param counter: 8-byte initial counter value (default 0).
+        """
+        super().__init__(key)
+        if nonce and len(nonce) != 8:
+            raise ValueError("Nonce must be exactly 8 bytes long.")
+        self.nonce = nonce or os.urandom(8)  # Generate a random nonce if not provided.
+        self.counter = counter  # Initial counter value.
+
+    def _generate_keystream(self, block_index: int) -> bytes:
+        """
+        Generate a keystream block by encrypting the nonce + counter.
+        :param block_index: Block index for counter increment.
+        :return: 16-byte keystream block.
+        """
+        counter_bytes = struct.pack(">Q", self.counter + block_index)  # Convert counter to 8 bytes (big-endian)
+        nonce_counter = self.nonce + counter_bytes  # 8-byte nonce + 8-byte counter
+        return self.encrypt_block(nonce_counter)  # Encrypt to generate keystream
+
+    def encrypt(self, plaintext: bytes) -> bytes:
+        """
+        Encrypt using CTR mode.
+        :param plaintext: Data to encrypt.
+        :return: Nonce + encrypted data.
+        """
+        ciphertext = b""
+        for i in range(0, len(plaintext), 16):
+            keystream = self._generate_keystream(i // 16)  # Generate keystream block
+            block = bytes(a ^ b for a, b in zip(keystream, plaintext[i:i+16]))  # XOR with plaintext
+            ciphertext += block
+
+        return self.nonce + ciphertext  # Prepend nonce to ciphertext for decryption
+
+    def decrypt(self, ciphertext: bytes) -> bytes:
+        """
+        Decrypt using CTR mode.
+        :param ciphertext: Data to decrypt (first 8 bytes are nonce).
+        :return: Decrypted plaintext.
+        """
+        if len(ciphertext) < 8:
+            raise ValueError("Ciphertext must be at least 8 bytes long.")
+
+        nonce, ciphertext = ciphertext[:8], ciphertext[8:]  # Extract nonce.
+        plaintext = b""
+
+        for i in range(0, len(ciphertext), 16):
+            keystream = self._generate_keystream(i // 16)  # Generate keystream block
+            block = bytes(a ^ b for a, b in zip(keystream, ciphertext[i:i+16]))  # XOR with ciphertext
+            plaintext += block
+
+        return plaintext  # No need for padding/unpadding in CTR mode.
+
+    def encrypt_hex(self, plaintext: str) -> str:
+        """
+        Encrypt plaintext and return the result as a hex string.
+        :param plaintext: Plaintext to encrypt (string).
+        :return: Hex-encoded ciphertext.
+        """
+        encrypted_bytes = self.encrypt(plaintext.encode())
+        return encrypted_bytes.hex()
+
+    def decrypt_hex(self, ciphertext_hex: str) -> str:
+        """
+        Decrypt a hex-encoded ciphertext.
+        :param ciphertext_hex: Hex string of encrypted data.
+        :return: Decrypted plaintext.
+        """
+        encrypted_bytes = bytes.fromhex(ciphertext_hex)
+        decrypted_bytes = self.decrypt(encrypted_bytes)
+        return decrypted_bytes.decode()
+
+    def display_info(self):
+        """Print the current key, nonce, and counter in hex format."""
+        print(f"Key:    {self.key.hex()}")
+        print(f"Nonce:  {self.nonce.hex()}")
+        print(f"Counter: {self.counter}")
