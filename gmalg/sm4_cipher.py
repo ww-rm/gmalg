@@ -502,3 +502,104 @@ class SM4_GCM(SM4):
         """打印当前密钥和 IV"""
         print(f"密钥: {self.key.hex()}")
         print(f"IV:  {self.iv.hex()}")
+
+class SM4_XTS:
+    def __init__(self, key1: bytes, key2: bytes, sector_size: int = 512):
+        if len(key1) != 16 or len(key2) != 16:
+            raise ValueError("Keys must be exactly 16 bytes each")
+        self.key1_cipher = SM4(key1)
+        self.key2_cipher = SM4(key2)
+        self.sector_size = sector_size
+        if sector_size % 16 != 0:
+            raise ValueError("Sector size must be a multiple of 16")
+
+    def _generate_tweak(self, sector: int) -> bytes:
+        tweak = sector.to_bytes(16, byteorder='little')
+        return self.key2_cipher.encrypt(tweak)
+
+    @staticmethod
+    def _xor_bytes(a: bytes, b: bytes) -> bytes:
+        return bytes(x ^ y for x, y in zip(a, b))
+
+    @staticmethod
+    def _galois_multiply(tweak: bytes) -> bytes:
+        num = int.from_bytes(tweak, byteorder='big')
+        high_bit = (num & (1 << 127)) != 0
+        num = ((num << 1) & ((1 << 128) - 1))
+        if high_bit:
+            num ^= 0x87
+        return num.to_bytes(16, byteorder='big')
+
+    def _process_sector(self, data: bytes, sector: int, encrypt: bool) -> bytes:
+        if len(data) != self.sector_size:
+            raise ValueError("Data length must match sector size")
+
+        tweak = self._generate_tweak(sector)
+        result = bytearray()
+
+        for i in range(0, self.sector_size, 16):
+            block = data[i:i + 16]
+            tweak = self._galois_multiply(tweak)
+            masked_block = self._xor_bytes(block, tweak)
+            processed_block = self.key1_cipher.encrypt(masked_block) if encrypt else self.key1_cipher.decrypt(masked_block)
+            result.extend(self._xor_bytes(processed_block, tweak))
+
+        return bytes(result)
+
+    def encrypt_sector(self, plaintext: bytes, sector: int) -> bytes:
+        return self._process_sector(plaintext, sector, True)
+
+    def decrypt_sector(self, ciphertext: bytes, sector: int) -> bytes:
+        return self._process_sector(ciphertext, sector, False)
+
+    def encrypt_file(self, input_path: str, output_path: str, start_sector: int = 0):
+        sector = start_sector
+        with open(input_path, 'rb') as fin, open(output_path, 'wb') as fout:
+            while chunk := fin.read(self.sector_size):
+                if len(chunk) < self.sector_size:
+                    chunk = chunk.ljust(self.sector_size, b'\x00')
+                encrypted = self.encrypt_sector(chunk, sector)
+                fout.write(encrypted)
+                sector += 1
+
+    def decrypt_file(self, input_path: str, output_path: str, original_size: Optional[int] = None, start_sector: int = 0):
+        sector = start_sector
+        total_written = 0
+        with open(input_path, 'rb') as fin, open(output_path, 'wb') as fout:
+            while chunk := fin.read(self.sector_size):
+                decrypted = self.decrypt_sector(chunk, sector)
+                if original_size and total_written + self.sector_size > original_size:
+                    decrypted = decrypted[:original_size - total_written]
+                fout.write(decrypted)
+                total_written += len(decrypted)
+                sector += 1
+
+    def generate_hmac(self, data: bytes, sector: int) -> bytes:
+        hmac_key = self.key1_cipher.encrypt(b'\x00' * 16)
+        mac = hmac.new(hmac_key, data + sector.to_bytes(8, 'little'), hashlib.sha256).digest()
+        return mac[:16]
+
+    def encrypt_with_hmac(self, data: bytes, sector: int) -> tuple[bytes, bytes]:
+        encrypted = self.encrypt_sector(data, sector)
+        mac = self.generate_hmac(encrypted, sector)
+        return encrypted, mac
+
+    def decrypt_with_hmac(self, data: bytes, mac: bytes, sector: int) -> Optional[bytes]:
+        expected_mac = self.generate_hmac(data, sector)
+        if not hmac.compare_digest(mac, expected_mac):
+            return None
+        return self.decrypt_sector(data, sector)
+
+    def rotate_keys(self, new_key1: bytes, new_key2: bytes):
+        if len(new_key1) != 16 or len(new_key2) != 16:
+            raise ValueError("Keys must be exactly 16 bytes each")
+        self.key1_cipher = SM4(new_key1)
+        self.key2_cipher = SM4(new_key2)
+
+    def benchmark(self, iterations: int = 1000) -> float:
+        import time
+        test_data = os.urandom(self.sector_size)
+        start = time.time()
+        for _ in range(iterations):
+            self.encrypt_sector(test_data, 0)
+        return (time.time() - start) / iterations
