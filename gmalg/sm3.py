@@ -88,13 +88,13 @@ class SM3(Hash):
     """SM3 Algorithm."""
 
     @classmethod
-    def max_msg_length(self) -> int:
+    def max_msg_length(cls) -> int:
         """Get maximum message length in bytes."""
 
         return 0x1fffffffffffffff  # (1 << 64 - 1) >> 3
 
     @classmethod
-    def hash_length(self) -> int:
+    def hash_length(cls) -> int:
         """Get output hash value length in bytes."""
 
         return 32

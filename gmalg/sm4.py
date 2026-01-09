@@ -75,13 +75,13 @@ class SM4(BlockCipher):
     """SM4 Algorithm."""
 
     @classmethod
-    def key_length(self) -> int:
+    def key_length(cls) -> int:
         """Get key length in bytes."""
 
         return 16
 
     @classmethod
-    def block_length(self) -> int:
+    def block_length(cls) -> int:
         """Get block length in bytes."""
 
         return 16

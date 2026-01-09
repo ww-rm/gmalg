@@ -44,13 +44,13 @@ class Hash:
     """Base class of hash algorithm."""
 
     @classmethod
-    def max_msg_length(self) -> int:
+    def max_msg_length(cls) -> int:
         """Get maximum message length in bytes."""
 
         raise NotImplementedError
 
     @classmethod
-    def hash_length(self) -> int:
+    def hash_length(cls) -> int:
         """Get output hash value length in bytes."""
 
         raise NotImplementedError
@@ -81,13 +81,13 @@ class BlockCipher:
     """Base class of block cipher algorithm."""
 
     @classmethod
-    def key_length(self) -> int:
+    def key_length(cls) -> int:
         """Get key length in bytes."""
 
         raise NotImplementedError
 
     @classmethod
-    def block_length(self) -> int:
+    def block_length(cls) -> int:
         """Get block length in bytes."""
 
         raise NotImplementedError

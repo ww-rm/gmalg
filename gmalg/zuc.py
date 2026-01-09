@@ -74,13 +74,13 @@ class ZUC:
     """ZUC Algorithm."""
 
     @classmethod
-    def key_length(self) -> int:
+    def key_length(cls) -> int:
         """Get key length in bytes."""
 
         return 16
 
     @classmethod
-    def iv_length(self) -> int:
+    def iv_length(cls) -> int:
         """Get IV length in bytes."""
 
         return 16
