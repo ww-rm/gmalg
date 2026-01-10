@@ -1,2 +1,7 @@
+mkdocs==1.5.3
+mkdocs-autorefs==1.0.1
+mkdocstrings==0.24.1
+mkdocstrings-python==1.9.0
+griffe==0.42.1
 mkdocs[i18n]
 mkdocstrings[python]
