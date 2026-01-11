@@ -22,7 +22,7 @@ pip install gmalg
   - 密钥交换
   - 加密解密
 - SM3 密码杂凑算法
-- SM4 分组密码算法
+- SM4 分组密码算法 (含部分工作模式)
 - SM9 标识密码算法
   - 签名验签
   - 密钥交换
@@ -66,6 +66,26 @@ sm4 = gmalg.SM4(bytes.fromhex("0123456789ABCDEFFEDCBA9876543210"))
 cipher = sm4.encrypt(b"0102030405060708")
 print(cipher.hex())
 print(sm4.decrypt(cipher))
+```
+
+### SM4 加密/解密 (工作模式)
+
+```python
+import gmalg
+
+data = b"12345678123456781234"
+print(data.hex())
+
+key = bytes.fromhex("0123456789ABCDEFFEDCBA9876543210")
+iv = bytes.fromhex("FEDCBA98765432100123456789ABCDEF")
+sm4 = gmalg.SM4Cipher(key, gmalg.BC_MODE.CBC, gmalg.DataPadder(16, gmalg.PADDING_MODE.PKCS7), iv=iv)
+
+cipher = sm4.encrypt(data)
+print(cipher.hex())
+
+sm4.reset()  # reset internal states
+plain = sm4.decrypt(cipher)
+print(plain)
 ```
 
 ### SM2 签名/验签
