@@ -48,7 +48,7 @@ class PADDING_MODE(enum.Enum):
 class DataPadder:
     """Data padder used to pad data to a multiple of block size."""
 
-    def __init__(self, block_length: int, method: PADDING_MODE) -> None:
+    def __init__(self, block_length: int = 1, method: PADDING_MODE = PADDING_MODE.NONE) -> None:
         """Data padder used to pad data to a multiple of block size.
 
         Args:
@@ -137,5 +137,5 @@ class DataPadder:
             data = data[:-pad_len]
         else:
             raise NotImplementedError(f"Unsupported padding method: {self._method}")
-        
+
         return bytes(data)
