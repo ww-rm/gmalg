@@ -1,7 +1,7 @@
 """SM9 Algorithm Implementation Module."""
 
 import math
-from typing import Callable, Tuple, Type
+from typing import Callable, Tuple
 
 from . import ellipticcurve as Ec
 from . import primefield as Fp
@@ -177,23 +177,23 @@ class SM9Core(SMCoreBase):
         bnbp (SM9BNBP): BNBP used in SM9.
     """
 
-    def __init__(self, bnbp: Ec.SM9BNBP, hash_cls: Type[Hash], rnd_fn: Callable[[int], int] = None) -> None:
+    def __init__(self, bnbp: Ec.SM9BNBP, hash_obj: Hash, rnd_fn: Callable[[int], int] = None) -> None:
         """ID Based Encryption.
 
         Args:
             bnbp: BNBP used in SM9.
-            hash_cls (Type[Hash]): Hash class used in SM9.
+            hash_obj (Hash): Hash object used in SM9.
             rnd_fn (Callable[[int], int]): Random function used to generate k-bit random number, default to [`secrets.randbits`][].
         """
 
-        super().__init__(hash_cls, rnd_fn)
+        super().__init__(hash_obj, rnd_fn)
 
         self.bnbp = bnbp
         self._hlen = math.ceil((5 * math.log2(bnbp.fpn.p)) / 32)  # used for H1 and H2
 
     def _cipher_fn(self, prefix_byte: bytes, Z: bytes, hlen: int) -> int:
         hash_fn = self._hash_fn
-        v = self._hash_cls.hash_length()
+        v = self._hash_obj.hash_length()
 
         count, tail = divmod(hlen, v)
         if count + (tail > 0) > 0xffffffff:
@@ -620,7 +620,7 @@ class SM9KGC:
             pc_mode: Point compress mode used for generated data, no effects on the data to be parsed.
         """
 
-        self._core = SM9Core(_bnbp, SM3, rnd_fn)
+        self._core = SM9Core(_bnbp, SM3(), rnd_fn)
 
         self._hid_s = hid_s
         self._msk_s = bytes_to_int(msk_s) if msk_s else None
@@ -768,7 +768,7 @@ class SM9:
             mac_klen: MAC value key length in bytes, default to `32`.
         """
 
-        self._core = SM9Core(_bnbp, SM3, rnd_fn)
+        self._core = SM9Core(_bnbp, SM3(), rnd_fn)
 
         self._hid_s = hid_s
         self._mpk_s = bytes_to_point_2(mpk_s) if mpk_s else None
@@ -1008,7 +1008,7 @@ class SM9:
         else:
             raise InvalidPCError(mode)
 
-        mac_length = self._core._hash_cls.hash_length()
+        mac_length = self._core._hash_obj.hash_length()
         C3 = cipher[c1_length:c1_length + mac_length]
         C2 = cipher[c1_length + mac_length:]
 

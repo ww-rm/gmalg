@@ -109,6 +109,11 @@ class SM3(Hash):
         self._words_buffer1: List[int] = [0] * 68
         self._words_buffer2: List[int] = [0] * 64
 
+    def reset(self):
+        """Reset to initial state."""
+
+        self.__init__()
+
     def update(self, data: bytes) -> None:
         """Update internal state.
 

@@ -2,7 +2,7 @@
 
 import enum
 import secrets
-from typing import Callable, Type
+from typing import Callable
 
 from .errors import *
 
@@ -56,6 +56,11 @@ class Hash:
         raise NotImplementedError
 
     def __init__(self) -> None:
+        raise NotImplementedError
+
+    def reset(self) -> None:
+        """Reset to initial state."""
+
         raise NotImplementedError
 
     def update(self, data: bytes) -> None:
@@ -115,24 +120,24 @@ class BlockCipher:
 class SMCoreBase:
     """SM core algorithm base class."""
 
-    def __init__(self, hash_cls: Type[Hash], rnd_fn: Callable[[int], int] = None) -> None:
+    def __init__(self, hash_obj: Hash, rnd_fn: Callable[[int], int] = None) -> None:
         """SM core algorithm base class.
 
         Args:
-            hash_cls (Type[Hash]): Hash class used in cipher.
+            hash_obj (Hash): Hash object used in cipher.
             rnd_fn (Callable[[int], int]): Random function used to generate k-bit random number, default to [`secrets.randbits`][].
         """
 
-        self._hash_cls = hash_cls
+        self._hash_obj = hash_obj
         self._rnd_fn = rnd_fn or self._default_rnd_fn
 
     def _default_rnd_fn(self, k: int) -> int:
         return secrets.randbits(k)
 
     def _hash_fn(self, data: bytes) -> bytes:
-        hash_obj = self._hash_cls()
-        hash_obj.update(data)
-        return hash_obj.value()
+        self._hash_obj.reset()
+        self._hash_obj.update(data)
+        return self._hash_obj.value()
 
     def _randint(self, a: int, b: int) -> int:
         bitlength = b.bit_length()
@@ -154,7 +159,7 @@ class SMCoreBase:
         """
 
         hash_fn = self._hash_fn
-        v = self._hash_cls.hash_length()
+        v = self._hash_obj.hash_length()
 
         count, tail = divmod(klen, v)
         if count + (tail > 0) > 0xffffffff:

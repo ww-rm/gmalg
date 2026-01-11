@@ -1,7 +1,7 @@
 """SM2 Algorithm Implementation Module."""
 
 import math
-from typing import Callable, Tuple, Type
+from typing import Callable, Tuple
 
 from . import ellipticcurve as Ec
 from .base import KEYXCHG_MODE, PC_MODE, Hash, SMCoreBase
@@ -105,16 +105,16 @@ class SM2Core(SMCoreBase):
         ecdlp (ECDLP): ECDLP used in SM2.
     """
 
-    def __init__(self, ecdlp: Ec.ECDLP, hash_cls: Type[Hash], rnd_fn: Callable[[int], int] = None) -> None:
+    def __init__(self, ecdlp: Ec.ECDLP, hash_obj: Hash, rnd_fn: Callable[[int], int] = None) -> None:
         """SM2 Core Algorithms.
 
         Args:
             ecdlp: ECDLP used in SM2.
-            hash_cls (Type[Hash]): Hash class used in SM2.
+            hash_obj (Hash): Hash object used in SM2.
             rnd_fn (Callable[[int], int]): Random function used to generate k-bit random number, default to [`secrets.randbits`][].
         """
 
-        super().__init__(hash_cls, rnd_fn)
+        super().__init__(hash_obj, rnd_fn)
 
         self.ecdlp = ecdlp
 
@@ -456,7 +456,7 @@ class SM2:
             pc_mode: Point compress mode used for generated data, no effects on the data to be parsed.
         """
 
-        self._core = SM2Core(_ecdlp, SM3, rnd_fn)
+        self._core = SM2Core(_ecdlp, SM3(), rnd_fn)
         self._sk = bytes_to_int(sk) if sk else None
         self._pk = self._get_pk(pk)
 
@@ -627,7 +627,7 @@ class SM2:
         else:
             raise InvalidPCError(mode)
 
-        hash_length = self._core._hash_cls.hash_length()
+        hash_length = self._core._hash_obj.hash_length()
         C3 = cipher[c1_length:c1_length + hash_length]
         C2 = cipher[c1_length + hash_length:]
 

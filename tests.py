@@ -42,7 +42,7 @@ class TestSM2(unittest.TestCase):
             0x8542D69E_4C044F18_E8B92435_BF6FF7DD_29772063_0485628D_5AE74EE7_C32E79B7,
         )
         ecc = gmalg.sm2.SM2Core(
-            ecdlp, gmalg.SM3,
+            ecdlp, gmalg.SM3(),
             lambda _: 0x6CB28D99_385C175C_94F94E93_4817663F_C176D925_DD72B727_260DBAAE_1FB2F96F
         )
         d = 0x128B2FA8_BD433C6C_068C8D80_3DFF7979_2A519A55_171B1B65_0C23661D_15897263
@@ -90,7 +90,7 @@ class TestSM2(unittest.TestCase):
             0xBDB6F4FE_3E8B1D9E_0DA8C0D4_0FC96219_5DFAE76F_56564677,
         )
         ecc = gmalg.sm2.SM2Core(
-            ecdlp, gmalg.SM3,
+            ecdlp, gmalg.SM3(),
             lambda _: 0x384F3035_3073AEEC_E7A16543_30A96204_D37982A3_E15B2CB5
         )
         d = 0x58892B80_7074F53F_BF67288A_1DFAA1AC_313455FE_60355AFD
@@ -115,7 +115,7 @@ class TestSM2(unittest.TestCase):
             0x8542D69E_4C044F18_E8B92435_BF6FF7DD_29772063_0485628D_5AE74EE7_C32E79B7,
         )
         ecc = gmalg.sm2.SM2Core(
-            ecdlp, gmalg.SM3,
+            ecdlp, gmalg.SM3(),
             lambda _: 0x4C62EEFD_6ECFC2B9_5B92FD6C_3D957514_8AFA1742_5546D490_18E5388D_49DD7B4F
         )
         d = 0x1649AB77_A00637BD_5E2EFE28_3FBF3535_34AA7F7C_B89463F2_08DDBC29_20BB0DA0
@@ -225,7 +225,7 @@ class TestSM2(unittest.TestCase):
         )
 
         ecc1 = gmalg.sm2.SM2Core(
-            ecdlp, gmalg.SM3,
+            ecdlp, gmalg.SM3(),
             lambda _: 0x83A2C9C8_B96E5AF7_0BD480B4_72409A9A_327257F1_EBB73F5B_073354B2_48668563
         )
         d1 = 0x6FCBA2EF_9AE0AB90_2BC3BDE3_FF915D44_BA4CC78F_88E2F8E7_F8996D3B_8CCEEDEE
@@ -234,7 +234,7 @@ class TestSM2(unittest.TestCase):
         id1 = b"ALICE123@YAHOO.COM"
 
         ecc2 = gmalg.sm2.SM2Core(
-            ecdlp, gmalg.SM3,
+            ecdlp, gmalg.SM3(),
             lambda _: 0x33FE2194_0342161C_55619C4A_0C060293_D543C80A_F19748CE_176D8347_7DE71C80
         )
         d2 = 0x5E35D7D3_F3C54DBA_C72E6181_9E730B01_9A84208C_A3A35E4C_2E353DFC_CB2A3B53
