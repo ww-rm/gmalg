@@ -72,19 +72,22 @@ print(sm4.decrypt(cipher))
 
 ```python
 import gmalg
+from gmalg import utils
+from gmalg.bcmode import BlockCipherModeCBC
 
 data = b"12345678123456781234"
 print(data.hex())
 
 key = bytes.fromhex("0123456789ABCDEFFEDCBA9876543210")
 iv = bytes.fromhex("FEDCBA98765432100123456789ABCDEF")
-sm4 = gmalg.SM4Cipher(key, gmalg.BC_MODE.CBC, gmalg.DataPadder(16, gmalg.PADDING_MODE.PKCS7), iv=iv)
+padder = utils.DataPadder(16, utils.PADDING_MODE.PKCS7)
+sm4_cbc = BlockCipherModeCBC(gmalg.SM4(key), iv=iv)
 
-cipher = sm4.encrypt(data)
+cipher = sm4_cbc.encrypt(padder.pad(data))
 print(cipher.hex())
 
-sm4.reset()  # reset internal states
-plain = sm4.decrypt(cipher)
+sm4_cbc.reset()  # reset internal states
+plain = padder.unpad(sm4_cbc.decrypt(cipher))
 print(plain)
 ```
 
