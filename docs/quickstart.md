@@ -143,13 +143,15 @@ SM3 的哈希值长度为 32 字节. 即使是空值, SM3 算法也有固定的�
 
 ## SM4 分组密码算法
 
+### 简介
+
 SM4 是一种分组密码算法, 它可以使用固定长度的密钥对固定长度的明文数据块进行加密, 得到与明文等长的密文数据块.
 
 分组密码属于对称密码算法, 通常需要一个固定长度的密钥来控制算法的运行, 且加密和解密的过程是对称可逆的.
 
 分组密码的一大特点就是只能对指定长度的数据块进行加密和解密, 因此大部分时候都不直接使用分组密码, 而是使用带有工作模式的分组密码.
 
-常见的工作模式有 ECB, CBC, CTR 等, 它们有各自的特点, 能够扩展分组密码的功能, 使其能对任意长度数据进行加密, 在 gmalg 中, 仅仅实现了无工作模式的原始 SM4 算法.
+常见的工作模式有 ECB, CBC, CFB 等, 它们有各自的特点, 能够扩展分组密码的功能, 使其能对任意长度数据进行加密, 在 gmalg 中, 仅仅实现了无工作模式的原始 SM4 算法.
 
 ---
 
@@ -169,6 +171,53 @@ print(plain)
 ```
 
 初始化 [`SM4`][gmalg.SM4] 类, 需要指定一次密钥, 密钥长度为 16 字节. 之后使用 [`encrypt`][gmalg.SM4.encrypt] 和 [`decrypt`][gmalg.SM4.decrypt] 方法进行加密和解密, 分组长度为 16 字节.
+
+### 带有工作模式的 SM4 算法
+
+本项目中实现了一些常见的工作模式:
+
+- ECB: 电码本模式 (Electronic Codebook). 该模式要求加解密的数据都必须是分组大小的整数倍.
+- CBC: 密文链接模式 (Cipher Block Chaining). 该模式同样要求加解密的数据必须是分组大小的整数倍, 且需要提供一个与分组大小相同的初始向量 IV.
+- CFB: 密文反馈模式 (Cipher Feedback). 该模式可以对任意长度的数据进行加解密, 无需填充, 但是需要提供一个与分组大小相同的初始向量 IV, 且需要指定数据的片段移位长度, 该长度为小于等于分组长度的正整数.
+- OFB: 输出反馈模式 (Output Feedback). 该模式与 CFB 类似, 可以对任意长度的数据进行加解密, 无需填充, 但是同样需要提供一个与分组大小相同的初始向量 IV.
+
+由上述可知, 部分工作模式需要对数据进行填充, 因此项目内提供了一些常见的填充方法, 具体可见 [`PADDING_MODE`][gmalg.PADDING_MODE], 可以按一下方式对数据进行填充和去填充操作:
+
+```python
+import gmalg
+
+data = b"1234567"
+print(data.hex())
+
+padder = gmalg.DataPadder(16, gmalg.PADDING_MODE.PKCS7)
+padded_data = padder.pad(data)
+print(padded_data.hex())
+
+unpadded_data = padder.unpad(padded_data)
+print(unpadded_data.hex())
+```
+
+可以使用指定工作模式和填充方法的 [`SM4Cipher`][gmalg.SM4Cipher] 对数据进行加解密:
+
+```python
+import gmalg
+
+data = b"12345678123456781234"
+print(data.hex())
+
+key = bytes.fromhex("0123456789ABCDEFFEDCBA9876543210")
+iv = bytes.fromhex("FEDCBA98765432100123456789ABCDEF")
+sm4 = gmalg.SM4Cipher(key, gmalg.BC_MODE.CBC, gmalg.DataPadder(16, gmalg.PADDING_MODE.PKCS7), iv=iv)
+
+cipher = sm4.encrypt(data)
+print(cipher.hex())
+
+sm4.reset()  # reset internal states
+plain = sm4.decrypt(cipher)
+print(plain)
+```
+
+[`SM4Cipher`][gmalg.SM4Cipher] 类可用于流式数据加解密, 且提供了 [`reset`][gmalg.SM4Cipher.reset] 方法, 用于重置内部运算状态.
 
 ## SM9 标识密码算法
 
