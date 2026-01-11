@@ -1,3 +1,5 @@
+import random
+import secrets
 import unittest
 
 import gmalg
@@ -324,7 +326,7 @@ class TestSM3(unittest.TestCase):
     def test_case5(self):
         self.h.update(b"1234567812345678123456781234567812345678123456781234567812345678")
         self.assertEqual(self.h.value(), bytes.fromhex("7883E626D07F179E5A5E06445462BD08F08156A8DDCE5FE9E6DAE4D6DAD49CF8"))
-    
+
     def test_case6(self):
         self.h.update(b"1234567812345678123456781234567812345678123456781234567812345678"
                       b"1234567812345678123456781234567812345678123456781234567812345678")
@@ -334,27 +336,27 @@ class TestSM3(unittest.TestCase):
         self.h.update(b"123456781")
         self.h.update(b"2345678123456781234567812345678123456781234567")
         self.assertEqual(self.h.value(), bytes.fromhex("84FA82E235020F62BEBD48C0995E2AD7CB4B12AC70E90282110D8D972863DC8E"))
-    
+
     def test_update2(self):
         self.h.update(b"12345")
         self.h.update(b"678123456781234567812345678123456781234567812345678")
         self.assertEqual(self.h.value(), bytes.fromhex("84A1C27DDCC45E60FF8EF4C55084FD280ECF6CE5A1626B0107A768452F1CFCB3"))
-    
+
     def test_update3(self):
         self.h.update(b"12345")
         self.h.update(b"6781234567812345678123456781234567812345678123456781")
         self.assertEqual(self.h.value(), bytes.fromhex("9AC2E4FF798A09A5F48FFDCA727EBECB230EC069A185F4D81B84E44738ADAEC1"))
-    
+
     def test_update4(self):
         self.h.update(b"12345")
         self.h.update(b"67812345678123456781234567812345678123456781234567812345678")
         self.assertEqual(self.h.value(), bytes.fromhex("7883E626D07F179E5A5E06445462BD08F08156A8DDCE5FE9E6DAE4D6DAD49CF8"))
-    
+
     def test_update51(self):
         self.h.update(b"12345")
         self.h.update(b"6781234567812345678123456781234567812345678123456781234567812345")
         self.assertEqual(self.h.value(), bytes.fromhex("40EDF000B67036C78BC4B394FB3F3201D466E5084FFAA1C4EA6A8427D12F4C40"))
-    
+
     def test_update52(self):
         self.h.update(b"1234567812345678123456781234567812345678123456781234567812345678")
         self.h.update(b"12345")
@@ -364,13 +366,13 @@ class TestSM3(unittest.TestCase):
         self.h.update(b"1234567812345678123456781234567812345678123456781234567812345678")
         self.h.update(b"1234567812345678123456781234567812345678123456781234567812345678")
         self.assertEqual(self.h.value(), bytes.fromhex("16ABFDD57F52837457D36F7E3B5E806E568E3BDA6AD920259FEC4CEB5B382921"))
-    
+
     def test_update71(self):
         self.h.update(b"1234567812345678123456781234567812345678123456781234567812345678")
         self.h.update(b"1234567812345678123456781234567812345678123456781234567812345678"
                       b"1234567812345678123456781234567812345678123456781234567812345678")
         self.assertEqual(self.h.value(), bytes.fromhex("45418F14DC9077297E5E8480664A294DB2C05F73382469933917E662208B948B"))
-    
+
     def test_update72(self):
         self.h.update(b"1234567812345678123456781234567812345678123456781234567812345678"
                       b"1234567812345678123456781234567812345678123456781234567812345678")
@@ -406,6 +408,72 @@ class TestSM4(unittest.TestCase):
         self.assertRaises(gmalg.errors.IncorrectLengthError, self.c.encrypt, b"12345678123456781")
         self.assertRaises(gmalg.errors.IncorrectLengthError, self.c.decrypt, b"123456781234567")
         self.assertRaises(gmalg.errors.IncorrectLengthError, self.c.decrypt, b"12345678123456781")
+
+
+class TestSM4Cipher(unittest.TestCase):
+    def test_ecb(self):
+        c = gmalg.SM4Cipher(b"0123456789ABCDEF", gmalg.BC_MODE.ECB)
+        plain = secrets.token_bytes(16 * 3)
+        cipher = c.encrypt(plain)
+        c.reset()
+        self.assertEqual(plain, c.decrypt(cipher))
+
+    def test_cbc(self):
+        c = gmalg.SM4Cipher(b"0123456789ABCDEF", gmalg.BC_MODE.CBC, iv=b"0123456789ABCDEF")
+        plain = secrets.token_bytes(16 * 3)
+        cipher = c.encrypt(plain)
+        c.reset()
+        self.assertEqual(plain, c.decrypt(cipher))
+
+    def test_cfb(self):
+        for seg_len in range(1, 17):
+            for _ in range(10):
+                c = gmalg.SM4Cipher(
+                    b"0123456789ABCDEF",
+                    gmalg.BC_MODE.CFB,
+                    iv=b"0123456789ABCDEF",
+                    segment_length=seg_len
+                )
+                seg = b"123"
+                lengths = [random.randint(1, 10) for _ in range(100)]
+
+                seq1 = lengths.copy()
+                random.shuffle(seq1)
+                seq2 = seq1.copy()
+                random.shuffle(seq2)
+
+                cipher = b"".join(c.encrypt(seg * i) for i in seq1)
+
+                seq2_idx = [0]
+                for i in seq2:
+                    seq2_idx.append(seq2_idx[-1] + i)
+                c.reset()
+                plain = b"".join(c.decrypt(cipher[seq2_idx[i] * len(seg):seq2_idx[i + 1] * len(seg)]) for i in range(len(seq2)))
+                self.assertEqual(plain, seg * sum(lengths))
+
+    def test_ofb(self):
+        for _ in range(10):
+            c = gmalg.SM4Cipher(
+                b"0123456789ABCDEF",
+                gmalg.BC_MODE.CFB,
+                iv=b"0123456789ABCDEF"
+            )
+            seg = b"123"
+            lengths = [random.randint(1, 10) for _ in range(100)]
+
+            seq1 = lengths.copy()
+            random.shuffle(seq1)
+            seq2 = seq1.copy()
+            random.shuffle(seq2)
+
+            cipher = b"".join(c.encrypt(seg * i) for i in seq1)
+
+            seq2_idx = [0]
+            for i in seq2:
+                seq2_idx.append(seq2_idx[-1] + i)
+            c.reset()
+            plain = b"".join(c.decrypt(cipher[seq2_idx[i] * len(seg):seq2_idx[i + 1] * len(seg)]) for i in range(len(seq2)))
+            self.assertEqual(plain, seg * sum(lengths))
 
 
 class TestSM9(unittest.TestCase):
