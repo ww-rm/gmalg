@@ -6,40 +6,12 @@ from .base import BlockCipher
 from .errors import *
 
 __all__ = [
-    "BC_MODE",
     "BlockCipherMode",
     "BlockCipherModeECB",
     "BlockCipherModeCBC",
     "BlockCipherModeCFB",
     "BlockCipherModeOFB",
 ]
-
-
-class BC_MODE(enum.Enum):
-    """Block cipher working mode.
-
-    Attributes:
-        ECB: Electronic Codebook mode.
-            Each block is encrypted independently.
-            Not secure for most real-world use cases.
-
-        CBC: Cipher Block Chaining mode.
-            Each plaintext block is XORed with the previous ciphertext block
-            before encryption. Requires an initialization vector (IV).
-
-        CFB: Cipher Feedback mode.
-            Turns a block cipher into a self-synchronizing stream cipher.
-            Requires an initialization vector (IV).
-
-        OFB: Output Feedback mode.
-            Turns a block cipher into a synchronous stream cipher.
-            Requires an initialization vector (IV).
-    """
-
-    ECB = enum.auto()
-    CBC = enum.auto()
-    CFB = enum.auto()
-    OFB = enum.auto()
 
 
 class BlockCipherMode:

@@ -3,6 +3,7 @@ import secrets
 import unittest
 
 import gmalg
+import gmalg.bcmode as bcmode
 import gmalg.ellipticcurve as Ec
 import gmalg.primefield as Fp
 
@@ -410,16 +411,16 @@ class TestSM4(unittest.TestCase):
         self.assertRaises(gmalg.errors.IncorrectLengthError, self.c.decrypt, b"12345678123456781")
 
 
-class TestSM4Cipher(unittest.TestCase):
+class TestSM4BlockCipherMode(unittest.TestCase):
     def test_ecb(self):
-        c = gmalg.SM4Cipher(b"0123456789ABCDEF", gmalg.BC_MODE.ECB)
+        c = bcmode.BlockCipherModeECB(gmalg.SM4(b"0123456789ABCDEF"))
         plain = secrets.token_bytes(16 * 3)
         cipher = c.encrypt(plain)
         c.reset()
         self.assertEqual(plain, c.decrypt(cipher))
 
     def test_cbc(self):
-        c = gmalg.SM4Cipher(b"0123456789ABCDEF", gmalg.BC_MODE.CBC, iv=b"0123456789ABCDEF")
+        c = bcmode.BlockCipherModeCBC(gmalg.SM4(b"0123456789ABCDEF"), b"0123456789ABCDEF")
         plain = secrets.token_bytes(16 * 3)
         cipher = c.encrypt(plain)
         c.reset()
@@ -428,12 +429,7 @@ class TestSM4Cipher(unittest.TestCase):
     def test_cfb(self):
         for seg_len in range(1, 17):
             for _ in range(10):
-                c = gmalg.SM4Cipher(
-                    b"0123456789ABCDEF",
-                    gmalg.BC_MODE.CFB,
-                    iv=b"0123456789ABCDEF",
-                    segment_length=seg_len
-                )
+                c = bcmode.BlockCipherModeCFB(gmalg.SM4(b"0123456789ABCDEF"), b"0123456789ABCDEF", seg_len)
                 seg = b"123"
                 lengths = [random.randint(1, 10) for _ in range(100)]
 
@@ -453,11 +449,7 @@ class TestSM4Cipher(unittest.TestCase):
 
     def test_ofb(self):
         for _ in range(10):
-            c = gmalg.SM4Cipher(
-                b"0123456789ABCDEF",
-                gmalg.BC_MODE.CFB,
-                iv=b"0123456789ABCDEF"
-            )
+            c = bcmode.BlockCipherModeOFB(gmalg.SM4(b"0123456789ABCDEF"), b"0123456789ABCDEF")
             seg = b"123"
             lengths = [random.randint(1, 10) for _ in range(100)]
 
