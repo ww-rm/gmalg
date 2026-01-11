@@ -93,7 +93,7 @@ class DataPadder:
             raise NotImplementedError(f"Unsupported padding method: {self._method}")
         return bytes(data)
 
-    def unpad(self, data: bytes):
+    def unpad(self, data: bytes) -> bytes:
         """Remove padding from data.
 
         Args:
