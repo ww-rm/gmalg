@@ -1,6 +1,6 @@
 from . import errors
 from .base import KEYXCHG_MODE, PC_MODE
-from .blockcipher import BC_MODE
+from .bcmode import BC_MODE
 from .sm2 import SM2
 from .sm3 import SM3
 from .sm4 import SM4, SM4Cipher

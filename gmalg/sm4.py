@@ -3,7 +3,7 @@
 from typing import List
 
 from .base import BlockCipher
-from .blockcipher import *
+from .bcmode import *
 from .errors import *
 from .utils import ROL32, DataPadder
 
