@@ -174,22 +174,22 @@ print(plain)
 
 ### 带有工作模式的 SM4 算法
 
-本项目中实现了一些常见的工作模式:
+本项目中实现了一些常见的分组加密工作模式:
 
 - ECB: 电码本模式 (Electronic Codebook). 该模式要求加解密的数据都必须是分组大小的整数倍.
 - CBC: 密文链接模式 (Cipher Block Chaining). 该模式同样要求加解密的数据必须是分组大小的整数倍, 且需要提供一个与分组大小相同的初始向量 IV.
 - CFB: 密文反馈模式 (Cipher Feedback). 该模式可以对任意长度的数据进行加解密, 无需填充, 但是需要提供一个与分组大小相同的初始向量 IV, 且需要指定数据的片段移位长度, 该长度为小于等于分组长度的正整数.
 - OFB: 输出反馈模式 (Output Feedback). 该模式与 CFB 类似, 可以对任意长度的数据进行加解密, 无需填充, 但是同样需要提供一个与分组大小相同的初始向量 IV.
 
-由上述可知, 部分工作模式需要对数据进行填充, 因此项目内提供了一些常见的填充方法, 具体可见 [`PADDING_MODE`][gmalg.PADDING_MODE], 可以按一下方式对数据进行填充和去填充操作:
+由上述可知, 部分工作模式需要对数据进行填充, 因此项目内提供了一些常见的填充方法, 具体可见 [`PADDING_MODE`][gmalg.utils.PADDING_MODE], 可以按以下方式对数据进行填充和去填充操作:
 
 ```python
-import gmalg
+from gmalg import utils
 
 data = b"1234567"
 print(data.hex())
 
-padder = gmalg.DataPadder(16, gmalg.PADDING_MODE.PKCS7)
+padder = utils.DataPadder(16, utils.PADDING_MODE.PKCS7)
 padded_data = padder.pad(data)
 print(padded_data.hex())
 
@@ -197,27 +197,30 @@ unpadded_data = padder.unpad(padded_data)
 print(unpadded_data.hex())
 ```
 
-可以使用指定工作模式和填充方法的 [`SM4Cipher`][gmalg.SM4Cipher] 对数据进行加解密:
+可以使用指定工作模式和填充方式的 SM4 算法对数据进行加解密:
 
 ```python
 import gmalg
+from gmalg import utils
+from gmalg.bcmode import BlockCipherModeCBC
 
 data = b"12345678123456781234"
 print(data.hex())
 
 key = bytes.fromhex("0123456789ABCDEFFEDCBA9876543210")
 iv = bytes.fromhex("FEDCBA98765432100123456789ABCDEF")
-sm4 = gmalg.SM4Cipher(key, gmalg.BC_MODE.CBC, gmalg.DataPadder(16, gmalg.PADDING_MODE.PKCS7), iv=iv)
+padder = utils.DataPadder(16, utils.PADDING_MODE.PKCS7)
+sm4_cbc = BlockCipherModeCBC(gmalg.SM4(key), iv=iv)
 
-cipher = sm4.encrypt(data)
+cipher = sm4_cbc.encrypt(padder.pad(data))
 print(cipher.hex())
 
-sm4.reset()  # reset internal states
-plain = sm4.decrypt(cipher)
+sm4_cbc.reset()  # reset internal states
+plain = padder.unpad(sm4_cbc.decrypt(cipher))
 print(plain)
 ```
 
-[`SM4Cipher`][gmalg.SM4Cipher] 类可用于流式数据加解密, 且提供了 [`reset`][gmalg.SM4Cipher.reset] 方法, 用于重置内部运算状态.
+工作模式类可用于流式数据加解密, 且提供了 [`reset`][gmalg.bcmode.BlockCipherMode.reset] 方法, 用于重置内部运算状态.
 
 ## SM9 标识密码算法
 

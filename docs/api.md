@@ -5,15 +5,11 @@
 - [`gmalg.SM2`][]
 - [`gmalg.SM3`][]
 - [`gmalg.SM4`][]
-- [`gmalg.SM4Cipher`][]
 - [`gmalg.SM9KGC`][]
 - [`gmalg.SM9`][]
 - [`gmalg.ZUC`][]
 - [`gmalg.KEYXCHG_MODE`][]
 - [`gmalg.PC_MODE`][]
-- [`gmalg.BC_MODE`][]
-- [`gmalg.PADDING_MODE`][]
-- [`gmalg.DataPadder`][]
 - [`gmalg.errors`][]
 
 继续向下阅读 `gmalg` 中涉及的所有主要接口及其参数说明.
@@ -41,7 +37,6 @@
     options:
         members:
             - SM4
-            - SM4Cipher
 
 ---
 
@@ -125,7 +120,7 @@
 
 ---
 
-::: gmalg.blockcipher
+::: gmalg.bcmode
 
 ---
 
