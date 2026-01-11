@@ -3,10 +3,14 @@
 from typing import List
 
 from .base import BlockCipher
+from .blockcipher import *
 from .errors import *
-from .utils import ROL32
+from .utils import ROL32, DataPadder
 
-__all__ = ["SM4"]
+__all__ = [
+    "SM4",
+    "SM4Cipher",
+]
 
 _S_BOX = bytes([
     0xd6, 0x90, 0xe9, 0xfe, 0xcc, 0xe1, 0x3d, 0xb7, 0x16, 0xb6, 0x14, 0xc2, 0x28, 0xfb, 0x2c, 0x05,
@@ -178,3 +182,64 @@ class SM4(BlockCipher):
         BUFFER.extend(X1.to_bytes(4, "big"))
         BUFFER.extend(X0.to_bytes(4, "big"))
         return bytes(BUFFER)
+
+
+class SM4Cipher:
+    """SM4 algorithm with working mode."""
+
+    def __init__(self, key: bytes, mode: BC_MODE, padder: DataPadder = None, *,
+                 iv: bytes = None, segment_length: int = 16):
+        """SM4 algorithm with working mode.
+
+        Args:
+            key (bytes): 16 bytes key.
+            mode (BC_MODE): Working modeo of SM4.
+            padder (DataPadder): Optional data padder for en/decryption, None no padding.
+            iv (bytes): 16 bytes iv (for mode CBC, CFB, OFB).
+            segment_length: Segment length in bytes between 1 to 16 (for mode CFB).
+        """
+
+        self._sm4 = SM4(key)
+        self._padder = padder or DataPadder()  # None for no padding
+        self._bcm: BlockCipherMode = None
+        if mode is BC_MODE.ECB:
+            self._bcm = BlockCipherModeECB(self._sm4)
+        elif mode is BC_MODE.CBC:
+            self._bcm = BlockCipherModeCBC(self._sm4, iv)
+        elif mode is BC_MODE.CFB:
+            self._bcm = BlockCipherModeCFB(self._sm4, iv, segment_length)
+        elif mode is BC_MODE.OFB:
+            self._bcm = BlockCipherModeOFB(self._sm4, iv)
+        else:
+            raise NotImplementedError
+
+    def reset(self) -> None:
+        """Reset internal states."""
+
+        return self._bcm.reset()
+
+    def encrypt(self, plain: bytes) -> bytes:
+        """Encrypt.
+
+        Args:
+            plain (bytes): Data to be encrypted.
+
+        Returns:
+            cipher: Encrypted plain data.
+        """
+
+        plain = self._padder.pad(plain)
+        return self._bcm.encrypt(plain)
+
+    def decrypt(self, cipher: bytes) -> bytes:
+        """Decrypt.
+
+        Args:
+            cipher (bytes): Data to be decrypted.
+
+        Returns:
+            plain: Decrypted data.
+        """
+
+        plain = self._bcm.decrypt(cipher)
+        return self._padder.unpad(plain)
