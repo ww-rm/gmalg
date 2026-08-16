@@ -292,7 +292,7 @@ class PrimeField(PrimeFieldBase):
             if (V * V - 4 * Y) % p == 0:
                 return (V * inv2) % p
 
-            if U != 1 or U != p_1:
+            if U != 1 and U != p_1:
                 return None
 
         return None
